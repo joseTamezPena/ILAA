@@ -1,0 +1,370 @@
+---
+title: "Univariate: GRAVIER"
+author: "Jose Tamez"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+```
+
+# GRAVIER Univariate
+
+### Loading the libraries
+
+```{r}
+library("FRESA.CAD")
+library(readxl)
+op <- par(no.readonly = TRUE)
+pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+
+```
+
+
+
+## The Data
+
+
+```{r}
+data('gravier', package = 'datamicroarray')
+table(gravier$y)
+
+gravierset <- as.data.frame(cbind(class=1*(gravier$y=="poor"),gravier$x))
+
+gravier <- NULL
+
+
+
+```
+#### Standarize the names for the reporting
+
+```{r results = "asis"}
+dataframe <- gravierset
+outcome <- "class"
+
+```
+
+
+
+```{r results = "asis"}
+pander::pander(c(rows=nrow(dataframe),col=ncol(dataframe)-1))
+pander::pander(table(dataframe[,outcome]))
+
+varlist <- colnames(dataframe)
+varlist <- varlist[varlist != outcome]
+varlist <- as.data.frame(cbind(name=varlist,desc=varlist))
+
+```
+
+
+## Univariate
+
+```{r results = "asis"}
+
+univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","cohortKSP","ROCAUC","WilcoxRes.p","FRes.p")
+univar <- uniRankVar(varlist,
+	           paste(outcome,"~1"),
+	           outcome,
+	           dataframe,
+	           categorizationType = "Raw",
+	           type = "LOGIT",
+	           rankingTest = "AUC",
+	            cateGroups = c(0.1, 0.9),
+	            raw.dataFrame = NULL,
+	            description = ".",
+	            uniType = "Binary")
+
+pander::pander(univar$orderframe[1:20,univariate_columns])
+
+topfiveOrg <- rownames(univar$orderframe[1:5,])
+
+```
+
+
+### ROC plot of top feature
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
+topvar <- univar$orderframe$Name[1]
+cmod <- glm(formula(paste(outcome,"~",topvar)),dataframe,family="binomial");
+pmod <- predict(cmod,dataframe)
+
+
+perd <- cbind(dataframe[,outcome],pmod)
+prSurvTest <- predictionStats_binary(perd,topvar)
+
+pander::pander(prSurvTest$CM.analysis$tab)
+pander::pander(prSurvTest$aucs)
+
+```
+
+
+## Decorrelation Analysis
+
+```{r results = "asis"}
+DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE,skipRelaxed=FALSE)
+#DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=0.60,verbose = TRUE,skipRelaxed=FALSE)
+#DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,method="spearman",type="LM",thr=0.50,verbose = TRUE,skipRelaxed=FALSE)
+
+
+
+demat <- attr(DEdataframe,"GDSTM")
+
+pander::pander(c(Cols=ncol(demat),Rows=nrow(demat)))
+totFe <- ncol(DEdataframe)-1
+totBa <- sum(str_detect(colnames(DEdataframe),"Ba_"))
+totDe <- sum(str_detect(colnames(DEdataframe),"De_"))
+toUnmat <- sum(apply(demat!=0,2,sum)==1)
+unaltered <- totFe - ncol(demat) + toUnmat
+pander::pander(c(Features=totFe,totBa=totBa,totDe=totDe,unaltered=totFe-totBa-totDe,totuna=unaltered))
+pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"De_"))/(ncol(DEdataframe)-1)))
+pander::pander(c(Base_Fraction=sum(str_detect(colnames(DEdataframe),"Ba_"))/(ncol(DEdataframe)-1)))
+
+pander::pander(c(Unaltered_Fraction=unaltered/totFe))
+pander::pander(c(sparcity=(totFe-ncol(demat)+sum(abs(demat)!=0))/totFe/totFe))
+
+varlistDe <-  colnames(demat)[apply(demat!=0,2,sum)>1];
+varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
+
+
+```
+
+### The heat maps.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+cormat <- cor(dataframe[,rownames(demat)],method="spearman")
+cormat[is.na(cormat)] <- 0
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+#                  scale = "row",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  main = "Spearman Correlation Original",
+                  cexRow = 0.35,
+                  cexCol = 0.35,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+
+cormat <- cor(DEdataframe[,colnames(demat)],method="spearman")
+cormat[is.na(cormat)] <- 0
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+#                  scale = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  main = "Spearman Correlation: After GDSTM",
+                  cexRow = 0.35,
+                  cexCol = 0.35,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+par(op)
+```
+
+
+## Univariate Decorrelated
+
+```{r results = "asis"}
+
+univarDe <- uniRankVar(varlistDe,
+              paste(outcome,"~1"),
+	            outcome,
+              DEdataframe,
+	            categorizationType = "Raw",
+	            type = "LOGIT",
+	            rankingTest = "AUC",
+	            cateGroups = c(0.1, 0.9),
+	            raw.dataFrame = NULL,
+	            description = ".",
+	            uniType = "Binary")
+
+pander::pander(univarDe$orderframe[1:20,univariate_columns])
+
+```
+
+
+### ROC plot of top feature
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
+topvar <- univarDe$orderframe$Name[1]
+cmod <- glm(formula(paste(outcome,"~",topvar)),DEdataframe,family="binomial");
+pmod <- predict(cmod,DEdataframe)
+
+
+perd <- cbind(DEdataframe[,outcome],pmod)
+prSurvTest <- predictionStats_binary(perd,topvar)
+
+pander::pander(prSurvTest$CM.analysis$tab)
+pander::pander(prSurvTest$aucs)
+
+```
+
+
+### Comparing Decorrelation vs Original
+
+```{r results = "asis"}
+pthr <- 0.20/(ncol(dataframe)-1)
+
+topDecorNames <- rownames(univarDe$orderframe[univarDe$orderframe$FRes.p<pthr,])
+topDecorNames <- unique(c(topDecorNames,rownames(univarDe$orderframe[1:5,])))
+
+#topDecorNames <- rownames(univarDe$orderframe[univarDe$orderframe$FRes.p<1.0e-4,])
+dc <- getDerivedCoefficients(DEdataframe)
+### 2a Get only the ones that in the top features
+deNames_in_dc <- topDecorNames[topDecorNames %in% names(dc)]
+selectedlist <- dc[deNames_in_dc]
+theDeFormulas <- selectedlist
+```
+
+## CV ROC Analysis
+
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
+par(op)
+par(mfrow=c(1,2),cex=0.9)
+fraction <-0.80
+repetitions <- 100
+
+fcout <- round(fraction*nrow(dataframe)/15+1.0)
+pander::pander(c(NumberofFeatures=fcout))
+
+cvRaw <- randomCV(dataframe,
+                outcome,
+                fittingFunction= filteredFit,
+                classSamplingType = "Pro",
+                trainFraction = fraction,
+                repetitions = repetitions,
+                fitmethod=  glm,
+                filtermethod=mRMR.classic_FRESA,
+                filtermethod.control=list(feature_count= fcout),
+                family="binomial"
+)
+bpraw <- predictionStats_binary(cvRaw$medianTest,"RAW",cex=0.75)
+
+
+pander::pander(bpraw$CM.analysis$tab)
+pander::pander(bpraw$accc)
+pander::pander(bpraw$aucs)
+pander::pander(bpraw$berror)
+
+cvDe <- randomCV(DEdataframe,
+                outcome,
+                fittingFunction= filteredFit,
+                trainSampleSets= cvRaw$trainSamplesSets,
+                fitmethod=  glm,
+                filtermethod=mRMR.classic_FRESA,
+                filtermethod.control=list(feature_count= fcout),
+                family="binomial"
+)
+bpDecor <- predictionStats_binary(cvDe$medianTest,"Decorrelated",cex=0.75)
+
+par(op)
+
+pander::pander(bpDecor$CM.analysis$tab)
+pander::pander(bpDecor$accc)
+pander::pander(bpDecor$aucs)
+pander::pander(bpDecor$berror)
+
+### Here we compute the probability that the outcome-driven decorrelation ROC is superior to the RAW ROC. 
+pander::pander(roc.test(bpDecor$ROC.analysis$roc.predictor,bpraw$ROC.analysis$roc.predictor,alternative = "greater"))
+
+
+```
+
+## Feature Frequency Plots
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
+par(mfrow=c(2,1),cex=0.9,cex.axis=0.8)
+
+rawtopf <- cvRaw$featureFrequency/repetitions
+crawtopf <- rawtopf
+
+if (length(rawtopf) > 40)
+{
+  rawtopf <- rawtopf[1:40]
+}
+barplot(100*rawtopf,las=2,main="Raw Features",ylim=c(0,100.0),cex.names = 0.5,cex.axis = 0.5,ylab="Sel. %")
+
+detopf <- cvDe$featureFrequency/repetitions
+cdetopf <- detopf
+names(cdetopf) <- str_remove_all(names(cdetopf),"Ba_")
+names(cdetopf) <- str_remove_all(names(cdetopf),"De_")
+if (length(detopf) > 40)
+{
+  detopf <- detopf[1:40]
+}
+
+barplot(100*detopf,las=2,main="Decorrelated Features",ylim=c(0,100.0),cex.names = 0.5,cex.axis = 0.5,ylab="Sel. %")
+
+par(op)
+
+
+
+```
+
+
+
+### Final Table
+
+```{r results = "asis"}
+unlistdecorr <- selectedlist
+names(unlistdecorr) <- NULL
+unlistdecorr <- unique(names(unlist(unlistdecorr)))
+
+finalTableDe <- univarDe$orderframe[deNames_in_dc,univariate_columns]
+
+finalTableOr <- univar$orderframe[unique(c(topfiveOrg,unlistdecorr,names(crawtopf)[1:2],names(cdetopf)[1:2])),univariate_columns]
+
+finalTable <- rbind(finalTableOr,finalTableDe)
+
+deFromula <- character(length(theDeFormulas))
+names(deFromula) <- names(theDeFormulas)
+
+for (dx in names(deFromula))
+{
+  coef <- theDeFormulas[[dx]]
+  cname <- names(theDeFormulas[[dx]])
+  names(cname) <- cname
+  for (cf in names(coef))
+  {
+    if (cf != dx)
+    {
+      if (coef[cf]>0)
+      {
+        deFromula[dx] <- paste(deFromula[dx],
+                               sprintf("+ %5.3f*%s",coef[cf],cname[cf]))
+      }
+      else
+      {
+        deFromula[dx] <- paste(deFromula[dx],
+                               sprintf("%5.3f*%s",coef[cf],cname[cf]))
+      }
+    }
+  }
+}
+orgnamez <- rownames(finalTable)
+orgnamez <- str_remove_all(orgnamez,"Ba_")
+orgnamez <- str_remove_all(orgnamez,"De_")
+finalTable$uAUC <- univar$orderframe[orgnamez,"ROCAUC"]
+finalTable$raw_Freq <- crawtopf[orgnamez]
+finalTable$de_Freq <- cdetopf[orgnamez]
+finalTable$DecorFormula <- deFromula[rownames(finalTable)]
+finalTable <- finalTable[order(-finalTable$ROCAUC),]
+
+pander::pander(finalTable)
+```
+
