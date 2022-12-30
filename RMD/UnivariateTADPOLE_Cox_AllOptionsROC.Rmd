@@ -320,7 +320,7 @@ for (DeOut in DeOutcome)
     for (typ in type)
     {
       par(op)
-      par(mfrow=c(1,2),cex=0.9)
+      par(mfrow=c(1,2),cex=0.8)
       for (thrs in thr)
       {
         for (corran in corRank)
@@ -407,6 +407,64 @@ for (DeOut in DeOutcome)
   }
 }
 par(op)
+
+```
+
+### Printing the outputs
+
+
+```{r results = "asis"}
+
+names(totFe) <- thenames
+names(totBa) <- thenames
+names(totDe) <- thenames
+names(toUnmat) <- thenames
+names(unaltered) <- thenames
+names(Decorrleated_Fraction) <- thenames
+names(Base_Fraction) <- thenames
+names(Unaltered_Fraction) <- thenames
+names(sparcity) <- thenames
+names(Average_Latent_Size) <- thenames
+names(SigDe) <- thenames
+names(De_Significant) <- thenames
+names(pbKNN) <- thenames
+
+
+allperformancedata <- as.data.frame(cbind(totBa,totDe,toUnmat,unaltered,Decorrleated_Fraction,Base_Fraction,Unaltered_Fraction,sparcity,Average_Latent_Size,SigDe,De_Significant))
+
+pander::pander(totFe[[1]])
+pander::pander(allperformancedata)
+
+onlyCorrelated <- allperformancedata[str_detect(rownames(allperformancedata),"TRUE"),]
+onlyCorrelatedfast <- onlyCorrelated[str_detect(rownames(onlyCorrelated),"fast"),]
+onlyCorrelatedfast <- onlyCorrelatedfast[!str_detect(rownames(onlyCorrelatedfast),"RLM"),]
+onlyCorrelatedDriven <- onlyCorrelatedfast[!str_detect(rownames(onlyCorrelatedfast),"NoDriven"),]
+onlyCorrelatedNoDriven <- onlyCorrelatedfast[str_detect(rownames(onlyCorrelatedfast),"NoDriven"),]
+
+
+AUCdata <- NULL
+for (i in 1:length(pbKNN)) 
+{
+  AUCdata <- rbind(AUCdata,pbKNN[[i]]$aucs)
+}
+rownames(AUCdata) <- thenames
+pander::pander(AUCdata)
+
+
+ACCdata <- NULL
+for (i in 1:length(pbKNN)) 
+{
+  ACCdata <- rbind(ACCdata,pbKNN[[i]]$accc)
+}
+rownames(ACCdata) <- thenames
+pander::pander(ACCdata)
+
+```
+
+### Saving All
+```{r}
+
+save.image("~/GitHub/LatentBiomarkers/RMD/TADPOLE_ALL_Options.RData")
 
 ```
 
