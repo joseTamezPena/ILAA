@@ -34,10 +34,10 @@ type <- c("LM","RLM")
 DeOutcome <- c("NoDriven","Driven")
 corRankS <- c("FALSE","TRUE")
 
-thr <- thr[7]
+thr <- thr[6]
 method  <- method[1]
 type <- type[1] 
-DeOutcome <- DeOutcome[1]
+DeOutcome <- DeOutcome[2]
 corRankS <- corRankS[1]
 
 
@@ -359,7 +359,7 @@ univar$orderframe$pvalue=pnorm(abs(univar$orderframe$ZGLM),lower.tail = FALSE)
 
 ## Decorrelation Analysis 
 
-```{r results = "asis"}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 6.0}
 
 if (DeOutcome != "Driven")
 {
@@ -368,8 +368,27 @@ if (DeOutcome != "Driven")
 {
   DEdataframeTrain <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=thr,method=method,type=type,corRank=corRank,verbose = TRUE)
 }
+
+cormat <- abs(cor(DEdataframeTrain[,colnames(DEdataframeTrain) != outcome],method="spearman"));
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+#                  scale = "row",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  main = "Correlation",
+                  cexRow = 0.35,
+                  cexCol = 0.35,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+diag(cormat) <- 0;
+pander::pander(max(cormat))
+
 demat <- attr(DEdataframeTrain,"GDSTM")
 DEdataframe <- predictDecorrelate(DEdataframeTrain,dataframeTest)
+
 
 pander::pander(c(Cols=ncol(demat),Rows=nrow(demat)))
 totFe <- ncol(DEdataframe)-1
@@ -647,11 +666,6 @@ pbMaha <- predictionStats_binary(cbind(dataframeTest[,outcome],disttoControl-dis
 #pb <- predictionStats_binary(cbind(dataframeTest[,outcome],predict(mlNB,dataframeTest[,c(outcome,topvarraw)])),"Raw NB:ROC")
 #mlSig <- CVsignature(formula(paste(outcome,"~.")),dataframe[,c(outcome,topvarraw)])
 #pb <- predictionStats_binary(cbind(dataframeTest[,outcome],predict(mlSig,dataframeTest[,c(outcome,topvarraw)])),"Raw Sig:ROC")
-mlKNNRaw <- KNN_method(formula(paste(outcome,"~.")),dataframe[,c(outcome,topSigRaw)])
-pbKNN <- predictionStats_binary(cbind(dataframeTest[,outcome],predict(mlKNNRaw,dataframeTest[,c(outcome,topSigRaw)])),"Raw KNN:ROC",cex=0.8)
-
-pander::pander(pbKNN$aucs)
-pander::pander(pbMaha$aucs)
 
 ### Decorrelated Analysis
 
@@ -683,6 +697,13 @@ disttoControl <- mahalanobis(DEdataframe[,topvarDe],meanControls,covControls)
 disttoCases <- mahalanobis(DEdataframe[,topvarDe],meanCases,covCases)
 pbMaha <- predictionStats_binary(cbind(DEdataframe[,outcome],disttoControl-disttoCases),"De Maha:ROC",cex=0.8)
 
+
+
+mlKNNRaw <- KNN_method(formula(paste(outcome,"~.")),dataframe[,c(outcome,topSigRaw)])
+pbKNN <- predictionStats_binary(cbind(dataframeTest[,outcome],predict(mlKNNRaw,dataframeTest[,c(outcome,topSigRaw)])),"Raw KNN:ROC",cex=0.8)
+
+pander::pander(pbKNN$aucs)
+pander::pander(pbMaha$aucs)
 
 mlKNN <- KNN_method(formula(paste(outcome,"~.")),DEdataframeTrain[,c(outcome,topSigDe)])
 pbKNN <- predictionStats_binary(cbind(dataframeTest[,outcome],predict(mlKNN,DEdataframe[,c(outcome,topSigDe)])),"De KNN:ROC",cex=0.8)

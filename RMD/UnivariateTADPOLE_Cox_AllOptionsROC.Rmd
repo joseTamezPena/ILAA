@@ -39,6 +39,8 @@ pander::panderOptions('table.split.table', 400)
 pander::panderOptions('keep.trailing.zeros',TRUE)
 TrainFraction <- 0.50;
 
+dataLoad = TRUE
+
 ```
 ## The data set
 
@@ -284,123 +286,165 @@ outcome <- "status"
 ### All the run options
 ```{r}
 sig_pvalue <- 0.01
-thr <- c(0.05,0.2,0.4,0.5,0.6,0.8,0.95);
-method  <- c("fast","spearman");
+thr <- c(0.05,0.2,0.4,0.6,0.8,0.95);
+method  <- c("fast","pearson","spearman");
 type <- c("LM","RLM")
 DeOutcome <- c("NoDriven","Driven")
 corRank <- c(FALSE,TRUE)
+
+#method  <- c("fast","pearson","spearman");
+#type <- c("LM","RLM")
+
 
 ```
 
 
 ## Decorrelation Analysis 
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 8.0, fig.width= 6.0}
 
-
-idx = 0;
-totFe <- list()
-totBa <- list()
-totDe <- list()
-toUnmat <- list()
-unaltered <- list()
-Decorrleated_Fraction<- list()
-Base_Fraction<- list()
-Unaltered_Fraction <- list()
-sparcity <- list()
-Average_Latent_Size  <- list()
-SigDe <- list()
-De_Significant <- list()
-pbKNN <- list()
-thenames <- list();
-for (DeOut in DeOutcome)
+if (dataLoad)
 {
-  for (meth in method)
+  load("~/GitHub/LatentBiomarkers/RMD/TADPOLE_ALL_Options.RData")
+} else
+{
+  
+  idx = 0;
+  thenames <- list();
+  totBaM <- NULL
+  totDeM <- NULL
+  toUnmatM <- NULL
+  unalteredM <- NULL
+  Decorrleated_FractionM<- NULL
+  Base_FractionM<- NULL
+  Unaltered_FractionM <- NULL
+  sparcityM <- NULL
+  Average_Latent_SizeM <- NULL
+  SigDeM <- NULL
+  De_SignificantM <- NULL
+  pbKNNaucM <- NULL
+  pbKNNaccM <- NULL
+  
+  for (DeOut in DeOutcome)
   {
-    for (typ in type)
+    for (meth in method)
     {
-      par(op)
-      par(mfrow=c(1,2),cex=0.8)
-      for (thrs in thr)
+      for (typ in type)
       {
         for (corran in corRank)
         {
+          par(op)
+          par(mfrow=c(3,2),cex=0.5)
           idx <- idx + 1;
-          thenames[[idx]] <- paste(DeOut,meth,typ,corran,thrs,sep="_")
-          print(thenames[[idx]])
-          
-
-          if (DeOut != "Driven")
+          thenames[[idx]] <- paste(DeOut,meth,typ,corran,sep="_")
+          totBa <- numeric()
+          totDe <- numeric()
+          toUnmat <- numeric()
+          unaltered <- numeric()
+          Decorrleated_Fraction<- numeric()
+          Base_Fraction<- numeric()
+          Unaltered_Fraction <- numeric()
+          sparcity <- numeric()
+          Average_Latent_Size  <- numeric()
+          SigDe <- numeric()
+          De_Significant <- numeric()
+          pbKNNauc <- numeric()
+          pbKNNacc <- numeric()
+          for (thrs in thr)
           {
-            DEdataframeTrain <- GDSTMDecorrelation(dataframe,
-                                                   thr=thrs,
-                                                   method=meth,
-                                                   type=typ,
-                                                   corRank=corran,
-                                                   verbose = FALSE)
-          } else
-          {
-            DEdataframeTrain <- GDSTMDecorrelation(dataframe,
-                                                   Outcome=outcome,
-                                                   thr=thrs,
-                                                   method=meth,
-                                                   type=typ,
-                                                   corRank=corran,
-                                                   verbose = FALSE)
+            print(thenames[[idx]])
+            plotname <- paste(thenames[[idx]],thrs,sep="_")
+            
+  
+            if (DeOut != "Driven")
+            {
+              DEdataframeTrain <- GDSTMDecorrelation(dataframe,
+                                                     thr=thrs,
+                                                     method=meth,
+                                                     type=typ,
+                                                     corRank=corran,
+                                                     verbose = FALSE)
+            } else
+            {
+              DEdataframeTrain <- GDSTMDecorrelation(dataframe,
+                                                     Outcome=outcome,
+                                                     thr=thrs,
+                                                     method=meth,
+                                                     type=typ,
+                                                     corRank=corran,
+                                                     verbose = FALSE)
+            }
+            demat <- attr(DEdataframeTrain,"GDSTM")
+            DEdataframe <- predictDecorrelate(DEdataframeTrain,dataframeTest)
+            
+            totFe <- ncol(DEdataframe)-1
+            totBa <- c(totBa,sum(str_detect(colnames(DEdataframe),"Ba_")))
+            totDe <- c(totDe, sum(str_detect(colnames(DEdataframe),"De_")))
+            toUn <- sum(apply(demat!=0,2,sum)==1)
+            toUnmat <- c(toUnmat,toUn )
+            una <-  totFe - ncol(demat) + toUn
+            unaltered <- c(unaltered,una)
+            Decorrleated_Fraction <- c(Decorrleated_Fraction,sum(str_detect(colnames(DEdataframe),"De_"))/totFe)
+            Base_Fraction <- c(Base_Fraction,sum(str_detect(colnames(DEdataframe),"Ba_"))/totFe)
+            
+            Unaltered_Fraction <- c(Unaltered_Fraction,una/totFe)
+            sparcity <- c(sparcity,(totFe-ncol(demat)+sum(abs(demat)!=0))/totFe/totFe)
+            
+            varlistDe <-  colnames(demat)[apply(demat!=0,2,sum)>1];
+            varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
+            
+            
+            varlist_DeAll <- colnames(DEdataframe)
+            varlist_DeAll <- varlist_DeAll[!(varlist_DeAll %in% c(outcome,"TimeToEvent"))]
+            varlist_DeAll <- as.data.frame(cbind(name=varlist_DeAll,desc=varlist_DeAll))
+            
+  
+            DEdataframeTime <- cbind(DEdataframeTrain,SurvTime=surTimeTest)
+            
+            
+            pthr <- sig_pvalue/(ncol(dataframe)-1)
+            
+            pDe <- univariate_Logit(DEdataframeTime,formula("Surv(SurvTime,status)~."));
+            topDecorNames <- names(pDe);
+  
+            dc <- getDerivedCoefficients(DEdataframeTrain)
+            deNames_in_dc <- topDecorNames[topDecorNames %in% names(dc)]
+            selectedlist <- dc[deNames_in_dc]
+            theDeFormulas <- selectedlist
+            
+            
+            Average_Latent_Size <- c(Average_Latent_Size,length(unlist(theDeFormulas))/length(theDeFormulas))
+            
+            topSigDe <- topDecorNames
+            
+            pDeDe <- pDe[names(pDe) %in% varlistDe[,1]]
+            pDeDe <- pDeDe[pDeDe<sig_pvalue]
+            
+            De_Significant <- c(De_Significant,length(topSigDe))
+            SigDe <- c(SigDe,length(pDeDe))
+  
+            
+            mlKNN <- KNN_method(formula(paste(outcome,"~.")),DEdataframeTrain[,c(outcome,topSigDe)])
+            psb <- predictionStats_binary(cbind(dataframeTest[,outcome],
+                                                  predict(mlKNN,
+                                                  DEdataframe[,c(outcome,topSigDe)])),plotname,cex=0.6)
+            pbKNNauc <- c(pbKNNauc,psb$aucs[1])
+            pbKNNacc <- c(pbKNNacc,psb$accc[1])
           }
-          demat <- attr(DEdataframeTrain,"GDSTM")
-          DEdataframe <- predictDecorrelate(DEdataframeTrain,dataframeTest)
-          
-          totFe[[idx]] <- ncol(DEdataframe)-1
-          totBa[[idx]] <- sum(str_detect(colnames(DEdataframe),"Ba_"))
-          totDe[[idx]] <- sum(str_detect(colnames(DEdataframe),"De_"))
-          toUnmat[[idx]] <- sum(apply(demat!=0,2,sum)==1)
-          unaltered[[idx]] <- totFe[[idx]] - ncol(demat) + toUnmat[[idx]]
-          Decorrleated_Fraction[[idx]] <- sum(str_detect(colnames(DEdataframe),"De_"))/(ncol(DEdataframe)-1)
-          Base_Fraction[[idx]]  <- sum(str_detect(colnames(DEdataframe),"Ba_"))/(ncol(DEdataframe)-1)
-          
-          Unaltered_Fraction[[idx]] <- unaltered[[idx]]/totFe[[idx]]
-          sparcity[[idx]] <- (totFe[[idx]]-ncol(demat)+sum(abs(demat)!=0))/totFe[[idx]]/totFe[[idx]]
-          
-          varlistDe <-  colnames(demat)[apply(demat!=0,2,sum)>1];
-          varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
-          
-          
-          varlist_DeAll <- colnames(DEdataframe)
-          varlist_DeAll <- varlist_DeAll[!(varlist_DeAll %in% c(outcome,"TimeToEvent"))]
-          varlist_DeAll <- as.data.frame(cbind(name=varlist_DeAll,desc=varlist_DeAll))
-          
-
-          DEdataframeTime <- cbind(DEdataframeTrain,SurvTime=surTimeTest)
-          
-          
-          pthr <- sig_pvalue/(ncol(dataframe)-1)
-          
-          pDe <- univariate_Logit(DEdataframeTime,formula("Surv(SurvTime,status)~."));
-          topDecorNames <- names(pDe);
-
-          dc <- getDerivedCoefficients(DEdataframeTrain)
-          deNames_in_dc <- topDecorNames[topDecorNames %in% names(dc)]
-          selectedlist <- dc[deNames_in_dc]
-          theDeFormulas <- selectedlist
-          
-          
-          Average_Latent_Size[[idx]] <- length(unlist(theDeFormulas))/length(theDeFormulas)
-          
-
-          topSigDe <- topDecorNames
-          
-          pDeDe <- pDe[names(pDe) %in% varlistDe[,1]]
-          pDeDe <- pDeDe[pDeDe<sig_pvalue]
-          
-          De_Significant[[idx]] <- length(topSigDe)
-          SigDe[[idx]] <- length(pDeDe)
-
-          
-          mlKNN <- KNN_method(formula(paste(outcome,"~.")),DEdataframeTrain[,c(outcome,topSigDe)])
-          pbKNN[[idx]] <- predictionStats_binary(cbind(dataframeTest[,outcome],
-                                                predict(mlKNN,
-                                                DEdataframe[,c(outcome,topSigDe)])),thenames[[idx]],cex=0.8)
+          totBaM <- rbind(totBaM,totBa)
+          totDeM <- rbind(totDeM,totDe)
+          toUnmatM <- rbind(toUnmatM,toUnmat)
+          unalteredM <- rbind(unalteredM,unaltered)
+          Decorrleated_FractionM <- rbind(Decorrleated_FractionM,Decorrleated_Fraction)
+          Base_FractionM <- rbind(Base_FractionM,Base_Fraction)
+          Unaltered_FractionM <- rbind(Unaltered_FractionM,Unaltered_Fraction)
+          sparcityM <- rbind(sparcityM,sparcity)
+          Average_Latent_SizeM <- rbind(Average_Latent_SizeM,Average_Latent_Size)
+          SigDeM <- rbind(SigDeM,SigDe)
+          De_SignificantM <- rbind(De_SignificantM,De_Significant)
+          pbKNNaucM <- rbind(pbKNNaucM,pbKNNauc)
+          pbKNNaccM <- rbind(pbKNNaccM,pbKNNacc)
+  
         }
       }
     }
@@ -410,54 +454,386 @@ par(op)
 
 ```
 
-### Printing the outputs
+### Printing the analysis outputs
 
 
-```{r results = "asis"}
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 3.0, fig.width= 7.0}
+par(op)
+par(mfrow=c(1,2),cex=0.6)
 
-names(totFe) <- thenames
-names(totBa) <- thenames
-names(totDe) <- thenames
-names(toUnmat) <- thenames
-names(unaltered) <- thenames
-names(Decorrleated_Fraction) <- thenames
-names(Base_Fraction) <- thenames
-names(Unaltered_Fraction) <- thenames
-names(sparcity) <- thenames
-names(Average_Latent_Size) <- thenames
-names(SigDe) <- thenames
-names(De_Significant) <- thenames
-names(pbKNN) <- thenames
+rownames(totBaM) <- thenames
+rownames(totDeM) <- thenames
+rownames(toUnmatM) <- thenames
+rownames(unalteredM) <- thenames
+rownames(Decorrleated_FractionM) <- thenames
+rownames(Base_FractionM) <- thenames
+rownames(Unaltered_FractionM) <- thenames
+rownames(sparcityM) <- thenames
+rownames(Average_Latent_SizeM) <- thenames
+rownames(SigDeM) <- thenames
+rownames(De_SignificantM) <- thenames
+rownames(pbKNNaucM) <- thenames
+rownames(pbKNNaccM) <- thenames
 
+colnames(totBaM) <- thr
+colnames(totDeM) <- thr
+colnames(toUnmatM) <- thr
+colnames(unalteredM) <- thr
+colnames(Decorrleated_FractionM) <- thr
+colnames(Base_FractionM) <- thr
+colnames(Unaltered_FractionM) <- thr
+colnames(sparcityM) <- thr
+colnames(Average_Latent_SizeM) <- thr
+colnames(SigDeM) <- thr
+colnames(De_SignificantM) <- thr
+colnames(pbKNNaucM) <- thr
+colnames(pbKNNaccM) <- thr
 
-allperformancedata <- as.data.frame(cbind(totBa,totDe,toUnmat,unaltered,Decorrleated_Fraction,Base_Fraction,Unaltered_Fraction,sparcity,Average_Latent_Size,SigDe,De_Significant))
+pander::pander(totFe)
 
-pander::pander(totFe[[1]])
-pander::pander(allperformancedata)
+pander::pander(totBaM)
+pander::pander(totDeM)
+pander::pander(toUnmatM)
+pander::pander(unalteredM)
+pander::pander(Decorrleated_FractionM)
+pander::pander(Base_FractionM)
+pander::pander(Unaltered_FractionM)
+pander::pander(sparcityM)
+pander::pander(Average_Latent_SizeM)
+pander::pander(SigDeM)
+pander::pander(De_SignificantM)
+pander::pander(pbKNNaucM)
+pander::pander(pbKNNaccM)
 
-onlyCorrelated <- allperformancedata[str_detect(rownames(allperformancedata),"TRUE"),]
-onlyCorrelatedfast <- onlyCorrelated[str_detect(rownames(onlyCorrelated),"fast"),]
-onlyCorrelatedfast <- onlyCorrelatedfast[!str_detect(rownames(onlyCorrelatedfast),"RLM"),]
-onlyCorrelatedDriven <- onlyCorrelatedfast[!str_detect(rownames(onlyCorrelatedfast),"NoDriven"),]
-onlyCorrelatedNoDriven <- onlyCorrelatedfast[str_detect(rownames(onlyCorrelatedfast),"NoDriven"),]
+miny = min(pbKNNaucM)-0.05
+maxy = max(pbKNNaucM)+0.15
 
-
-AUCdata <- NULL
-for (i in 1:length(pbKNN)) 
+plot(thr,pbKNNaucM[1,],ylim=c(miny,maxy),
+     main="KNN's ROCAUC",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="ROC AUC",
+     type="l",
+     col=1,
+     lwd=2)
+for (ind in 2:nrow(pbKNNaucM))
 {
-  AUCdata <- rbind(AUCdata,pbKNN[[i]]$aucs)
+  lines(thr,pbKNNaucM[ind,],col=ind,lwd=2)
 }
-rownames(AUCdata) <- thenames
-pander::pander(AUCdata)
+
+legend("topleft", rownames(pbKNNaucM),lty=1, col = 1:length(thenames),cex=0.55,ncol=2)
+
+fastRows <- str_detect(rownames(pbKNNaucM),"fast")
+pearsonRows <- str_detect(rownames(pbKNNaucM),"pearson")
+spearmanRows <- str_detect(rownames(pbKNNaucM),"spearman")
+NoDrivenRows <- str_detect(rownames(pbKNNaucM),"NoDriven")
+corRankRows <- str_detect(rownames(pbKNNaucM),"TRUE")
+maxCorRankRows <- str_detect(rownames(pbKNNaucM),"FALSE")
+RLMfitMethod <- str_detect(rownames(pbKNNaucM),"RLM")
 
 
-ACCdata <- NULL
-for (i in 1:length(pbKNN)) 
+meanAuc <-  colMeans(pbKNNaucM[fastRows,])
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[pearsonRows,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[spearmanRows,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[!NoDrivenRows,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[NoDrivenRows,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[corRankRows,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[maxCorRankRows,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[corRankRows,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[maxCorRankRows,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[RLMfitMethod,]))
+meanAuc <-  rbind(meanAuc,colMeans(pbKNNaucM[!RLMfitMethod,]))
+legnames <- c("fast","Pearson","Spearman","Driven","NoDriven","SumCor","MaxCor","RLM","LM")
+
+
+pbKNNaccM <- as.data.frame(pbKNNaccM)
+pbKNNaccM[,1:ncol(pbKNNaccM)] <- sapply(pbKNNaccM,as.numeric)
+
+Average_Latent_SizeM <- as.data.frame(Average_Latent_SizeM)
+Average_Latent_SizeM[,1:ncol(Average_Latent_SizeM)] <- sapply(Average_Latent_SizeM,as.numeric)
+Average_Latent_SizeM[is.na(Average_Latent_SizeM)] <- 0
+
+SigDeM <- as.data.frame(SigDeM)
+SigDeM[,1:ncol(SigDeM)] <- sapply(SigDeM,as.numeric)
+
+sparcityM <- as.data.frame(sparcityM)
+sparcityM[,1:ncol(sparcityM)] <- sapply(sparcityM,as.numeric)
+
+miny = min(meanAuc)-0.01
+maxy = max(meanAuc)+0.025
+
+plot(thr,meanAuc[1,],ylim=c(miny,maxy),
+     main="Mean KNN's ROCAUC",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="ROC AUC",
+     type="l",
+     col=1,
+     lwd=2,
+     lty=1)
+for (ind in 2:nrow(meanAuc))
 {
-  ACCdata <- rbind(ACCdata,pbKNN[[i]]$accc)
+  lines(thr,meanAuc[ind,],col=ind,lwd=2,lty=ind)
 }
-rownames(ACCdata) <- thenames
-pander::pander(ACCdata)
+legend("topleft", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
+
+
+miny = min(pbKNNaccM) - 0.025
+maxy = max(pbKNNaccM) + 0.1
+
+plot(thr,pbKNNaccM[1,],ylim=c(miny,maxy),
+     main="KNN's Accuracy",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="Accuracy",
+     type="l",
+     col=1,
+     lwd=2)
+for (ind in 2:nrow(pbKNNaucM))
+{
+  lines(thr,pbKNNaccM[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("topleft", rownames(pbKNNaucM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+
+
+
+meanAcc <-  colMeans(pbKNNaccM[fastRows,])
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[pearsonRows,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[spearmanRows,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[!NoDrivenRows,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[NoDrivenRows,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[corRankRows,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[maxCorRankRows,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[corRankRows,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[maxCorRankRows,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[RLMfitMethod,]))
+meanAcc <-  rbind(meanAcc,colMeans(pbKNNaccM[!RLMfitMethod,]))
+
+miny = min(meanAcc)-0.01
+maxy = max(meanAcc)+0.025
+
+plot(thr,meanAcc[1,],ylim=c(miny,maxy),
+     main="Mean KNN's Accuracy",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="Accuracy",
+     type="l",
+     col=1,
+     lwd=2)
+for (ind in 2:nrow(meanAcc))
+{
+  lines(thr,meanAcc[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("topleft", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
+
+
+
+
+miny = 1
+maxy = max(Average_Latent_SizeM)
+
+plot(thr,Average_Latent_SizeM[1,],ylim=c(miny,maxy),
+     main="Average Size of Latent-Variable",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="Size",
+     type="l",
+     col=1,
+     lwd=2,
+     log = "y")
+
+for (ind in 2:nrow(Average_Latent_SizeM))
+{
+  lines(thr,Average_Latent_SizeM[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("topright", rownames(Average_Latent_SizeM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+
+
+
+
+meanAccAvgSize <-  colMeans(Average_Latent_SizeM[fastRows,])
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[pearsonRows,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[spearmanRows,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[!NoDrivenRows,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[NoDrivenRows,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[corRankRows,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[maxCorRankRows,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[corRankRows,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[maxCorRankRows,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[RLMfitMethod,]))
+meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[!RLMfitMethod,]))
+
+miny =1
+maxy = max(meanAccAvgSize) + 10
+
+plot(thr,meanAccAvgSize[1,],ylim=c(miny,maxy),
+     main="Mean Size of Average-Latent-Variable",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="Size",
+     type="l",
+     col=1,
+     lwd=2,
+     log = "y")
+for (ind in 2:nrow(meanAccAvgSize))
+{
+  lines(thr,meanAccAvgSize[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("topright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
+
+
+
+miny = min(De_SignificantM)
+maxy = max(De_SignificantM)
+
+plot(thr,De_SignificantM[1,],ylim=c(miny,maxy),
+     main="Number of Discovered Features",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="Number of Features",
+     type="l",
+     col=1,
+     lwd=2,
+     log = "y")
+
+for (ind in 2:nrow(De_SignificantM))
+{
+  lines(thr,De_SignificantM[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("bottomright", rownames(De_SignificantM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+
+
+
+
+meanDiscovered <-  colMeans(De_SignificantM[fastRows,])
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[pearsonRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[spearmanRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[!NoDrivenRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[NoDrivenRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[corRankRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[maxCorRankRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[corRankRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[maxCorRankRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[RLMfitMethod,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[!RLMfitMethod,]))
+
+miny = min(meanDiscovered)
+maxy = max(meanDiscovered) + 10
+
+plot(thr,meanDiscovered[1,],ylim=c(miny,maxy),
+     main="Average Number of Discovered Features",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="Number of Features",
+     type="l",
+     col=1,
+     lwd=2,
+     log = "y")
+for (ind in 2:nrow(meanDiscovered))
+{
+  lines(thr,meanDiscovered[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("bottomright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
+
+
+SigDeM[is.na(SigDeM)] <- 0
+miny = 1
+maxy = max(SigDeM) + 200
+
+plot(thr,SigDeM[1,],ylim=c(miny,maxy),
+     main="Number of Significant Latent Variables",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="How Many",
+     type="l",
+     col=1,
+     lwd=2,
+     log = "y")
+
+for (ind in 2:nrow(SigDeM))
+{
+  lines(thr,SigDeM[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("topright", rownames(SigDeM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+
+
+
+SigLatent <-  colMeans(SigDeM[fastRows,])
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[pearsonRows,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[spearmanRows,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[!NoDrivenRows,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[NoDrivenRows,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[corRankRows,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[maxCorRankRows,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[corRankRows,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[maxCorRankRows,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[RLMfitMethod,]))
+SigLatent <-  rbind(SigLatent,colMeans(SigDeM[!RLMfitMethod,]))
+
+miny = 1
+maxy = max(SigLatent) + 10
+
+
+plot(thr,SigLatent[1,],ylim=c(miny,maxy),
+     main="Average # of Significant Latent Variables",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="How Many",
+     type="l",
+     col=1,
+     lwd=2,
+     log = "y")
+for (ind in 2:nrow(SigLatent))
+{
+  lines(thr,SigLatent[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("topright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
+
+
+
+sparcityM[is.na(sparcityM)] <- 0
+miny = min(sparcityM)
+maxy = max(sparcityM) + 0.25 
+
+plot(thr,sparcityM[1,],ylim=c(miny,maxy),
+     main="Matrix Sparcity",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="Sparcity",
+     type="l",
+     col=1,
+     lwd=2,
+     log = "y")
+
+for (ind in 2:nrow(sparcityM))
+{
+  lines(thr,sparcityM[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("topright", rownames(sparcityM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+
+
+
+
+meanSparcity <-  colMeans(sparcityM[fastRows,])
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[pearsonRows,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[spearmanRows,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[!NoDrivenRows,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[NoDrivenRows,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[corRankRows,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[maxCorRankRows,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[corRankRows,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[maxCorRankRows,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[RLMfitMethod,]))
+meanSparcity <-  rbind(meanSparcity,colMeans(sparcityM[!RLMfitMethod,]))
+
+miny = min(meanSparcity)
+maxy = max(meanSparcity)+0.25
+
+
+plot(thr,meanSparcity[1,],ylim=c(miny,maxy),
+     main="Mean Matrix Sparcity",
+     xlab="Correlation-Matrix's Maximum Goal",
+     ylab="Sparcity",
+     type="l",
+     col=1,
+     lwd=2,
+     log = "y")
+for (ind in 2:nrow(meanSparcity))
+{
+  lines(thr,meanSparcity[ind,],col=ind,lwd=2,lty=ind)
+}
+legend("topright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
+
+
 
 ```
 
