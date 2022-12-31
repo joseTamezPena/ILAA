@@ -152,7 +152,7 @@ gplots::heatmap.2(abs(cormat),
 #                  scale = "row",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
-                  main = "Thermal Correlation",
+                  main = "COVID-19: Infrared Signal Correlation",
                   cexRow = 0.35,
                   cexCol = 0.35,
                   key.title=NA,
@@ -160,7 +160,7 @@ gplots::heatmap.2(abs(cormat),
                   xlab="Feature", ylab="Feature")
 
 #deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,Outcome="class",thr=0.90,verbose = TRUE,skipRelaxed=FALSE,corRank=FALSE)
-deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,thr=0.90,verbose = TRUE,skipRelaxed=FALSE,corRank=FALSE)
+deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,thr=0.80,verbose = TRUE,skipRelaxed=FALSE)
 #deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,Outcome="class",thr=0.95,verbose = TRUE)
 #deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,Outcome="class",thr=0.95,verbose = TRUE)
 
@@ -171,7 +171,7 @@ gplots::heatmap.2(abs(cormat),
 #                  scale = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
-                  main = "Correlation after GDSTM",
+                  main = "COVID-19 Correlation after GDSTM",
                   cexRow = 0.35,
                   cexCol = 0.35,
                   key.title=NA,
@@ -181,19 +181,24 @@ gplots::heatmap.2(abs(cormat),
 par(op)
 ```
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 3.5, fig.width= 5.0}
+### The decorrelation matrix
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+
 GDSTM <- attr(deThermal,"GDSTM")
 
-gplots::heatmap.2(log(abs(GDSTM)+1),
+gplots::heatmap.2(log(abs(1000*GDSTM)+1),
                   trace = "none",
 #                  scale = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
-                  main = "Decorrelation matrix",
+                  main = "COVID-19 Decorrelation matrix",
                   cexRow = 0.35,
                   cexCol = 0.35,
                   key.title=NA,
-                  key.xlab="Beta",
+                  key.xlab="Log(|1000*Beta|+1)",
                   xlab="Output Feature", ylab="Input Feature")
 
 par(op)
@@ -203,7 +208,7 @@ par(op)
 ### Plots
 
 ```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 5.0}
-par(mfrow=c(2,1),cex.axis=0.7,cex.main=0.8)
+par(mfrow=c(2,1),cex=0.8,cex.axis=0.7,cex.main=0.8)
 
 varlist <- colnames(SalivaThermal_Avg)[!(colnames(SalivaThermal_Avg) %in% "class")]
 varlist <- cbind(varlist,varlist)
@@ -323,7 +328,7 @@ par(op)
 
 ### Comparing Univariate ROC AUC
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5.0, fig.width= 6.0}
 par(cex=0.8)
 varlist <- colnames(SalivaThermal_d2)[!(colnames(SalivaThermal_d2) %in% "class")]
 varlist <- cbind(varlist,varlist)
@@ -381,7 +386,7 @@ for (dename in names(dc))
 points(x=wavenumberDe[valroc],
                y=aucvalueDe[valroc],col="red",pch=4,lwd=2)
 
-legend("bottomleft",legend=c("raw", "2nd Deriv","De: Parent","De: w>0"),
+legend("bottomleft",legend=c("raw", "2nd Deriv","La: Parent","La: w>0"),
        col=c("black", "blue","red","pink"), lty=c(1,0,0,0),lwd=c(3,3,2,1),pch=c(-1,1,4,10), cex=0.8)
 
 ```
