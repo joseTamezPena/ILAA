@@ -82,7 +82,7 @@ varlist <- as.data.frame(cbind(name=varlist,desc=varlist))
 
 ```{r results = "asis"}
 
-univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","cohortKSP","ROCAUC","WilcoxRes.p","FRes.p")
+univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","WilcoxRes.p","FRes.p")
 univar <- uniRankVar(varlist,
 	           paste(outcome,"~1"),
 	           outcome,
@@ -104,8 +104,11 @@ topfiveOrg <- rownames(univar$orderframe[1:5,])
 ## Decorrelation Analysis
 
 ```{r results = "asis"}
-#DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=0.80,verbose = TRUE,maxLoops=200,skipRelaxed=FALSE)
-DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE,maxLoops=200,skipRelaxed=FALSE)
+DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE)
+#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,method="spearman",type="RLM",verbose = TRUE)
+#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE)
+#DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=0.60,verbose = TRUE)
+#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE,maxLoops=200,skipRelaxed=FALSE)
 
 demat <- attr(DEdataframe,"GDSTM")
 
@@ -220,10 +223,11 @@ cvRaw <- randomCV(dataframe,
                 classSamplingType = "Pro",
                 trainFraction = fraction,
                 repetitions = repetitions,
-                fitmethod=  glm,
+#                fitmethod=  glm,
+                fitmethod=  KNN_method,
                 filtermethod=mRMR.classic_FRESA,
                 filtermethod.control=list(feature_count= fcout),
-                family="binomial"
+#                family="binomial"
 )
 bpraw <- predictionStats_binary(cvRaw$medianTest,"RAW",cex=0.75)
 
@@ -237,10 +241,11 @@ cvDe <- randomCV(DEdataframe,
                 outcome,
                 fittingFunction= filteredFit,
                 trainSampleSets= cvRaw$trainSamplesSets,
-                fitmethod=  glm,
+#                fitmethod=  glm,
+                fitmethod=  KNN_method,
                 filtermethod=mRMR.classic_FRESA,
                 filtermethod.control=list(feature_count= fcout),
-                family="binomial"
+#                family="binomial"
 )
 bpDecor <- predictionStats_binary(cvDe$medianTest,"Decorrelated",cex=0.75)
 
@@ -264,22 +269,22 @@ par(mfrow=c(2,1),cex=0.9,cex.axis=0.8)
 rawtopf <- cvRaw$featureFrequency/repetitions
 crawtopf <- rawtopf
 
-if (length(rawtopf) > 40)
+if (length(rawtopf) > 30)
 {
-  rawtopf <- rawtopf[1:40]
+  rawtopf <- rawtopf[1:30]
 }
-barplot(100*rawtopf,las=2,main="Raw Features",ylim=c(0,100.0),cex.names = 0.5,cex.axis = 0.5,ylab="Sel. %")
+barplot(100*rawtopf,las=2,main="Raw Features",ylim=c(0,100.0),cex.names = 0.35,cex.axis = 0.35,ylab="Sel. %")
 
 detopf <- cvDe$featureFrequency/repetitions
 cdetopf <- detopf
 names(cdetopf) <- str_remove_all(names(cdetopf),"Ba_")
 names(cdetopf) <- str_remove_all(names(cdetopf),"De_")
-if (length(detopf) > 40)
+if (length(detopf) > 30)
 {
-  detopf <- detopf[1:40]
+  detopf <- detopf[1:30]
 }
 
-barplot(100*detopf,las=2,main="Decorrelated Features",ylim=c(0,100.0),cex.names = 0.5,cex.axis = 0.5,ylab="Sel. %")
+barplot(100*detopf,las=2,main="Decorrelated Features",ylim=c(0,100.0),cex.names = 0.35,cex.axis = 0.35,ylab="Sel. %")
 
 par(op)
 

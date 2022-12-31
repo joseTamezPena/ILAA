@@ -105,7 +105,7 @@ varlist <- as.data.frame(cbind(name=varlist,desc=varlist))
 
 ```{r results = "asis"}
 
-univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","cohortKSP","ROCAUC","WilcoxRes.p","FRes.p")
+univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","WilcoxRes.p","FRes.p")
 univar <- uniRankVar(varlist,
 	           paste(outcome,"~1"),
 	           outcome,
@@ -127,8 +127,10 @@ topfiveOrg <- rownames(univar$orderframe[1:5,])
 ## Decorrelation Analysis
 
 ```{r results = "asis"}
+DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE)
 #DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=0.80,verbose = TRUE,maxLoops=200,skipRelaxed=FALSE)
-DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE,maxLoops=200,skipRelaxed=FALSE)
+#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE,maxLoops=200,skipRelaxed=FALSE)
+#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE)
 
 pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"De_"))/(ncol(DEdataframe)-1)))
 pander::pander(c(Base_Fraction=sum(str_detect(colnames(DEdataframe),"Ba_"))/(ncol(DEdataframe)-1)))
@@ -142,8 +144,10 @@ varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
 
 ### The heat maps.
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 7.0}
-cormat <- cor(dataframe[,varlist[,1]],method="spearman")
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+cormat <- cor(dataframe[,rownames(demat)],method="spearman")
 cormat[is.na(cormat)] <- 0
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
@@ -158,7 +162,7 @@ gplots::heatmap.2(abs(cormat),
                   xlab="Feature", ylab="Feature")
 
 
-cormat <- cor(DEdataframe[,varlistDe[,1]],method="spearman")
+cormat <- cor(DEdataframe[,colnames(demat)],method="spearman")
 cormat[is.na(cormat)] <- 0
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
@@ -199,13 +203,107 @@ pander::pander(univarDe$orderframe[1:20,univariate_columns])
 ### Comparing Decorrelation vs Original
 
 ```{r results = "asis"}
-topDecorNames <- rownames(univarDe$orderframe[univarDe$orderframe$FRes.p<1.0e-5,])
+pthr <- 0.20/(ncol(dataframe)-1)
+
+topDecorNames <- rownames(univarDe$orderframe[univarDe$orderframe$FRes.p<pthr,])
+topDecorNames <- unique(c(topDecorNames,rownames(univarDe$orderframe[1:5,])))
+
+#topDecorNames <- rownames(univarDe$orderframe[univarDe$orderframe$FRes.p<1.0e-5,])
 dc <- getDerivedCoefficients(DEdataframe)
 ### 2a Get only the ones that in the top features
 deNames_in_dc <- topDecorNames[topDecorNames %in% names(dc)]
 selectedlist <- dc[deNames_in_dc]
 theDeFormulas <- selectedlist
 ```
+
+
+## CV ROC Analysis
+
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
+par(op)
+par(mfrow=c(1,2),cex=0.9)
+fraction <-0.80
+repetitions <- 100
+
+fcout <- round(fraction*nrow(dataframe)/15+1.0)
+pander::pander(c(NumberofFeatures=fcout))
+
+cvRaw <- randomCV(dataframe,
+                outcome,
+                fittingFunction= filteredFit,
+                classSamplingType = "Pro",
+                trainFraction = fraction,
+                repetitions = repetitions,
+#                fitmethod=  glm,
+                fitmethod=  KNN_method,
+                filtermethod=mRMR.classic_FRESA,
+                filtermethod.control=list(feature_count= fcout),
+#                family="binomial"
+)
+bpraw <- predictionStats_binary(cvRaw$medianTest,"RAW",cex=0.75)
+
+
+pander::pander(bpraw$CM.analysis$tab)
+pander::pander(bpraw$accc)
+pander::pander(bpraw$aucs)
+pander::pander(bpraw$berror)
+
+cvDe <- randomCV(DEdataframe,
+                outcome,
+                fittingFunction= filteredFit,
+                trainSampleSets= cvRaw$trainSamplesSets,
+#                fitmethod=  glm,
+                fitmethod=  KNN_method,
+                filtermethod=mRMR.classic_FRESA,
+                filtermethod.control=list(feature_count= fcout),
+#                family="binomial"
+)
+bpDecor <- predictionStats_binary(cvDe$medianTest,"Decorrelated",cex=0.75)
+
+par(op)
+
+pander::pander(bpDecor$CM.analysis$tab)
+pander::pander(bpDecor$accc)
+pander::pander(bpDecor$aucs)
+pander::pander(bpDecor$berror)
+
+### Here we compute the probability that the outcome-driven decorrelation ROC is superior to the RAW ROC. 
+pander::pander(roc.test(bpDecor$ROC.analysis$roc.predictor,bpraw$ROC.analysis$roc.predictor,alternative = "greater"))
+
+
+```
+
+## Feature Frequency Plots
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
+par(mfrow=c(2,1),cex=0.9,cex.axis=0.8)
+
+rawtopf <- cvRaw$featureFrequency/repetitions
+crawtopf <- rawtopf
+
+if (length(rawtopf) > 30)
+{
+  rawtopf <- rawtopf[1:30]
+}
+barplot(100*rawtopf,las=2,main="Raw Features",ylim=c(0,100.0),cex.names = 0.35,cex.axis = 0.35,ylab="Sel. %")
+
+detopf <- cvDe$featureFrequency/repetitions
+cdetopf <- detopf
+names(cdetopf) <- str_remove_all(names(cdetopf),"Ba_")
+names(cdetopf) <- str_remove_all(names(cdetopf),"De_")
+if (length(detopf) > 30)
+{
+  detopf <- detopf[1:30]
+}
+
+barplot(100*detopf,las=2,main="Decorrelated Features",ylim=c(0,100.0),cex.names = 0.35,cex.axis = 0.35,ylab="Sel. %")
+
+par(op)
+
+
+
+```
+
+
 
 ### Final Table
 
@@ -216,7 +314,7 @@ unlistdecorr <- unique(names(unlist(unlistdecorr)))
 
 finalTableDe <- univarDe$orderframe[deNames_in_dc,univariate_columns]
 
-finalTableOr <- univar$orderframe[unique(c(topfiveOrg,unlistdecorr)),univariate_columns]
+finalTableOr <- univar$orderframe[unique(c(topfiveOrg,unlistdecorr,names(crawtopf)[1:2],names(cdetopf)[1:2])),univariate_columns]
 
 finalTable <- rbind(finalTableOr,finalTableDe)
 
@@ -249,8 +347,12 @@ orgnamez <- rownames(finalTable)
 orgnamez <- str_remove_all(orgnamez,"Ba_")
 orgnamez <- str_remove_all(orgnamez,"De_")
 finalTable$uAUC <- univar$orderframe[orgnamez,"ROCAUC"]
+finalTable$raw_Freq <- crawtopf[orgnamez]
+finalTable$de_Freq <- cdetopf[orgnamez]
 finalTable$DecorFormula <- deFromula[rownames(finalTable)]
 finalTable <- finalTable[order(-finalTable$ROCAUC),]
+
 pander::pander(finalTable)
 ```
+
 

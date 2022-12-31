@@ -159,8 +159,8 @@ gplots::heatmap.2(abs(cormat),
                   key.xlab="Spearman Correlation",
                   xlab="Feature", ylab="Feature")
 
+deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,thr=0.80,verbose = TRUE)
 #deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,Outcome="class",thr=0.90,verbose = TRUE,skipRelaxed=FALSE,corRank=FALSE)
-deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,thr=0.80,verbose = TRUE,skipRelaxed=FALSE)
 #deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,Outcome="class",thr=0.95,verbose = TRUE)
 #deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,Outcome="class",thr=0.95,verbose = TRUE)
 
@@ -390,3 +390,52 @@ legend("bottomleft",legend=c("raw", "2nd Deriv","La: Parent","La: w>0"),
        col=c("black", "blue","red","pink"), lty=c(1,0,0,0),lwd=c(3,3,2,1),pch=c(-1,1,4,10), cex=0.8)
 
 ```
+
+
+### Final Table 
+
+```{r results = "asis"}
+
+univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","ZGLM","FRes.p")
+
+pwilvalue <- univarDe$orderframe$FRes.p
+valroc <- pwilvalue < pthr
+
+finalTable <- univarDe$orderframe[valroc,univariate_columns]
+
+theFormulas <- dc[rownames(finalTable)]
+deFromula <- character(length(theFormulas))
+names(deFromula) <- rownames(finalTable)
+
+dx <- names(deFromula)[1]
+for (dx in names(deFromula))
+{
+  coef <- theFormulas[[dx]]
+  cname <- names(theFormulas[[dx]])
+  names(cname) <- cname
+  for (cf in names(coef))
+  {
+    if (cf != dx)
+    {
+      if (coef[cf]>0)
+      {
+        deFromula[dx] <- paste(deFromula[dx],
+                               sprintf("+ %5.3f*%s",coef[cf],cname[cf]))
+      }
+      else
+      {
+        deFromula[dx] <- paste(deFromula[dx],
+                               sprintf("%5.3f*%s",coef[cf],cname[cf]))
+      }
+    }
+  }
+}
+orgnamez <- rownames(finalTable)
+orgnamez <- str_remove_all(orgnamez,"Ba_")
+orgnamez <- str_remove_all(orgnamez,"De_")
+finalTable$DecorFormula <- deFromula[rownames(finalTable)]
+pander::pander(finalTable)
+
+```
+
+

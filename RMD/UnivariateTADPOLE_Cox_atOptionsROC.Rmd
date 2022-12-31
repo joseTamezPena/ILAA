@@ -28,17 +28,17 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 ```{r}
 TrainFraction <- 0.50;
 sig_pvalue <- 0.01
-thr <- c(0.05,0.2,0.4,0.5,0.6,0.8,0.95);
+thr <- c(0.05,0.2,0.4,0.6,0.8,0.95);
 method  <- c("fast","pearson","spearman","kendall");
 type <- c("LM","RLM")
 DeOutcome <- c("NoDriven","Driven")
 corRankS <- c("FALSE","TRUE")
 
-thr <- thr[6]
+thr <- thr[5]
 method  <- method[1]
 type <- type[1] 
 DeOutcome <- DeOutcome[2]
-corRankS <- corRankS[1]
+corRankS <- corRankS[2]
 
 
 corRank <- corRankS == "TRUE"
