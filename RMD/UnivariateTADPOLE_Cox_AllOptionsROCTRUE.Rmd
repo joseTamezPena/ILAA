@@ -305,7 +305,7 @@ corRank <- c(FALSE,TRUE)
 
 if (dataLoad)
 {
-  load("~/GitHub/LatentBiomarkers/RMD/TADPOLE_ALL_Options.RData")
+  load("~/GitHub/LatentBiomarkers/RMD/TADPOLE_ALL_Options_TRUE.RData")
 } else
 {
   
@@ -363,6 +363,7 @@ if (dataLoad)
                                                      method=meth,
                                                      type=typ,
                                                      corRank=corran,
+                                                     relaxed=FALSE,
                                                      verbose = FALSE)
             } else
             {
@@ -372,6 +373,7 @@ if (dataLoad)
                                                      method=meth,
                                                      type=typ,
                                                      corRank=corran,
+                                                     relaxed=FALSE,
                                                      verbose = FALSE)
             }
             demat <- attr(DEdataframeTrain,"GDSTM")
@@ -828,7 +830,7 @@ legend("topright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex
 ### Saving All
 ```{r}
 
-save.image("~/GitHub/LatentBiomarkers/RMD/TADPOLE_ALL_Options.RData")
+save.image("~/GitHub/LatentBiomarkers/RMD/TADPOLE_ALL_Options_TRUE.RData")
 
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: "TADPOLE_Survival"
+title: "Parkinsons_Speach All Options"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output: 
@@ -22,7 +22,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
 ```
 
-# TADPOLE Univariate Options Analysis
+# Parkinsons Univariate Options Analysis
 
 
 ### Loading the libraries
@@ -42,231 +42,59 @@ TrainFraction <- 0.50;
 dataLoad = FALSE
 
 ```
-## The data set
+
+## The Data
 
 ```{r}
-TADPOLE_D1_D2 <- read.csv("~/GitHub/BSWiMS/Data/TADPOLE/TADPOLE_D1_D2.csv")
-TADPOLE_D1_D2_Dict <- read.csv("~/GitHub/BSWiMS/Data/TADPOLE/TADPOLE_D1_D2_Dict.csv")
-TADPOLE_D1_D2_Dict_LR <- as.data.frame(read_excel("~/GitHub/BSWiMS/Data/TADPOLE/TADPOLE_D1_D2_Dict_LR.xlsx",sheet = "LeftRightFeatures"))
 
+pd_speech_features <- as.data.frame(read_excel("~/GitHub/FCA/Data/pd_speech_features.xlsx",sheet = "pd_speech_features", range = "A2:ACB758"))
 
-rownames(TADPOLE_D1_D2_Dict) <- TADPOLE_D1_D2_Dict$FLDNAME
-
-```
-
-## Conditioning the data
-
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
-
-# mm3 to mm
-isVolume <- c("Ventricles","Hippocampus","WholeBrain","Entorhinal","Fusiform","MidTemp","ICV",
-              TADPOLE_D1_D2_Dict$FLDNAME[str_detect(TADPOLE_D1_D2_Dict$TEXT,"Volume")]
-              )
-
-
-#TADPOLE_D1_D2[,isVolume] <- apply(TADPOLE_D1_D2[,isVolume],2,'^',(1/3))
-TADPOLE_D1_D2[,isVolume] <- TADPOLE_D1_D2[,isVolume]^(1/3)
-
-# mm2 to mm
-isArea <- TADPOLE_D1_D2_Dict$FLDNAME[str_detect(TADPOLE_D1_D2_Dict$TEXT,"Area")]
-TADPOLE_D1_D2[,isArea] <- sqrt(TADPOLE_D1_D2[,isArea])
-
-# Get only cross sectional measurements
-FreeSurfersetCross <- str_detect(colnames(TADPOLE_D1_D2),"UCSFFSX")
-
-# The subset of baseline measurements
-baselineTadpole <- subset(TADPOLE_D1_D2,VISCODE=="bl")
-table(baselineTadpole$DX)
-table(baselineTadpole$DX_bl)
-
-rownames(baselineTadpole) <- baselineTadpole$PTID
-
-
-validBaselineTadpole <- cbind(DX=baselineTadpole$DX_bl,
-                                 AGE=baselineTadpole$AGE,
-                                 Gender=1*(baselineTadpole$PTGENDER=="Female"),
-                                 ADAS11=baselineTadpole$ADAS11,
-                                 ADAS13=baselineTadpole$ADAS13,
-                                 MMSE=baselineTadpole$MMSE,
-                                 RAVLT_immediate=baselineTadpole$RAVLT_immediate,
-                                 RAVLT_learning=baselineTadpole$RAVLT_learning,
-                                 RAVLT_forgetting=baselineTadpole$RAVLT_forgetting,
-                                 RAVLT_perc_forgetting=baselineTadpole$RAVLT_perc_forgetting,
-                                 FAQ=baselineTadpole$FAQ,
-                                 Ventricles=baselineTadpole$Ventricles,
-                                 Hippocampus=baselineTadpole$Hippocampus,
-                                 WholeBrain=baselineTadpole$WholeBrain,
-                                 Entorhinal=baselineTadpole$Entorhinal,
-                                 Fusiform=baselineTadpole$Fusiform,
-                                 MidTemp=baselineTadpole$MidTemp,
-                                 ICV=baselineTadpole$ICV,
-                                 baselineTadpole[,FreeSurfersetCross])
-
-
-LeftFields <- TADPOLE_D1_D2_Dict_LR$LFN
-names(LeftFields) <- LeftFields
-LeftFields <- LeftFields[LeftFields %in% colnames(validBaselineTadpole)]
-RightFields <- TADPOLE_D1_D2_Dict_LR$RFN
-names(RightFields) <- RightFields
-RightFields <- RightFields[RightFields %in% colnames(validBaselineTadpole)]
-
-## Normalize to ICV
-validBaselineTadpole$Ventricles=validBaselineTadpole$Ventricles/validBaselineTadpole$ICV
-validBaselineTadpole$Hippocampus=validBaselineTadpole$Hippocampus/validBaselineTadpole$ICV
-validBaselineTadpole$WholeBrain=validBaselineTadpole$WholeBrain/validBaselineTadpole$ICV
-validBaselineTadpole$Entorhinal=validBaselineTadpole$Entorhinal/validBaselineTadpole$ICV
-validBaselineTadpole$Fusiform=validBaselineTadpole$Fusiform/validBaselineTadpole$ICV
-validBaselineTadpole$MidTemp=validBaselineTadpole$MidTemp/validBaselineTadpole$ICV
-
-leftData <- validBaselineTadpole[,LeftFields]/validBaselineTadpole$ICV
-RightData <- validBaselineTadpole[,RightFields]/validBaselineTadpole$ICV
-
-## get mean and relative difference 
-meanLeftRight <- (leftData + RightData)/2
-difLeftRight <- abs(leftData - RightData)
-reldifLeftRight <- difLeftRight/meanLeftRight
-colnames(meanLeftRight) <- paste("M",colnames(meanLeftRight),sep="_")
-colnames(difLeftRight) <- paste("D",colnames(difLeftRight),sep="_")
-colnames(reldifLeftRight) <- paste("RD",colnames(reldifLeftRight),sep="_")
-
-
-validBaselineTadpole <- validBaselineTadpole[,!(colnames(validBaselineTadpole) %in% 
-                                               c(LeftFields,RightFields))]
-#validBaselineTadpole <- cbind(validBaselineTadpole,meanLeftRight,difLeftRight,reldifLeftRight)
-validBaselineTadpole <- cbind(validBaselineTadpole,meanLeftRight,difLeftRight)
-
-## Remove columns with too many NA more than %15 of NA
-nacount <- apply(is.na(validBaselineTadpole),2,sum)/nrow(validBaselineTadpole) < 0.15
-diagnose <- validBaselineTadpole$DX
-pander::pander(table(diagnose))
-validBaselineTadpole <- validBaselineTadpole[,nacount]
-## Remove character columns
-ischar <- sapply(validBaselineTadpole,class) == "character"
-validBaselineTadpole <- validBaselineTadpole[,!ischar]
-## Place back diagnose
-validBaselineTadpole$DX <- diagnose
-
-
-validBaselineTadpole <- validBaselineTadpole[complete.cases(validBaselineTadpole),]
-ischar <- sapply(validBaselineTadpole,class) == "character"
-validBaselineTadpole[,!ischar] <- sapply(validBaselineTadpole[,!ischar],as.numeric)
-
-colnames(validBaselineTadpole) <- str_remove_all(colnames(validBaselineTadpole),"_UCSFFSX_11_02_15_UCSFFSX51_08_01_16")
-colnames(validBaselineTadpole) <- str_replace_all(colnames(validBaselineTadpole)," ","_")
-validBaselineTadpole$LONISID <- NULL
-validBaselineTadpole$IMAGEUID <- NULL
-validBaselineTadpole$LONIUID <- NULL
-
-diagnose <- as.character(validBaselineTadpole$DX)
-validBaselineTadpole$DX <- diagnose
-pander::pander(table(validBaselineTadpole$DX))
-
-
-validBaselineTadpole[validBaselineTadpole$DX %in% c("EMCI","LMCI"),"DX"] <- "MCI" 
-validBaselineTadpole[validBaselineTadpole$DX %in% c("CN","SMC"),"DX"] <- "NL" 
-
-pander::pander(table(validBaselineTadpole$DX))
 
 
 
 ```
 
-## Get the Time To Event on MCI Subjects
+### The Average of the Three Repetitions
+
+Each subject had three repeated observations. Here I'll use the average of the three experiments per subject.
 
 ```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
+rep1Parkison <- subset(pd_speech_features,RID==1)
+rownames(rep1Parkison) <- rep1Parkison$id
+rep1Parkison$id <- NULL
+rep1Parkison$RID <- NULL
+rep1Parkison[,1:ncol(rep1Parkison)] <- sapply(rep1Parkison,as.numeric)
 
-subjectsID <- rownames(validBaselineTadpole)
-visitsID <- unique(TADPOLE_D1_D2$VISCODE)
-baseDx <- TADPOLE_D1_D2[TADPOLE_D1_D2$VISCODE=="bl",c("PTID","DX","EXAMDATE")]
-rownames(baseDx) <- baseDx$PTID 
-baseDx <- baseDx[subjectsID,]
-lastDx <- baseDx
-toDementia <- baseDx
-table(lastDx$DX)
-hasDementia <- lastDx$PTID[str_detect(lastDx$DX,"Dementia")]
+rep2Parkison <- subset(pd_speech_features,RID==2)
+rownames(rep2Parkison) <- rep2Parkison$id
+rep2Parkison$id <- NULL
+rep2Parkison$RID <- NULL
+rep2Parkison[,1:ncol(rep2Parkison)] <- sapply(rep2Parkison,as.numeric)
 
+rep3Parkison <- subset(pd_speech_features,RID==3)
+rownames(rep3Parkison) <- rep3Parkison$id
+rep3Parkison$id <- NULL
+rep3Parkison$RID <- NULL
+rep3Parkison[,1:ncol(rep3Parkison)] <- sapply(rep3Parkison,as.numeric)
 
-for (vid in visitsID)
-{
-  DxValue <- TADPOLE_D1_D2[TADPOLE_D1_D2$VISCODE==vid,c("PTID","DX","EXAMDATE")]
-  rownames(DxValue) <- DxValue$PTID 
-  DxValue <- DxValue[DxValue$PTID %in% subjectsID,]
-  noDX <- DxValue$PTID[nchar(DxValue$DX) < 1]
-  print(length(noDX))
-  DxValue[noDX,] <- lastDx[noDX,]
-  inLast <- lastDx$PTID[lastDx$PTID %in% DxValue$PTID]
-  print(length(inLast))
-  lastDx[inLast,] <- DxValue[inLast,]
-  noDementia <- !(toDementia$PTID %in% hasDementia)
-  toDementia[noDementia,] <- lastDx[noDementia,]
-  hasDementia <- unique(c(hasDementia,lastDx$PTID[str_detect(lastDx$DX,"Dementia")]))
-}
-table(lastDx$DX)
-baseMCI <-baseDx$PTID[baseDx$DX == "MCI"]
-lastDementia <- lastDx$PTID[str_detect(lastDx$DX,"Dementia")]
-lastDementia2 <- toDementia$PTID[str_detect(toDementia$DX,"Dementia")]
-lastNL <- lastDx$PTID[str_detect(lastDx$DX,"NL")]
-
-MCIatBaseline <- baseDx[baseMCI,]
-MCIatEvent <- toDementia[baseMCI,]
-MCIatLast <- lastDx[baseMCI,]
-
-MCIconverters <- MCIatBaseline[baseMCI %in% lastDementia,]
-MCI_No_converters <- MCIatBaseline[!(baseMCI %in% MCIconverters$PTID),]
-MCIconverters$TimeToEvent <- (as.Date(toDementia[MCIconverters$PTID,"EXAMDATE"]) 
-                                   - as.Date(MCIconverters$EXAMDATE))
-
-sum(MCIconverters$TimeToEvent ==0)
-
-
-MCIconverters$AtEventDX <- MCIatEvent[MCIconverters$PTID,"DX"]
-MCIconverters$LastDX <- MCIatLast[MCIconverters$PTID,"DX"]
-
-MCI_No_converters$TimeToEvent <- (as.Date(lastDx[MCI_No_converters$PTID,"EXAMDATE"]) 
-                                   - as.Date(MCI_No_converters$EXAMDATE))
-
-MCI_No_converters$LastDX <- MCIatLast[MCI_No_converters$PTID,"DX"]
-
-MCI_No_converters <- subset(MCI_No_converters,TimeToEvent > 0)
-
-
-
-```
-
-
-# Prognosis MCI to AD Conversion
-
-## the set
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
-
-MCIPrognosisIDs <- c(MCIconverters$PTID,MCI_No_converters$PTID)
-
-TADPOLECrossMRI <- validBaselineTadpole[MCIPrognosisIDs,]
-table(TADPOLECrossMRI$DX)
-TADPOLECrossMRI$DX <- NULL
-TADPOLECrossMRI$status <- 1*(rownames(TADPOLECrossMRI) %in% MCIconverters$PTID)
-table(TADPOLECrossMRI$status)
-TADPOLECrossMRI$TimeToEvent <- numeric(nrow(TADPOLECrossMRI))
-TADPOLECrossMRI[MCIconverters$PTID,"TimeToEvent"] <- MCIconverters$TimeToEvent
-TADPOLECrossMRI[MCI_No_converters$PTID,"TimeToEvent"] <- MCI_No_converters$TimeToEvent
-
+whof <- !(colnames(rep1Parkison) %in% c("gender","class"));
+avgParkison <- rep1Parkison;
+avgParkison[,whof] <- (rep1Parkison[,whof] + rep2Parkison[,whof] + rep3Parkison[,whof])/3
+## I apply the log transform to the data
+##avgParkison[,whof] <- signedlog(avgParkison[,whof])
+avgParkison[,whof] <- FRESAScale(avgParkison[,whof],method="OrderLogit")$scaledData
+pander::pander(table(avgParkison$class))
 
 
 set.seed(1)
-trainCases <- sample(nrow(TADPOLECrossMRI),nrow(TADPOLECrossMRI)*TrainFraction)
+trainCases <- sample(nrow(avgParkison),nrow(avgParkison)*TrainFraction)
 
-TADPOLE_Conv_TRAIN <- TADPOLECrossMRI[trainCases,]
-TADPOLE_Conv_TEST <- TADPOLECrossMRI[-trainCases,]
+avgParkison_train <- avgParkison[trainCases,]
+avgParkison_test <- avgParkison[-trainCases,]
 
-pander::pander(table(TADPOLE_Conv_TRAIN$status))
-pander::pander(table(TADPOLE_Conv_TEST$status))
+pander::pander(table(avgParkison_train$class))
+pander::pander(table(avgParkison_test$class))
 
-surTimeTrain <- TADPOLE_Conv_TRAIN$TimeToEvent
-surTimeTest <- TADPOLE_Conv_TEST$TimeToEvent
-
-
-TADPOLE_Conv_TRAIN$TimeToEvent <- NULL
-TADPOLE_Conv_TEST$TimeToEvent <- NULL
 
 ```
 
@@ -274,9 +102,9 @@ TADPOLE_Conv_TEST$TimeToEvent <- NULL
 #### Analysis parameters
 
 ```{r results = "asis"}
-dataframe <- TADPOLE_Conv_TRAIN
-dataframeTest <- TADPOLE_Conv_TEST
-outcome <- "status"
+dataframe <- avgParkison_train
+dataframeTest <- avgParkison_test
+outcome <- "class"
 
 
 
@@ -285,7 +113,7 @@ outcome <- "status"
 
 ### All the run options
 ```{r}
-sig_pvalue <- 0.01
+sig_pvalue <- 0.05
 thr <- c(0.05,0.2,0.4,0.6,0.8,0.95);
 method  <- c("fast","pearson","spearman");
 type <- c("LM","RLM")
@@ -305,7 +133,7 @@ corRank <- c(FALSE,TRUE)
 
 if (dataLoad)
 {
-  load("~/GitHub/LatentBiomarkers/RMD/TADPOLE_ALL_Options.RData")
+  load("~/GitHub/LatentBiomarkers/RMD/Parkinsons_ALL_Options_TRUE.RData")
 } else
 {
   
@@ -363,6 +191,7 @@ if (dataLoad)
                                                      method=meth,
                                                      type=typ,
                                                      corRank=corran,
+                                                     relaxed=FALSE,
                                                      verbose = FALSE)
             } else
             {
@@ -372,6 +201,7 @@ if (dataLoad)
                                                      method=meth,
                                                      type=typ,
                                                      corRank=corran,
+                                                     relaxed=FALSE,
                                                      verbose = FALSE)
             }
             demat <- attr(DEdataframeTrain,"GDSTM")
@@ -395,16 +225,12 @@ if (dataLoad)
             
             
             varlist_DeAll <- colnames(DEdataframe)
-            varlist_DeAll <- varlist_DeAll[!(varlist_DeAll %in% c(outcome,"TimeToEvent"))]
+            varlist_DeAll <- varlist_DeAll[!(varlist_DeAll %in% c(outcome))]
             varlist_DeAll <- as.data.frame(cbind(name=varlist_DeAll,desc=varlist_DeAll))
             
   
-            DEdataframeTime <- cbind(DEdataframeTrain,SurvTime=surTimeTest)
             
-            
-            pthr <- sig_pvalue/(ncol(dataframe)-1)
-            
-            pDe <- univariate_Logit(DEdataframeTime,formula("Surv(SurvTime,status)~."));
+            pDe <- univariate_Wilcoxon(DEdataframeTrain,outcome,pvalue=sig_pvalue);
             topDecorNames <- names(pDe);
   
             dc <- getDerivedCoefficients(DEdataframeTrain)
@@ -418,8 +244,7 @@ if (dataLoad)
             topSigDe <- topDecorNames
             
             pDeDe <- pDe[names(pDe) %in% varlistDe[,1]]
-            pDeDe <- pDeDe[pDeDe<sig_pvalue]
-            
+
             De_Significant <- c(De_Significant,length(topSigDe))
             SigDe <- c(SigDe,length(pDeDe))
   
@@ -505,8 +330,8 @@ pander::pander(De_SignificantM)
 pander::pander(pbKNNaucM)
 pander::pander(pbKNNaccM)
 
-miny = min(pbKNNaucM)-0.05
-maxy = max(pbKNNaucM)+0.15
+miny = 0.15
+maxy = max(pbKNNaucM)
 
 plot(thr,pbKNNaucM[1,],ylim=c(miny,maxy),
      main="KNN's ROCAUC",
@@ -520,7 +345,7 @@ for (ind in 2:nrow(pbKNNaucM))
   lines(thr,pbKNNaucM[ind,],col=ind,lwd=2,lty=ind)
 }
 
-legend("topleft", rownames(pbKNNaucM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+legend("bottomright", rownames(pbKNNaucM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
 
 fastRows <- str_detect(rownames(pbKNNaucM),"fast")
 pearsonRows <- str_detect(rownames(pbKNNaucM),"pearson")
@@ -556,7 +381,7 @@ SigDeM[,1:ncol(SigDeM)] <- sapply(SigDeM,as.numeric)
 sparcityM <- as.data.frame(sparcityM)
 sparcityM[,1:ncol(sparcityM)] <- sapply(sparcityM,as.numeric)
 
-miny = min(meanAuc)-0.01
+miny = 0.65
 maxy = max(meanAuc)+0.025
 
 plot(thr,meanAuc[1,],ylim=c(miny,maxy),
@@ -571,10 +396,10 @@ for (ind in 2:nrow(meanAuc))
 {
   lines(thr,meanAuc[ind,],col=ind,lwd=2,lty=ind)
 }
-legend("topleft", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
+legend("bottomright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
 
 
-miny = min(pbKNNaccM) - 0.025
+miny = 0.35
 maxy = max(pbKNNaccM) + 0.1
 
 plot(thr,pbKNNaccM[1,],ylim=c(miny,maxy),
@@ -588,7 +413,7 @@ for (ind in 2:nrow(pbKNNaucM))
 {
   lines(thr,pbKNNaccM[ind,],col=ind,lwd=2,lty=ind)
 }
-legend("topleft", rownames(pbKNNaucM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+legend("bottomright", rownames(pbKNNaucM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
 
 
 
@@ -622,7 +447,7 @@ legend("topleft", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=
 
 
 miny = 1
-maxy = max(Average_Latent_SizeM)
+maxy = 20*max(Average_Latent_SizeM)
 
 plot(thr,Average_Latent_SizeM[1,],ylim=c(miny,maxy),
      main="Average Size of Latent-Variable",
@@ -653,7 +478,7 @@ meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[RLMfitMeth
 meanAccAvgSize <-  rbind(meanAccAvgSize,colMeans(Average_Latent_SizeM[!RLMfitMethod,]))
 
 miny =1
-maxy = max(meanAccAvgSize) + 10
+maxy = 5*max(meanAccAvgSize)
 
 plot(thr,meanAccAvgSize[1,],ylim=c(miny,maxy),
      main="Mean Size of Average-Latent-Variable",
@@ -672,7 +497,7 @@ legend("topright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex
 
 
 miny = min(De_SignificantM)
-maxy = max(De_SignificantM)
+maxy = 20*max(De_SignificantM)
 
 plot(thr,De_SignificantM[1,],ylim=c(miny,maxy),
      main="Number of Discovered Features",
@@ -687,7 +512,7 @@ for (ind in 2:nrow(De_SignificantM))
 {
   lines(thr,De_SignificantM[ind,],col=ind,lwd=2,lty=ind)
 }
-legend("bottomright", rownames(De_SignificantM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+legend("topleft", rownames(De_SignificantM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
 
 
 
@@ -722,7 +547,7 @@ legend("bottomright", legnames,lty=1:length(legnames), col = 1:length(legnames),
 
 SigDeM[is.na(SigDeM)] <- 0
 miny = 1
-maxy = max(SigDeM) + 200
+maxy = 20*max(SigDeM)
 
 plot(thr,SigDeM[1,],ylim=c(miny,maxy),
      main="Number of Significant Latent Variables",
@@ -767,13 +592,13 @@ for (ind in 2:nrow(SigLatent))
 {
   lines(thr,SigLatent[ind,],col=ind,lwd=2,lty=ind)
 }
-legend("topright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
+legend("bottomright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex=0.75)
 
 
 
 sparcityM[is.na(sparcityM)] <- 0
 miny = min(sparcityM)
-maxy = max(sparcityM) + 0.25 
+maxy = max(sparcityM) + 0.75 
 
 plot(thr,sparcityM[1,],ylim=c(miny,maxy),
      main="Matrix Sparcity",
@@ -828,7 +653,7 @@ legend("topright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex
 ### Saving All
 ```{r}
 
-save.image("~/GitHub/LatentBiomarkers/RMD/TADPOLE_ALL_Options.RData")
+save.image("~/GitHub/LatentBiomarkers/RMD/Parkinsons_ALL_Options_TRUE.RData")
 
 ```
 

@@ -128,9 +128,6 @@ topfiveOrg <- rownames(univar$orderframe[1:5,])
 
 ```{r results = "asis"}
 DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE)
-#DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=0.80,verbose = TRUE,maxLoops=200,skipRelaxed=FALSE)
-#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE,maxLoops=200,skipRelaxed=FALSE)
-#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE)
 
 pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"De_"))/(ncol(DEdataframe)-1)))
 pander::pander(c(Base_Fraction=sum(str_detect(colnames(DEdataframe),"Ba_"))/(ncol(DEdataframe)-1)))

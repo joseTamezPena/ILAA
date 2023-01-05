@@ -34,11 +34,11 @@ type <- c("LM","RLM")
 DeOutcome <- c("NoDriven","Driven")
 corRankS <- c("FALSE","TRUE")
 
-thr <- thr[4]
+thr <- thr[1]
 method  <- method[1]
 type <- type[1] 
-DeOutcome <- DeOutcome[2]
-corRankS <- corRankS[1]
+DeOutcome <- DeOutcome[1]
+corRankS <- corRankS[2]
 
 
 corRank <- corRankS == "TRUE"
@@ -363,13 +363,15 @@ univar$orderframe$pvalue=pnorm(abs(univar$orderframe$ZGLM),lower.tail = FALSE)
 
 if (DeOutcome != "Driven")
 {
-  DEdataframeTrain <- GDSTMDecorrelation(dataframe,thr=thr,method=method,type=type,corRank=corRank,verbose = TRUE)
+  DEdataframeTrain <- GDSTMDecorrelation(dataframe,thr=thr,method=method,type=type,corRank=corRank,relaxed=FALSE,verbose = TRUE)
 } else
 {
-  DEdataframeTrain <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=thr,method=method,type=type,corRank=corRank,verbose = TRUE)
+  DEdataframeTrain <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=thr,method=method,type=type,relaxed=FALSE,corRank=corRank,verbose = TRUE)
 }
 
-cormat <- abs(cor(DEdataframeTrain[,colnames(DEdataframeTrain) != outcome],method="spearman"));
+#cormat <- abs(cor(DEdataframeTrain[,colnames(DEdataframeTrain) != outcome],method="spearman"));
+cormat <- abs(cor(DEdataframeTrain[,colnames(DEdataframeTrain) != outcome],method="pearson"));
+diag(cormat) <- 0;
 
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
@@ -383,8 +385,9 @@ gplots::heatmap.2(abs(cormat),
                   key.xlab="Spearman Correlation",
                   xlab="Feature", ylab="Feature")
 
-diag(cormat) <- 0;
 pander::pander(max(cormat))
+maxcor <- apply(cormat,2,max)
+#pander::pander(maxcor[maxcor>thr])
 
 demat <- attr(DEdataframeTrain,"GDSTM")
 DEdataframe <- predictDecorrelate(DEdataframeTrain,dataframeTest)
@@ -594,7 +597,7 @@ finalTable$ROCAUC <- NULL
 finalTable$kendall.p <- NULL
 pander::pander(finalTable)
 
-save(finalTable,file=paste("FinalTable",thr,method,type,DeOutcome,corRankS,".RDATA",sep="_"))
+save(finalTable,file=paste("FinalTable",thr,method,type,DeOutcome,corRankS,"TRUE.RDATA",sep="_"))
 
 ```
 

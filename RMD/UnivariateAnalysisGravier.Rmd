@@ -116,11 +116,6 @@ pander::pander(prSurvTest$aucs)
 
 ```{r results = "asis"}
 DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE)
-#DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=0.80,verbose = TRUE)
-#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE,corRank=TRUE)
-#DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.60,verbose = TRUE,skipRelaxed=FALSE)
-#DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=0.60,verbose = TRUE,skipRelaxed=FALSE)
-#DEdataframe <- GDSTMDecorrelation(dataframe,Outcome=outcome,method="spearman",type="LM",thr=0.50,verbose = TRUE,skipRelaxed=FALSE)
 
 
 
