@@ -321,7 +321,7 @@ if (dataLoad)
   sparcityM <- NULL
   Average_Latent_SizeM <- NULL
   SigDeM <- NULL
-  De_SignificantM <- NULL
+  La_SignificantM <- NULL
   pbKNNaucM <- NULL
   pbKNNaccM <- NULL
   
@@ -347,7 +347,7 @@ if (dataLoad)
           sparcity <- numeric()
           Average_Latent_Size  <- numeric()
           SigDe <- numeric()
-          De_Significant <- numeric()
+          La_Significant <- numeric()
           pbKNNauc <- numeric()
           pbKNNacc <- numeric()
           for (thrs in thr)
@@ -379,12 +379,12 @@ if (dataLoad)
             
             totFe <- ncol(DEdataframe)-1
             totBa <- c(totBa,sum(str_detect(colnames(DEdataframe),"Ba_")))
-            totDe <- c(totDe, sum(str_detect(colnames(DEdataframe),"De_")))
+            totDe <- c(totDe, sum(str_detect(colnames(DEdataframe),"La_")))
             toUn <- sum(apply(demat!=0,2,sum)==1)
             toUnmat <- c(toUnmat,toUn )
             una <-  totFe - ncol(demat) + toUn
             unaltered <- c(unaltered,una)
-            Decorrleated_Fraction <- c(Decorrleated_Fraction,sum(str_detect(colnames(DEdataframe),"De_"))/totFe)
+            Decorrleated_Fraction <- c(Decorrleated_Fraction,sum(str_detect(colnames(DEdataframe),"La_"))/totFe)
             Base_Fraction <- c(Base_Fraction,sum(str_detect(colnames(DEdataframe),"Ba_"))/totFe)
             
             Unaltered_Fraction <- c(Unaltered_Fraction,una/totFe)
@@ -420,7 +420,7 @@ if (dataLoad)
             pDeDe <- pDe[names(pDe) %in% varlistDe[,1]]
             pDeDe <- pDeDe[pDeDe<sig_pvalue]
             
-            De_Significant <- c(De_Significant,length(topSigDe))
+            La_Significant <- c(La_Significant,length(topSigDe))
             SigDe <- c(SigDe,length(pDeDe))
   
             
@@ -441,7 +441,7 @@ if (dataLoad)
           sparcityM <- rbind(sparcityM,sparcity)
           Average_Latent_SizeM <- rbind(Average_Latent_SizeM,Average_Latent_Size)
           SigDeM <- rbind(SigDeM,SigDe)
-          De_SignificantM <- rbind(De_SignificantM,De_Significant)
+          La_SignificantM <- rbind(La_SignificantM,La_Significant)
           pbKNNaucM <- rbind(pbKNNaucM,pbKNNauc)
           pbKNNaccM <- rbind(pbKNNaccM,pbKNNacc)
   
@@ -471,7 +471,7 @@ rownames(Unaltered_FractionM) <- thenames
 rownames(sparcityM) <- thenames
 rownames(Average_Latent_SizeM) <- thenames
 rownames(SigDeM) <- thenames
-rownames(De_SignificantM) <- thenames
+rownames(La_SignificantM) <- thenames
 rownames(pbKNNaucM) <- thenames
 rownames(pbKNNaccM) <- thenames
 
@@ -485,7 +485,7 @@ colnames(Unaltered_FractionM) <- thr
 colnames(sparcityM) <- thr
 colnames(Average_Latent_SizeM) <- thr
 colnames(SigDeM) <- thr
-colnames(De_SignificantM) <- thr
+colnames(La_SignificantM) <- thr
 colnames(pbKNNaucM) <- thr
 colnames(pbKNNaccM) <- thr
 
@@ -501,7 +501,7 @@ pander::pander(Unaltered_FractionM)
 pander::pander(sparcityM)
 pander::pander(Average_Latent_SizeM)
 pander::pander(SigDeM)
-pander::pander(De_SignificantM)
+pander::pander(La_SignificantM)
 pander::pander(pbKNNaucM)
 pander::pander(pbKNNaccM)
 
@@ -671,10 +671,10 @@ legend("topright", legnames,lty=1:length(legnames), col = 1:length(legnames),cex
 
 
 
-miny = min(De_SignificantM)
-maxy = max(De_SignificantM)
+miny = min(La_SignificantM)
+maxy = max(La_SignificantM)
 
-plot(thr,De_SignificantM[1,],ylim=c(miny,maxy),
+plot(thr,La_SignificantM[1,],ylim=c(miny,maxy),
      main="Number of Discovered Features",
      xlab="Correlation-Matrix's Maximum Goal",
      ylab="Number of Features",
@@ -683,24 +683,24 @@ plot(thr,De_SignificantM[1,],ylim=c(miny,maxy),
      lwd=2,
      log = "y")
 
-for (ind in 2:nrow(De_SignificantM))
+for (ind in 2:nrow(La_SignificantM))
 {
-  lines(thr,De_SignificantM[ind,],col=ind,lwd=2,lty=ind)
+  lines(thr,La_SignificantM[ind,],col=ind,lwd=2,lty=ind)
 }
-legend("bottomright", rownames(De_SignificantM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
+legend("bottomright", rownames(La_SignificantM),lty=1:length(thenames), col = 1:length(thenames),cex=0.55,ncol=2)
 
 
 
 
-meanDiscovered <-  colMeans(De_SignificantM[fastRows,])
-meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[pearsonRows,]))
-meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[spearmanRows,]))
-meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[!NoDrivenRows,]))
-meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[NoDrivenRows,]))
-meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[corRankRows,]))
-meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[maxCorRankRows,]))
-meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[RLMfitMethod,]))
-meanDiscovered <-  rbind(meanDiscovered,colMeans(De_SignificantM[!RLMfitMethod,]))
+meanDiscovered <-  colMeans(La_SignificantM[fastRows,])
+meanDiscovered <-  rbind(meanDiscovered,colMeans(La_SignificantM[pearsonRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(La_SignificantM[spearmanRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(La_SignificantM[!NoDrivenRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(La_SignificantM[NoDrivenRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(La_SignificantM[corRankRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(La_SignificantM[maxCorRankRows,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(La_SignificantM[RLMfitMethod,]))
+meanDiscovered <-  rbind(meanDiscovered,colMeans(La_SignificantM[!RLMfitMethod,]))
 
 miny = min(meanDiscovered)
 maxy = max(meanDiscovered) + 10

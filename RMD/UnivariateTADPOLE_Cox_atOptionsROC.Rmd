@@ -393,11 +393,11 @@ DEdataframe <- predictDecorrelate(DEdataframeTrain,dataframeTest)
 pander::pander(c(Cols=ncol(demat),Rows=nrow(demat)))
 totFe <- ncol(DEdataframe)-1
 totBa <- sum(str_detect(colnames(DEdataframe),"Ba_"))
-totDe <- sum(str_detect(colnames(DEdataframe),"De_"))
+totDe <- sum(str_detect(colnames(DEdataframe),"La_"))
 toUnmat <- sum(apply(demat!=0,2,sum)==1)
 unaltered <- totFe - ncol(demat) + toUnmat
 pander::pander(c(Features=totFe,totBa=totBa,totDe=totDe,unaltered=totFe-totBa-totDe,totuna=unaltered))
-pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"De_"))/(ncol(DEdataframe)-1)))
+pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"La_"))/(ncol(DEdataframe)-1)))
 pander::pander(c(Base_Fraction=sum(str_detect(colnames(DEdataframe),"Ba_"))/(ncol(DEdataframe)-1)))
 
 pander::pander(c(Unaltered_Fraction=unaltered/totFe))
@@ -583,12 +583,15 @@ for (dx in names(deFromula))
 }
 orgnamez <- rownames(finalTable)
 orgnamez <- str_remove_all(orgnamez,"Ba_")
-orgnamez <- str_remove_all(orgnamez,"De_")
+orgnamez <- str_remove_all(orgnamez,"La_")
 finalTable$Train_ZGLM <- finalTableDe[rownames(finalTable),"ZGLM"]
 finalTable$Train_cStatCorr <- finalTableDe[rownames(finalTable),"cStatCorr"]
 finalTable$pvalue <- pnorm(abs(finalTable$ZGLM),lower.tail = FALSE)
 finalTable$uZGLM <- univar$orderframe[orgnamez,"ZGLM"]
 finalTable$DecorFormula <- deFromula[rownames(finalTable)]
+fscores <- attr(DEdataframeTrain,"fscore")
+finalTable$fscores <- fscores[rownames(finalTable)]
+
 finalTable <- finalTable[order(finalTable$pvalue),]
 finalTable$ROCAUC <- NULL
 finalTable$kendall.p <- NULL
@@ -623,7 +626,7 @@ topSigDe <- names(pDe[pDe<sig_pvalue])
 pDeDe <- pDe[names(pDe) %in% varlistDe[,1]]
 pDeDe <- pDeDe[pDeDe<sig_pvalue]
 
-pander::pander(c(Raw_Significant=length(topSigRaw),De_Significant=length(topSigDe),SigDe=length(pDeDe)))
+pander::pander(c(Raw_Significant=length(topSigRaw),La_Significant=length(topSigDe),SigDe=length(pDeDe)))
 sig_p <- min(c(sig_pvalue,1.0e4*praw[10]))
 
 praw <- praw[praw <= sig_p]
@@ -709,7 +712,7 @@ mlKNN <- KNN_method(formula(paste(outcome,"~.")),DEdataframeTrain[,c(outcome,top
 pbKNN <- predictionStats_binary(cbind(dataframeTest[,outcome],predict(mlKNN,DEdataframe[,c(outcome,topSigDe)])),"De KNN:ROC",cex=0.8)
 
 pander::pander(c(Raw_Bhattacharyya=distRaw,Raw_Mahalanobis=mahaDisRaw))
-pander::pander(c(De_Bhattacharyya=distDe,De_Mahalanobis=mahaDisDe))
+pander::pander(c(La_Bhattacharyya=distDe,La_Mahalanobis=mahaDisDe))
 pander::pander(pbKNN$aucs)
 pander::pander(pbMaha$aucs)
 

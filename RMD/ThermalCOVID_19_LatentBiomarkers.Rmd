@@ -187,6 +187,9 @@ par(op)
 par(cex=0.6,cex.main=0.85,cex.axis=0.7)
 
 GDSTM <- attr(deThermal,"GDSTM")
+fscores <- attr(deThermal,"fscore")
+fscores <- fscores[order(-fscores)]
+#fscores[fscores>0]
 
 gplots::heatmap.2(log(abs(1000*GDSTM)+1),
                   trace = "none",
@@ -244,6 +247,8 @@ effectSize <- (apply(cases,2,mean)-apply(controls,2,mean))/apply(SalivaThermal_A
 wavenumber=as.numeric(str_remove_all(names(effectSize),"V_"))
 
 aucvalue <- univar$orderframe$ROCAUC
+
+
 wavenumber=as.numeric(str_remove_all(rownames(univar$orderframe),"V_"))
 aucvalueRaw <- aucvalue[order(wavenumber)]
 wavenumberRaw <- wavenumber[order(wavenumber)]
@@ -268,16 +273,16 @@ univarDe <- uniRankVar(varlist,
 	            uniType = "Binary")
 
 
-decorfeat <- colnames(deThermal)[str_detect(colnames(deThermal),"De_")]
-parentfeat <- str_remove_all(decorfeat,"De_")
+decorfeat <- colnames(deThermal)[str_detect(colnames(deThermal),"La_")]
+parentfeat <- str_remove_all(decorfeat,"La_")
 reldecor <- deThermal[,decorfeat]
 reldecor$class <- SalivaThermal_Avg$class
 cases <- subset(reldecor,class==1)
-cases <- cases[,str_detect(colnames(cases),"De_")]
-colnames(cases) <- str_remove_all(colnames(cases),"De_V_")
+cases <- cases[,str_detect(colnames(cases),"La_")]
+colnames(cases) <- str_remove_all(colnames(cases),"La_V_")
 controls <- subset(reldecor,class==0)
-controls <- controls[,str_detect(colnames(controls),"De_")]
-colnames(controls) <- str_remove_all(colnames(controls),"De_V_")
+controls <- controls[,str_detect(colnames(controls),"La_")]
+colnames(controls) <- str_remove_all(colnames(controls),"La_V_")
 bpcases <- boxplot(cases,
                    boxwex=2.0,
                    outline = FALSE,
@@ -298,13 +303,17 @@ legend("topright",legend=c("Cases", "Controls"),
 
 
 
-effectSize <- (apply(cases,2,median)-apply(controls,2,median))/apply(reldecor[,str_detect(colnames(reldecor),"De_")],2,IQR)
-wavenumber=as.numeric(str_remove_all(names(effectSize),"De_V_"))
+effectSize <- (apply(cases,2,median)-apply(controls,2,median))/apply(reldecor[,str_detect(colnames(reldecor),"La_")],2,IQR)
+wavenumber=as.numeric(str_remove_all(names(effectSize),"La_V_"))
 
 aucvalue <- univarDe$orderframe$ROCAUC
 depcvalue <- univarDe$orderframe$WilcoxRes.p
 
-wavenumber=str_remove_all(rownames(univarDe$orderframe),"De_V_")
+names(aucvalue) <- rownames(univarDe$orderframe)
+plot(aucvalue[names(fscores)],fscores)
+
+
+wavenumber=str_remove_all(rownames(univarDe$orderframe),"La_V_")
 wavenumber=str_remove_all(wavenumber,"Ba_V_")
 wavenumber=as.numeric(str_remove_all(wavenumber,"V_"))
 aucvalueDe <- aucvalue[order(wavenumber)]
@@ -331,7 +340,7 @@ par(op)
 par(cex=0.8)
 varlist <- colnames(SalivaThermal_d2)[!(colnames(SalivaThermal_d2) %in% "class")]
 varlist <- cbind(varlist,varlist)
-pthr <- 0.05/(ncol(SalivaThermal)-1)
+pthr <- 0.10/(ncol(SalivaThermal)-1)
 
 univarD2 <- uniRankVar(varlist,
 	           "class~1",
@@ -343,7 +352,9 @@ univarD2 <- uniRankVar(varlist,
 	            uniType = "Binary")
 
 aucvalue <- univarD2$orderframe$ROCAUC
+names(aucvalue) <- rownames(univarD2$orderframe)
 pwilvalue <- univarD2$orderframe$FRes.p
+
 
 wavenumber=as.numeric(str_remove_all(rownames(univarD2$orderframe),"DD_"))
 aucvalueDD <- aucvalue[order(wavenumber)]
@@ -371,7 +382,7 @@ valroc <- depcvalue < pthr
 dc <- getDerivedCoefficients(deThermal)
 for (dename in names(dc))
 {
-  wave <- as.numeric(str_remove(dename,"De_V_"))
+  wave <- as.numeric(str_remove(dename,"La_V_"))
   if (wave %in% wavenumberDe[valroc])
   {
     for (asfeat in names(dc[[dename]]))
@@ -431,8 +442,10 @@ for (dx in names(deFromula))
 }
 orgnamez <- rownames(finalTable)
 orgnamez <- str_remove_all(orgnamez,"Ba_")
-orgnamez <- str_remove_all(orgnamez,"De_")
+orgnamez <- str_remove_all(orgnamez,"La_")
 finalTable$DecorFormula <- deFromula[rownames(finalTable)]
+finalTable$fscores <- fscores[rownames(finalTable)]
+
 pander::pander(finalTable)
 
 ```

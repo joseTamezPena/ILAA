@@ -129,7 +129,7 @@ topfiveOrg <- rownames(univar$orderframe[1:5,])
 ```{r results = "asis"}
 DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE)
 
-pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"De_"))/(ncol(DEdataframe)-1)))
+pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"La_"))/(ncol(DEdataframe)-1)))
 pander::pander(c(Base_Fraction=sum(str_detect(colnames(DEdataframe),"Ba_"))/(ncol(DEdataframe)-1)))
 demat <- attr(DEdataframe,"GDSTM")
 pander::pander(c(sparse_Fraction=1.0-sum(demat==0)/ncol(demat)/nrow(demat)))
@@ -286,7 +286,7 @@ barplot(100*rawtopf,las=2,main="Raw Features",ylim=c(0,100.0),cex.names = 0.35,c
 detopf <- cvDe$featureFrequency/repetitions
 cdetopf <- detopf
 names(cdetopf) <- str_remove_all(names(cdetopf),"Ba_")
-names(cdetopf) <- str_remove_all(names(cdetopf),"De_")
+names(cdetopf) <- str_remove_all(names(cdetopf),"La_")
 if (length(detopf) > 30)
 {
   detopf <- detopf[1:30]
@@ -340,13 +340,17 @@ for (dx in names(deFromula))
     }
   }
 }
+
 orgnamez <- rownames(finalTable)
 orgnamez <- str_remove_all(orgnamez,"Ba_")
-orgnamez <- str_remove_all(orgnamez,"De_")
+orgnamez <- str_remove_all(orgnamez,"La_")
 finalTable$uAUC <- univar$orderframe[orgnamez,"ROCAUC"]
 finalTable$raw_Freq <- crawtopf[orgnamez]
-finalTable$de_Freq <- cdetopf[orgnamez]
+finalTable$La_Freq <- cdetopf[orgnamez]
 finalTable$DecorFormula <- deFromula[rownames(finalTable)]
+fscores <- attr(DEdataframe,"fscore")
+finalTable$fscores <- fscores[rownames(finalTable)]
+
 finalTable <- finalTable[order(-finalTable$ROCAUC),]
 
 pander::pander(finalTable)
