@@ -210,7 +210,7 @@ if (dataLoad)
             pDe <- univariate_Wilcoxon(DEdataframeTrain,outcome,pvalue=sig_pvalue);
             topDecorNames <- names(pDe);
   
-            dc <- getDerivedCoefficients(DEdataframeTrain)
+            dc <- getLatentCoefficients(DEdataframeTrain)
             deNames_in_dc <- topDecorNames[topDecorNames %in% names(dc)]
             selectedlist <- dc[deNames_in_dc]
             theDeFormulas <- selectedlist

@@ -409,7 +409,7 @@ if (dataLoad)
             pDe <- univariate_Logit(DEdataframeTime,formula("Surv(SurvTime,status)~."));
             topDecorNames <- names(pDe);
   
-            dc <- getDerivedCoefficients(DEdataframeTrain)
+            dc <- getLatentCoefficients(DEdataframeTrain)
             deNames_in_dc <- topDecorNames[topDecorNames %in% names(dc)]
             selectedlist <- dc[deNames_in_dc]
             theDeFormulas <- selectedlist

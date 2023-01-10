@@ -38,7 +38,7 @@ thr <- thr[4]
 method  <- method[1]
 type <- type[1] 
 DeOutcome <- DeOutcome[2]
-corRankS <- corRankS[1]
+corRankS <- corRankS[2]
 
 
 corRank <- corRankS == "TRUE"
@@ -533,7 +533,7 @@ pthr <- sig_pvalue/(ncol(dataframe)-1)
 topDecorNames <- rownames(univarDeTrain$orderframe[univarDeTrain$orderframe$pvalue<pthr,])
 topDecorNames <- unique(c(topDecorNames,rownames(univarDeTrain$orderframe[1:5,])))
 
-dc <- getDerivedCoefficients(DEdataframeTrain)
+dc <- getLatentCoefficients(DEdataframeTrain)
 ### 2a Get only the ones that in the top features
 deNames_in_dc <- topDecorNames[topDecorNames %in% names(dc)]
 selectedlist <- dc[deNames_in_dc]

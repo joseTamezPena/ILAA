@@ -33,7 +33,7 @@ This demo will use:
 
 -   *FRESA.CAD::GDSTMDecorrelation()*. For Decorrelation of Multidimensional data sets
 
-    -   *FRESA.CAD::getDerivedCoefficients()*. For the extraction of the model of the newly discovered of decorrelated features.
+    -   *FRESA.CAD::getLatentCoefficients()*. For the extraction of the model of the newly discovered of decorrelated features.
 
 -   *FRESA.CAD::randomCV()* For the cross-validation of the Machine Learning models
 
@@ -379,7 +379,7 @@ points(wavenumberDD[valroc],aucvalueDD[valroc],col="blue",lwd=3)
 #bpdiff <- plot
 valroc <- depcvalue < pthr
 
-dc <- getDerivedCoefficients(deThermal)
+dc <- getLatentCoefficients(deThermal)
 for (dename in names(dc))
 {
   wave <- as.numeric(str_remove(dename,"La_V_"))
