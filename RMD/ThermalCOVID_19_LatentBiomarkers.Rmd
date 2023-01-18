@@ -54,6 +54,8 @@ This demo will use:
 library("FRESA.CAD")
 library(readxl)
 library(igraph)
+library(umap)
+library(tsne)
 
 op <- par(no.readonly = TRUE)
 pander::panderOptions('digits', 3)
@@ -137,6 +139,37 @@ SalivaThermal_d2$class <- 1*(str_detect(rownames(SalivaThermal_d2),"P"))
 
 ```
 
+## The heatmap of the data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+hm <- heatMaps(data=SalivaThermal_Avg,
+               Outcome="class",
+               Scale=TRUE,
+               hCluster = "row",
+               xlab=expression("Wavenumber (cm)"^"-1"),
+               ylab="Sample")
+par(op)
+
+```
+
+### The UMAP
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+lnames <- c("Neg","Pos")
+featnames <- colnames(SalivaThermal_Avg)
+featnames <- featnames[featnames != "class"]
+datasetframe.umap = umap(FRESAScale(SalivaThermal_Avg[,featnames])$scaledData,n_components=2)
+plot(datasetframe.umap$layout,col=(SalivaThermal_Avg$class+1),xlab="U1",ylab="U2",main="UMAP: Original",t='n')
+text(datasetframe.umap$layout,labels=lnames[1+SalivaThermal_Avg$class],col=(SalivaThermal_Avg$class+1))
+
+#colors = rainbow(length(unique(SalivaThermal_Avg$class)))
+#names(colors) = unique(SalivaThermal_Avg$class)
+#ecb = function(x,y){ plot(x,t='n'); text(x,labels=SalivaThermal_Avg$class, col=colors[as.character(SalivaThermal_Avg$class)]) }
+#tsne_iris = tsne(SalivaThermal_Avg[,featnames], epoch_callback = ecb, perplexity=50)
+
+
+```
+
 
 #### Correlation Matrix of the Decorrelated Test Data
 
@@ -179,6 +212,39 @@ gplots::heatmap.2(abs(cormat),
 
 par(op)
 ```
+
+## The heatmap of the decorrelated data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+#hm <- heatMaps(data=deThermal,Outcome="class",Scale=TRUE,hCluster = "col")
+hm <- heatMaps(data=deThermal,
+               Outcome="class",
+               Scale=TRUE,
+               hCluster = "row",
+               xlab=expression("Wavenumber (cm)"^"-1"),
+               ylab="Sample")
+par(op)
+
+```
+
+### The decorralted UMAP
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+featnames <- colnames(deThermal)
+featnames <- featnames[featnames != "class"]
+datasetframe.umap = umap(FRESAScale(deThermal[,featnames])$scaledData,n_components=2)
+#plot(datasetframe.umap$layout,col=(deThermal$class+1),xlab="U1",ylab="U2",main="UMAP")
+plot(datasetframe.umap$layout,col=(deThermal$class+1),xlab="U1",ylab="U2",main="UMAP: After Transformation",t='n')
+text(datasetframe.umap$layout,labels=lnames[1+deThermal$class],col=(deThermal$class+1))
+
+
+#colors = rainbow(length(unique(deThermal$class)))
+#names(colors) = unique(deThermal$class)
+#ecb = function(x,y){ plot(x,t='n'); text(x,labels=deThermal$class, col=colors[as.character(deThermal$class)]) }
+#tsne_iris = tsne(deThermal[,featnames], epoch_callback = ecb, perplexity=50)
+
+```
+
 
 ### The decorrelation matrix
 
@@ -255,6 +321,7 @@ wavenumberRaw <- wavenumber[order(wavenumber)]
 bpdiff <- plot(wavenumberRaw,aucvalueRaw,las=2,cex.axis=0.5,type="l",
                                   ylab="ROC AUC",
                     xlim = c(1300,800),
+                    ylim = c(0.5,1.0),
                    xlab=expression("Wavenumber (cm)"^"-1"))
 title("Difference in Absorbance")
 
@@ -293,7 +360,9 @@ bpcases <- boxplot(cases,
                    ylab="Absorbance (a.u.)",
                    xlab=expression("Wavenumber (cm)"^"-1"))
 
-bpcontrols <- boxplot(controls,col="blue",ylim=c(-0.075,0.075),outline = FALSE,boxwex=1.25,las=2,add = TRUE,cex.axis=0.5)
+#bpcontrols <- boxplot(controls,col="blue",ylim=c(-0.075,0.075),outline = FALSE,boxwex=1.25,las=2,add = TRUE,cex.axis=0.5)
+lines(apply(controls,2,mean),col="blue",lwd=2)
+#lines(controls,col="blue",ylim=c(-0.075,0.075))
 title("Decorrelated Absorbance")
 legend("topright",legend=c("Cases", "Controls"),
         fill=c("red", "blue"),
@@ -310,7 +379,7 @@ aucvalue <- univarDe$orderframe$ROCAUC
 depcvalue <- univarDe$orderframe$WilcoxRes.p
 
 names(aucvalue) <- rownames(univarDe$orderframe)
-plot(aucvalue[names(fscores)],fscores)
+#plot(aucvalue[names(fscores)],fscores)
 
 
 wavenumber=str_remove_all(rownames(univarDe$orderframe),"La_V_")
@@ -323,6 +392,7 @@ wavenumberDe <- wavenumber[order(wavenumber)]
 bpdiff <- plot(x=wavenumberDe,y=aucvalueDe,las=2,cex.axis=0.5,type="l",
                                    xlim = c(1300,800),
                                   ylab="ROCAUC",
+                   ylim = c(0.5,1.0),
                    xlab=expression("Wavenumber (cm)"^"-1"))
 title("Difference in Decorrelated Absorbance")
 
@@ -368,7 +438,7 @@ bpdiff <- plot(x=wavenumberRaw,y=aucvalueRaw,
                type="l",
                lwd=3,
                 xlim=c(1300,800),
-                ylim=c(0.45,0.86),
+                ylim=c(0.5,1.0),
                ylab="ROC AUC",
                xlab=expression("Wavenumber (cm)"^"-1"))
 title("Feature Association with COVID-19")
@@ -396,7 +466,7 @@ for (dename in names(dc))
 points(x=wavenumberDe[valroc],
                y=aucvalueDe[valroc],col="red",pch=4,lwd=2)
 
-legend("bottomleft",legend=c("raw", "2nd Deriv","La: Parent","La: w>0"),
+legend("topleft",legend=c("raw", "2nd Deriv","La: Parent","La: w>0"),
        col=c("black", "blue","red","pink"), lty=c(1,0,0,0),lwd=c(3,3,2,1),pch=c(-1,1,4,10), cex=0.8)
 
 ```

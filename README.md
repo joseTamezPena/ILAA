@@ -19,7 +19,7 @@ print(getLatentCoefficients(irisDecor))
 
 ```
 
-The output will be:
+The output:
 
 ```{=asciidoc}
 $La_Sepal.Length
@@ -61,11 +61,10 @@ In this repository you will find examples to:
     -   **UnivariateTADPOLE_Cox_atOptionsROC.Rmd**
 
 |                  | caseMean | caseStd | controlMean | controlStd | cStatCorr | ZGLM   | DecorFormula                            |
-|------------|--------|-------|--------|--------|--------|--------|-------------------|
+|------------------|----------|---------|-------------|------------|-----------|--------|-----------------------------------------|
 | **La_ADAS13**    | 32.68    | 5.676   | 29.25       | 4.540      | 0.333     | 7.399  | \+ 1.000*ADAS13 + 0.405*RAVLT_immediate |
 | **La_M\_ST40CV** | -0.062   | 0.006   | -0.059      | 0.005      | 0.622     | -5.272 | -0.280*WholeBrain + 1.000*M_ST40CV      |
 
 -   Discover Parkinson biomarkers from speech features:
 
-**UnivariateAnalysisParkinson.Rmd**
-![Fig 3: Improving Diagnosis with Latent Biomarkers](images/paste-CF8DE326.png){width="691"}
+**UnivariateAnalysisParkinson.Rmd** ![Fig 3: Improving Diagnosis with Latent Biomarkers](images/paste-CF8DE326.png){width="691"}
