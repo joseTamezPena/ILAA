@@ -33,6 +33,7 @@ Sepal.Length  Sepal.Width Petal.Length
 $La_Petal.Width
 Sepal.Length  Sepal.Width Petal.Length  Petal.Width 
    0.1250483   -0.2228285   -0.4904624    1.0000000 
+   
 ```
 The answer to the decorrelation of the iris data set was a set of three latent variables.
 
@@ -46,9 +47,7 @@ featuresDecor <- colnames(irisDecor[,sapply(irisDecor,is,"numeric")])
 plot(irisDecor[,featuresDecor],col=classcolor,main="GDSTM IRIS")
 ```
 
-![Fig 1: The Decorrelated IRIS set](images/paste-AC36DA2E.png)
-
-In this repository you will find examples to:
+![](images/paste-249E77BE.png)In this repository you will find examples to:
 
 -   Discover Biomarkers from IR spectrometry data:
 
@@ -61,7 +60,7 @@ In this repository you will find examples to:
     -   **UnivariateTADPOLE_Cox_atOptionsROC.Rmd**
 
 |                  | caseMean | caseStd | controlMean | controlStd | cStatCorr | ZGLM   | DecorFormula                            |
-|------------------|----------|---------|-------------|------------|-----------|--------|-----------------------------------------|
+|---------|---------|---------|---------|---------|---------|---------|--------------|
 | **La_ADAS13**    | 32.68    | 5.676   | 29.25       | 4.540      | 0.333     | 7.399  | \+ 1.000*ADAS13 + 0.405*RAVLT_immediate |
 | **La_M\_ST40CV** | -0.062   | 0.006   | -0.059      | 0.005      | 0.622     | -5.272 | -0.280*WholeBrain + 1.000*M_ST40CV      |
 

@@ -56,6 +56,7 @@ library(readxl)
 library(igraph)
 library(umap)
 library(tsne)
+library(entropy)
 
 op <- par(no.readonly = TRUE)
 pander::panderOptions('digits', 3)
@@ -195,6 +196,11 @@ gplots::heatmap.2(abs(cormat),
 ## The decorrelation
 deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,thr=0.80,verbose = TRUE)
 #deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,thr=0.80,relaxed=FALSE,verbose = TRUE)
+
+pander::pander(sum(apply(SalivaThermal_Avg,2,var)))
+pander::pander(sum(apply(deThermal,2,var)))
+pander::pander(entropy(discretize(unlist(SalivaThermal_Avg[,colnames(SalivaThermal_Avg) != "class"]), 256)))
+pander::pander(entropy(discretize(unlist(deThermal[,colnames(deThermal) != "class"]), 256)))
 
 cormat <- cor(deThermal[,colnames(deThermal) != "class"],method="spearman")
 cormat[is.na(cormat)] <- 0
@@ -383,7 +389,7 @@ names(aucvalue) <- rownames(univarDe$orderframe)
 
 
 wavenumber=str_remove_all(rownames(univarDe$orderframe),"La_V_")
-wavenumber=str_remove_all(wavenumber,"Ba_V_")
+#wavenumber=str_remove_all(wavenumber,"Ba_V_")
 wavenumber=as.numeric(str_remove_all(wavenumber,"V_"))
 aucvalueDe <- aucvalue[order(wavenumber)]
 depcvalue <- depcvalue[order(wavenumber)]
@@ -466,7 +472,7 @@ for (dename in names(dc))
 points(x=wavenumberDe[valroc],
                y=aucvalueDe[valroc],col="red",pch=4,lwd=2)
 
-legend("topleft",legend=c("raw", "2nd Deriv","La: Parent","La: w>0"),
+legend("topleft",legend=c("raw", "2nd Deriv","La: Parent","La: Other"),
        col=c("black", "blue","red","pink"), lty=c(1,0,0,0),lwd=c(3,3,2,1),pch=c(-1,1,4,10), cex=0.8)
 
 ```
@@ -511,7 +517,7 @@ for (dx in names(deFromula))
   }
 }
 orgnamez <- rownames(finalTable)
-orgnamez <- str_remove_all(orgnamez,"Ba_")
+#orgnamez <- str_remove_all(orgnamez,"Ba_")
 orgnamez <- str_remove_all(orgnamez,"La_")
 finalTable$DecorFormula <- deFromula[rownames(finalTable)]
 finalTable$fscores <- fscores[rownames(finalTable)]
