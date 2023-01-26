@@ -133,6 +133,8 @@ colnames(SalivaThermal_Avg) <- paste("V",colnames(SalivaThermal_Avg),sep="_")
 #SalivaThermal_Avg <- SalivaThermal_d2
 SalivaThermal_Avg$class <- 1*(str_detect(rownames(SalivaThermal_Avg),"P"))
 ##The fraction of samples in the training set
+pander::pander(c(row=nrow(SalivaThermal_Avg),col=ncol(SalivaThermal_Avg)))
+
 pander::pander(table(SalivaThermal_Avg$class))
 trainFraction=0.90
 

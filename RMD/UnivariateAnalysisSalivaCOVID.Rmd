@@ -1,5 +1,5 @@
 ---
-title: "Univariate: DARWIN"
+title: "Univariate: Saliva COVID-19"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output: 
@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
 ```
 
-# DARWIN Univariate
+# COVID_19 Univariate
 
 ### Loading the libraries
 
@@ -36,31 +36,57 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 ```
 
 
+## Data: The COVID_19 Data-Set
 
-## The Data
+The data to process is described in:
+
+<https://zenodo.org/record/4156647#.Y1bSF3bMKUk>
+
+
+Thermal Saliva Testing Dataset
+
+
+10.5281/zenodo.4156647
+<https://doi.org/10.5281/zenodo.4156647>
+
+
+I added a column to the data identifying the repeated experiments.
 
 ```{r}
-DARWIN <- read.csv("~/GitHub/FCA/Data/DARWIN/DARWIN.csv")
-rownames(DARWIN) <- DARWIN$ID
-DARWIN$ID <- NULL
-DARWIN$class <- 1*(DARWIN$class=="P")
-print(table(DARWIN$class))
 
-DARWIN[,1:ncol(DARWIN)] <- sapply(DARWIN,as.numeric)
-signedlog <- function(x) { return (sign(x)*log(abs(x)+1.0e-12))}
-
-whof <- !(colnames(DARWIN) %in% c("class"));
-DARWIN[,whof] <- signedlog(DARWIN[,whof])
+SalivaThermal <- as.data.frame(read_excel("~/GitHub/FCA/Data/SalivaThermal_Source_Data_2.xlsx"))
 
 
+SalivaThermal_set1 <- subset(SalivaThermal,RepID==1)
+rownames(SalivaThermal_set1) <- SalivaThermal_set1$ID
+SalivaThermal_set1$RepID <- NULL
+SalivaThermal_set1$ID <- NULL
+SalivaThermal_set1$Ct <- NULL
+
+SalivaThermal_set2 <- subset(SalivaThermal,RepID==2)
+rownames(SalivaThermal_set2) <- SalivaThermal_set2$ID
+SalivaThermal_set2$RepID <- NULL
+SalivaThermal_set2$ID <- NULL
+SalivaThermal_set2$Ct <- NULL
+
+SalivaThermal_set3 <- subset(SalivaThermal,RepID==3)
+rownames(SalivaThermal_set3) <- SalivaThermal_set3$ID
+SalivaThermal_set3$RepID <- NULL
+SalivaThermal_set3$ID <- NULL
+SalivaThermal_set3$Ct <- NULL
+
+SalivaThermal_Avg <- (SalivaThermal_set1 + SalivaThermal_set2 + SalivaThermal_set3)/3
+
+colnames(SalivaThermal_Avg) <- paste("V",colnames(SalivaThermal_Avg),sep="_")
+
+SalivaThermal_Avg$class <- 1*(str_detect(rownames(SalivaThermal_Avg),"P"))
 
 ```
-
 
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-dataframe <- DARWIN
+dataframe <- SalivaThermal_Avg
 outcome <- "class"
 
 ```
@@ -106,23 +132,12 @@ topfiveOrg <- rownames(univar$orderframe[1:5,])
 ```{r results = "asis"}
 DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE)
 
-demat <- attr(DEdataframe,"GDSTM")
-
-pander::pander(c(Cols=ncol(demat),Rows=nrow(demat)))
-totFe <- ncol(DEdataframe)-1
-totBa <- sum(str_detect(colnames(DEdataframe),"Ba_"))
-totDe <- sum(str_detect(colnames(DEdataframe),"La_"))
-toUnmat <- sum(apply(demat!=0,2,sum)==1)
-unaltered <- totFe - ncol(demat) + toUnmat
-pander::pander(c(Features=totFe,totBa=totBa,totDe=totDe,unaltered=totFe-totBa-totDe,totuna=unaltered))
 pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"La_"))/(ncol(DEdataframe)-1)))
-pander::pander(c(Base_Fraction=sum(str_detect(colnames(DEdataframe),"Ba_"))/(ncol(DEdataframe)-1)))
-
-pander::pander(c(Unaltered_Fraction=unaltered/totFe))
-pander::pander(c(sparcity=(totFe-ncol(demat)+sum(abs(demat)!=0))/totFe/totFe))
-
-varlistDe <-  colnames(demat)[apply(demat!=0,2,sum)>1];
+demat <- attr(DEdataframe,"GDSTM")
+pander::pander(c(sparse_Fraction=1.0-sum(demat==0)/ncol(demat)/nrow(demat)))
+varlistDe <-  colnames(DEdataframe)[colnames(DEdataframe) != "class"];
 varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
+
 
 
 ```
@@ -208,7 +223,6 @@ pander::pander(c(sparse_Fraction=(sum(demat != 0) + nocorrelated)/matsize))
 pander::pander(c(raw=length(rawuniv),decor=length(deuniv)))
 pander::pander(c(Number_Latent=length(dc)))
 pander::pander(c(meanSize=mean(sapply(dc,length))))
-
 
 ```
 
@@ -339,6 +353,7 @@ for (dx in names(deFromula))
     }
   }
 }
+
 orgnamez <- rownames(finalTable)
 orgnamez <- str_remove_all(orgnamez,"Ba_")
 orgnamez <- str_remove_all(orgnamez,"La_")
@@ -353,4 +368,5 @@ finalTable <- finalTable[order(-finalTable$ROCAUC),]
 
 pander::pander(finalTable)
 ```
+
 

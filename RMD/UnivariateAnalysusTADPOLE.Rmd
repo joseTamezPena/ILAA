@@ -327,6 +327,7 @@ varlistDe <-  colnames(DEdataframe)[colnames(DEdataframe) != "class"];
 varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
 
 
+
 ```
 
 ### The heat maps.
@@ -401,6 +402,17 @@ dc <- getLatentCoefficients(DEdataframe)
 deNames_in_dc <- topDecorNames[topDecorNames %in% names(dc)]
 selectedlist <- dc[deNames_in_dc]
 theDeFormulas <- selectedlist
+
+rawuniv <- univariate_Wilcoxon(dataframe,outcome,limit=-1)
+deuniv <- univariate_Wilcoxon(DEdataframe,outcome,limit=-1)
+matsize <- (ncol(dataframe)-1)^2
+nocorrelated <- ncol(dataframe) - 1 - ncol(demat)
+pander::pander(c(sparse_Fraction=(sum(demat != 0) + nocorrelated)/matsize))
+pander::pander(c(raw=length(rawuniv),decor=length(deuniv)))
+pander::pander(c(Number_Latent=length(dc)))
+pander::pander(c(meanSize=mean(sapply(dc,length))))
+
+
 ```
 
 
