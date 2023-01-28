@@ -7,6 +7,7 @@ In many biomarker-discovery studies, a large set of measurements and variables a
 Simple use:
 
 ```{r}
+library("FRESA.CAD")
 data('iris')
 
 ##FCA Decorrelation at 0.25 threshold, pearson and fast estimation 
@@ -14,7 +15,6 @@ irisDecor <- GDSTMDecorrelation(iris,thr=0.25)
 
 ### Print the latent variables
 print(getLatentCoefficients(irisDecor))
-
 
 
 ```
@@ -55,12 +55,12 @@ plot(irisDecor[,featuresDecor],col=classcolor,main="HMCA IRIS")
 
 ![Fig 2: Latent Biomakers of COVID-19. IR Raman Spectroscopy](images/paste-46C4E95F.png){width="457"}
 
--   Discover prognosis Alzheimers Biomarkers from Multimodal data sets:
+-   Discover prognosis Alzheimer's Biomarkers from Multimodal data sets:
 
     -   **UnivariateTADPOLE_Cox_atOptionsROC.Rmd**
 
 |                  | caseMean | caseStd | controlMean | controlStd | cStatCorr | ZGLM   | DecorFormula                            |
-|---------|---------|---------|---------|---------|---------|---------|---------|
+|------------------|----------|---------|-------------|------------|-----------|--------|-----------------------------------------|
 | **La_ADAS13**    | 32.68    | 5.676   | 29.25       | 4.540      | 0.333     | 7.399  | \+ 1.000*ADAS13 + 0.405*RAVLT_immediate |
 | **La_M\_ST40CV** | -0.062   | 0.006   | -0.059      | 0.005      | 0.622     | -5.272 | -0.280*WholeBrain + 1.000*M_ST40CV      |
 

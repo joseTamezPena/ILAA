@@ -1,18 +1,21 @@
 ---
-title: "Univariate: DARWIN"
+title: 'Univariate: DARWIN'
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
-output: 
-  html_document: 
-    toc: yes
-    fig_caption: yes
-    number_sections: yes
-  word_document: 
+output:
+  word_document:
     reference_docx: WordStyle_FRESA.docx
     toc: yes
     fig_caption: yes
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
 editor_options:
   chunk_output_type: console
+fontsize: 10pt
 ---
 
 
@@ -47,11 +50,6 @@ DARWIN$class <- 1*(DARWIN$class=="P")
 print(table(DARWIN$class))
 
 DARWIN[,1:ncol(DARWIN)] <- sapply(DARWIN,as.numeric)
-signedlog <- function(x) { return (sign(x)*log(abs(x)+1.0e-12))}
-
-whof <- !(colnames(DARWIN) %in% c("class"));
-DARWIN[,whof] <- signedlog(DARWIN[,whof])
-
 
 
 ```
@@ -218,7 +216,7 @@ pander::pander(c(meanSize=mean(sapply(dc,length))))
 ```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
 par(op)
 par(mfrow=c(1,2),cex=0.9)
-fraction <-0.80
+fraction <-0.70
 repetitions <- 100
 
 fcout <- round(fraction*nrow(dataframe)/15+1.0)

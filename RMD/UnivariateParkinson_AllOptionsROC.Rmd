@@ -80,9 +80,7 @@ rep3Parkison[,1:ncol(rep3Parkison)] <- sapply(rep3Parkison,as.numeric)
 whof <- !(colnames(rep1Parkison) %in% c("gender","class"));
 avgParkison <- rep1Parkison;
 avgParkison[,whof] <- (rep1Parkison[,whof] + rep2Parkison[,whof] + rep3Parkison[,whof])/3
-## I apply the log transform to the data
-##avgParkison[,whof] <- signedlog(avgParkison[,whof])
-avgParkison[,whof] <- FRESAScale(avgParkison[,whof],method="OrderLogit")$scaledData
+
 pander::pander(table(avgParkison$class))
 
 

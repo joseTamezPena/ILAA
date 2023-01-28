@@ -142,6 +142,8 @@ varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
 
 ```
 
+
+
 ### The heat maps.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
@@ -232,7 +234,7 @@ pander::pander(c(meanSize=mean(sapply(dc,length))))
 ```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
 par(op)
 par(mfrow=c(1,2),cex=0.9)
-fraction <-0.80
+fraction <-0.70
 repetitions <- 100
 
 fcout <- round(fraction*nrow(dataframe)/15+1.0)

@@ -55,11 +55,6 @@ DARWIN$class <- 1*(DARWIN$class=="P")
 print(table(DARWIN$class))
 
 DARWIN[,1:ncol(DARWIN)] <- sapply(DARWIN,as.numeric)
-signedlog <- function(x) { return (sign(x)*log(abs(x)+1.0e-12))}
-
-whof <- !(colnames(DARWIN) %in% c("class"));
-DARWIN[,whof] <- signedlog(DARWIN[,whof])
-
 
 
 set.seed(1)

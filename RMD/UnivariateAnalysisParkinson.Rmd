@@ -1,18 +1,21 @@
 ---
-title: "Univariate: Parkinson"
+title: 'Univariate: Parkinson'
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
-output: 
-  html_document: 
-    toc: yes
-    fig_caption: yes
-    number_sections: yes
-  word_document: 
+output:
+  word_document:
     reference_docx: WordStyle_FRESA.docx
     toc: yes
     fig_caption: yes
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
 editor_options:
   chunk_output_type: console
+fontsize: 10pt
 ---
 
 
@@ -73,9 +76,7 @@ rep3Parkison[,1:ncol(rep3Parkison)] <- sapply(rep3Parkison,as.numeric)
 whof <- !(colnames(rep1Parkison) %in% c("gender","class"));
 avgParkison <- rep1Parkison;
 avgParkison[,whof] <- (rep1Parkison[,whof] + rep2Parkison[,whof] + rep3Parkison[,whof])/3
-## I apply the log transform to the data
-##avgParkison[,whof] <- signedlog(avgParkison[,whof])
-avgParkison[,whof] <- FRESAScale(avgParkison[,whof],method="OrderLogit")$scaledData
+
 pander::pander(table(avgParkison$class))
 
 ```
@@ -229,7 +230,7 @@ pander::pander(c(meanSize=mean(sapply(dc,length))))
 ```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
 par(op)
 par(mfrow=c(1,2),cex=0.9)
-fraction <-0.80
+fraction <-0.70
 repetitions <- 100
 
 fcout <- round(fraction*nrow(dataframe)/15+1.0)
