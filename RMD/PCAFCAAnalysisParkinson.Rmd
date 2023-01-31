@@ -21,13 +21,14 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
 ```
 
-# SALIVA-Parkinson's PCA-EFA-GDSTM
+# Parkinson's PCA-EFA-GDSTM
 
 ### Loading the libraries
 
 ```{r}
 library("FRESA.CAD")
 library(psych)
+library(whitening)
 
 library(readxl)
 op <- par(no.readonly = TRUE)
@@ -88,8 +89,8 @@ avgParkison[,whof] <- (rep1Parkison[,whof] + rep2Parkison[,whof] + rep3Parkison[
 dataframe <- avgParkison
 outcome <- "class"
 
-trainFraction <- 0.5
-rhoThreshold <- 0.5
+trainFraction <- 0.6
+rhoThreshold <- 0.6
 TopVariables <- 5
 
 trainSample <- sample(nrow(dataframe),nrow(dataframe)*trainFraction)
@@ -130,7 +131,7 @@ univar <- uniRankVar(varlist,
 ## Decorrelation with GDSTM Blind
 
 ```{r results = "asis"}
-DEdataframe <- GDSTMDecorrelation(trainDataFrame,thr=rhoThreshold)
+DEdataframe <- GDSTMDecorrelation(trainDataFrame,thr=rhoThreshold,verbose = TRUE)
 varlistDe <-  colnames(DEdataframe)[colnames(DEdataframe) != outcome];
 varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
 
@@ -166,28 +167,51 @@ univarDeDri <- uniRankVar(varlistDe,
 
 ```
 
+## Decorrelation with GDSTM Driven and Spearman
+
+```{r results = "asis"}
+
+DriDEdataframeSpear <- GDSTMDecorrelation(trainDataFrame,Outcome=outcome,thr=rhoThreshold,method="spearman",verbose=TRUE)
+
+pander::pander(head(getLatentCoefficients(DriDEdataframeSpear)))
+predTestDriSpear <- predictDecorrelate(DriDEdataframeSpear,testDataFrame)
+
+varlistDeSpear <-  colnames(DriDEdataframeSpear)[colnames(DriDEdataframeSpear) != outcome];
+univarDeDriSpear <- uniRankVar(varlistDeSpear,
+              paste(outcome,"~1"),
+	            outcome,
+              predTestDriSpear,
+              rankingTest = "AUC")
+
+```
+
 
 ## PCA Analysis
 
 ```{r results = "asis"}
 
 ### PCA 
-noclassData <- trainDataFrame[,colnames(trainDataFrame) != outcome]
-noclassTestData <- testDataFrame[,colnames(testDataFrame) != outcome]
-pc <- principal(noclassData,TopVariables,rotate="varimax")   #principal components
+noclassData <- trainDataFrame[,!(colnames(trainDataFrame) %in% c(outcome,"gender"))]
+cmat <- cor(noclassData);
+diag(cmat) <- 0;
+maxcor <- apply(cmat,2,max);
+topcor <- names(maxcor[maxcor>rhoThreshold]) ## Only correlaed features will be PCA
+pander::pander(c(Ncor=length(topcor)))
+
+notcorr <- colnames(trainDataFrame)[!(colnames(trainDataFrame) %in% topcor)]
+noclassData <- noclassData[,topcor]
+noclassTestData <- testDataFrame[,topcor]
+pc <- principal(noclassData,2*TopVariables,rotate="varimax")   #principal components
 pander::pander(head(pc$loadings))
-PCA_Train <- as.data.frame(cbind(predict(pc,noclassData),trainDataFrame[,outcome]))
-colnames(PCA_Train)[TopVariables+1] <- outcome
+PCA_Train <- as.data.frame(cbind(predict(pc,noclassData),trainDataFrame[,notcorr]))
+PCA_Predicted <- as.data.frame(cbind(predict(pc,noclassTestData),testDataFrame[,notcorr]))
 
-PCA_Predicted <- as.data.frame(cbind(predict(pc,noclassTestData),testDataFrame[,outcome]))
-colnames(PCA_Predicted)[TopVariables+1] <- outcome
 varlistPCA <-  colnames(PCA_Predicted)[colnames(PCA_Predicted) != "class"];
-varlistPCA <- as.data.frame(cbind(name=varlistPCA,desc=varlistPCA))
-
 univarPCA <- uniRankVar(varlistPCA,
               paste(outcome,"~1"),
 	            outcome,
-              PCA_Predicted)
+              PCA_Predicted,
+              rankingTest = "AUC")
 
 
 
@@ -196,65 +220,429 @@ univarPCA <- uniRankVar(varlistPCA,
 ## EFA
 ```{r results = "asis"}
 
-uls <- fa(noclassData,TopVariables,rotate="varimax")  #unweighted least squares is minres 
+uls <- fa(noclassData,2*TopVariables,rotate="varimax")  #unweighted least squares is minres 
 pander::pander(head(uls$weights)) 
-EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),trainDataFrame[,outcome]))
-colnames(EFA_Train)[TopVariables+1] <- outcome
-EFA_Predicted <- as.data.frame(cbind(predict(uls,noclassTestData),testDataFrame[,outcome]))
-colnames(EFA_Predicted)[TopVariables+1] <- outcome
-varlistEFA <-  colnames(EFA_Predicted)[colnames(EFA_Predicted) != "class"];
-varlistEFA <- as.data.frame(cbind(name=varlistEFA,desc=varlistEFA))
+EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),trainDataFrame[,notcorr]))
+EFA_Predicted <- as.data.frame(cbind(predict(uls,noclassTestData),testDataFrame[,notcorr]))
 
+varlistEFA <-  colnames(EFA_Predicted)[colnames(EFA_Predicted) != "class"];
 univarEFA <- uniRankVar(varlistEFA,
               paste(outcome,"~1"),
 	            outcome,
-              EFA_Predicted)
+              EFA_Predicted,
+              rankingTest = "AUC")
 
 
 ```
+
+
+## White
+```{r results = "asis"}
+library(whitening)
+WhiteMat = whiteningMatrix(cov(noclassData), method="PCA-cor")
+WhiteMat[is.na(WhiteMat)] <- 0;
+
+pander::pander(head(WhiteMat[,c(1:TopVariables)])) 
+PCAWhite_Train <- as.data.frame(cbind(tcrossprod(as.matrix(noclassData), WhiteMat),trainDataFrame[,notcorr]))
+PCAWhitePredicted <- as.data.frame(cbind(tcrossprod(as.matrix(noclassTestData), WhiteMat),testDataFrame[,notcorr]))
+
+varlistWhite <-  colnames(PCAWhitePredicted)[colnames(PCAWhitePredicted) != "class"];
+univarWhite <- uniRankVar(varlistWhite,
+              paste(outcome,"~1"),
+	            outcome,
+              PCAWhitePredicted,
+              rankingTest = "AUC")
+
+
+```
+
+## Correlation Matrices
+
+### RAW
+
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5, fig.width= 6}
+par(mfrow=c(1,1),cex=0.6,cex.main=0.8)
+breaks <- c(0:5)/5.0;
+
+cormat <- cor(testDataFrame,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+pander::pander(max(abs(cormat)))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(Raw_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Raw Correlation",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature"
+                  )
+
+hist(cormat,freq=FALSE,
+     density=NULL,
+     xlim=c(-1,1),
+     ylim=c(0,4.0),
+     main="Raw Correlation",xlab="Spearman Correlation")
+
+
+```
+
+### GDSTM Blind
+
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5, fig.width= 6}
+par(mfrow=c(1,1),cex=0.6,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(DEdataframe,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+#pander::pander(colnames(cormat)[apply(abs(cormat),2,max)>rhoThreshold])
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(HMCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(predTestDe,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(HMCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after HMCA",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+hist(cormat,freq=FALSE,
+     density=NULL,
+     xlim=c(-1,1),
+     ylim=c(0,4.0),
+     main="Correlation after GDSTM",xlab="Spearman Correlation")
+
+
+```
+
+### GDSTM Driven
+
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5, fig.width= 6}
+par(mfrow=c(1,1),cex=0.6,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(DriDEdataframe,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+#pander::pander(colnames(cormat)[apply(abs(cormat),2,max)>rhoThreshold])
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(HMCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(DriDEdataframe,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(HMCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after Driven-HMCA",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+hist(cormat,freq=FALSE,
+     density=NULL,
+     xlim=c(-1,1),
+     ylim=c(0,4.0),
+     main="Correlation after Driven-GDSTM",xlab="Spearman Correlation")
+
+
+```
+### GDSTM Spearman
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5, fig.width= 6}
+par(mfrow=c(1,1),cex=0.6,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(DriDEdataframeSpear,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+#pander::pander(colnames(cormat)[apply(abs(cormat),2,max)>rhoThreshold])
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(HMCAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+
+cormat <- cor(predTestDriSpear,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(HMCAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after HMCA/Spearman",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+hist(cormat,freq=FALSE,
+     density=NULL,
+     xlim=c(-1,1),
+     ylim=c(0,4.0),
+     main="Correlation after GDSTM with Spearman",xlab="Spearman Correlation")
+
+```
+
+### PCA
+
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5, fig.width= 6}
+par(mfrow=c(1,1),cex=0.6,cex.main=0.8)
+
+
+
+## Train Correlation
+
+cormat <- cor(PCA_Train,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(PCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(PCA_Predicted,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(PCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after PCA",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+
+hist(cormat,freq=FALSE,
+     density=NULL,
+     xlim=c(-1,1),
+     ylim=c(0,4.0),
+     main="Correlation after PCA",xlab="Spearman Correlation")
+
+
+```
+### EFA
+
+```{r  results = "asis", warning = FALSE, dpi=600, fig.height= 5, fig.width= 6}
+par(mfrow=c(1,1),cex=0.6,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(EFA_Train,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(EFA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(EFA_Predicted,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(EFA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after EFA",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+
+hist(cormat,freq=FALSE,
+     density=NULL,
+     xlim=c(-1,1),
+     ylim=c(0,4.0),
+     main="Correlation after EFA",xlab="Spearman Correlation")
+
+```
+
+### PCA Whitening
+
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5, fig.width= 6}
+
+
+## Train Correlation
+
+cormat <- cor(PCAWhite_Train,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(PCAWhite_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(PCAWhitePredicted,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(PCAWhite_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after PCAWhite",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+
+hist(cormat,freq=FALSE,
+     density=NULL,
+     xlim=c(-1,1),
+     ylim=c(0,4.0),
+     main="Correlation after PCAWhite",xlab="Spearman Correlation")
+
+```
+
 
 ### The tables
 
 ```{r results = "asis"}
+
 pander::pander(univar$orderframe[1:TopVariables,univariate_columns])
 pander::pander(univarDe$orderframe[1:TopVariables,univariate_columns])
 pander::pander(univarDeDri$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeDriSpear$orderframe[1:TopVariables,univariate_columns])
 pander::pander(univarPCA$orderframe[1:TopVariables,univariate_columns])
 pander::pander(univarEFA$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarWhite$orderframe[1:TopVariables,univariate_columns])
 
+topUni <- univar$orderframe$Name[1:TopVariables]
+topDe <- univarDe$orderframe$Name[1:TopVariables]
+topDeDri <- univarDeDri$orderframe$Name[1:TopVariables]
+topDeDriSpear <- univarDeDriSpear$orderframe$Name[1:TopVariables]
+topPCA <- univarPCA$orderframe$Name[1:TopVariables]
+topEFA <- univarEFA$orderframe$Name[1:TopVariables]
+topPCAWhite <- univarWhite$orderframe$Name[1:TopVariables]
 ```
 
-### Model of top five variables
+### Model of top variables
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5.0, fig.width= 5.0}
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4, fig.width= 8}
+par(mfrow=c(1,2),cex=0.6)
 
 lmRAW <- glm(paste(outcome,"~."),
-             trainDataFrame[,c(outcome,rownames(univar$orderframe[1:TopVariables,]))],
+             trainDataFrame[,c(outcome,topUni)],
              family="binomial")
-pr <- predictionStats_binary(cbind(testDataFrame[,outcome],predict(lmRAW,testDataFrame)),"Top Raw",cex=0.95)
+pr <- predictionStats_binary(cbind(testDataFrame[,outcome],predict(lmRAW,testDataFrame)),"Top Raw",cex=0.75)
 
 lmDe <- glm(paste(outcome,"~."),
-            DEdataframe[,c(outcome,rownames(univarDe$orderframe[1:TopVariables,]))],
+            DEdataframe[,c(outcome,topDe)],
             family="binomial")
-pr <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDe,predTestDe)),"Top Blind:GDSTM",cex=0.95)
+pr <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDe,predTestDe)),"Top Blind:GDSTM",cex=0.75)
 
 lmDri <- glm(paste(outcome,"~."),
-            DriDEdataframe[,c(outcome,rownames(univarDeDri$orderframe[1:TopVariables,]))],
+            DriDEdataframe[,c(outcome,topDeDri)],
             family="binomial")
-pr <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDri,predTestDri)),"Top Driven:GDSTM",cex=0.95)
+pr <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDri,predTestDri)),"Top Driven:GDSTM",cex=0.75)
+
+lmDriSpear <- glm(paste(outcome,"~."),
+            DriDEdataframeSpear[,c(outcome,topDeDriSpear)],
+            family="binomial")
+pr <- predictionStats_binary(cbind(predTestDriSpear[,outcome],predict(lmDriSpear,predTestDriSpear)),"Spearman Top Driven:GDSTM",cex=0.7)
 
 
 lmPCA <- glm(paste(outcome,"~."),
-            PCA_Train,
+            PCA_Train[,c(outcome,topPCA)],
             family="binomial")
-pr <- predictionStats_binary(cbind(PCA_Predicted[,outcome],predict(lmPCA,PCA_Predicted)),"Top PCA",cex=0.95)
+pr <- predictionStats_binary(cbind(PCA_Predicted[,outcome],predict(lmPCA,PCA_Predicted)),"Top PCA",cex=0.75)
 
 
 lmEFA <- glm(paste(outcome,"~."),
-            EFA_Train,
+            EFA_Train[,c(outcome,topEFA)],
             family="binomial")
-pr <- predictionStats_binary(cbind(EFA_Predicted[,outcome],predict(lmEFA,EFA_Predicted)),"Top EFA",cex=0.95)
+pr <- predictionStats_binary(cbind(EFA_Predicted[,outcome],predict(lmEFA,EFA_Predicted)),"Top EFA",cex=0.75)
 
+
+lmPCAW <- glm(paste(outcome,"~."),
+            PCAWhite_Train[,c(outcome,topPCAWhite)],
+            family="binomial")
+pr <- predictionStats_binary(cbind(PCAWhitePredicted[,outcome],predict(lmPCAW,PCAWhitePredicted)),"Top PCA_Cor",cex=0.75)
 
 ```
 
