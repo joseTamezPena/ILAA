@@ -287,7 +287,7 @@ par(op)
 par(mfrow=c(2,1),cex=0.8,cex.axis=0.7,cex.main=0.8)
 
 varlist <- colnames(SalivaThermal_Avg)[!(colnames(SalivaThermal_Avg) %in% "class")]
-varlist <- cbind(varlist,varlist)
+#varlist <- cbind(varlist,varlist)
 
 univar <- uniRankVar(varlist,
 	           "class~1",
@@ -336,7 +336,7 @@ title("Difference in Absorbance")
 
 
 varlist <- colnames(deThermal)[!(colnames(deThermal) %in% "class")]
-varlist <- cbind(varlist,varlist)
+#varlist <- cbind(varlist,varlist)
 
 univarDe <- uniRankVar(varlist,
 	           "class~1",
@@ -417,7 +417,7 @@ par(op)
 ```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5.0, fig.width= 6.0}
 par(cex=0.8)
 varlist <- colnames(SalivaThermal_d2)[!(colnames(SalivaThermal_d2) %in% "class")]
-varlist <- cbind(varlist,varlist)
+#varlist <- cbind(varlist,varlist)
 pthr <- 0.10/(ncol(SalivaThermal)-1)
 
 univarD2 <- uniRankVar(varlist,
