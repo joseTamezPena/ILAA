@@ -1,5 +1,5 @@
 ---
-title: "PCA EFA: COVID-19"
+title: "PCA EFA: GRAVIER"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output: 
@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
 ```
 
-# SALIVA-COVID-19 PCA-EFA-GDSTM
+# GRAVIER Univariate
 
 ### Loading the libraries
 
@@ -40,61 +40,31 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 
 
 
-## Data: The COVID_19 Data-Set
 
-The data to process is described in:
+## The Data
 
-<https://zenodo.org/record/4156647#.Y1bSF3bMKUk>
-
-
-Thermal Saliva Testing Dataset
-
-
-10.5281/zenodo.4156647
-<https://doi.org/10.5281/zenodo.4156647>
-
-
-I added a column to the data identifying the repeated experiments.
 
 ```{r}
+data('gravier', package = 'datamicroarray')
+table(gravier$y)
 
-SalivaThermal <- as.data.frame(read_excel("~/GitHub/FCA/Data/SalivaThermal_Source_Data_2.xlsx"))
+gravierset <- as.data.frame(cbind(class=1*(gravier$y=="poor"),gravier$x))
+
+gravier <- NULL
 
 
-SalivaThermal_set1 <- subset(SalivaThermal,RepID==1)
-rownames(SalivaThermal_set1) <- SalivaThermal_set1$ID
-SalivaThermal_set1$RepID <- NULL
-SalivaThermal_set1$ID <- NULL
-SalivaThermal_set1$Ct <- NULL
-
-SalivaThermal_set2 <- subset(SalivaThermal,RepID==2)
-rownames(SalivaThermal_set2) <- SalivaThermal_set2$ID
-SalivaThermal_set2$RepID <- NULL
-SalivaThermal_set2$ID <- NULL
-SalivaThermal_set2$Ct <- NULL
-
-SalivaThermal_set3 <- subset(SalivaThermal,RepID==3)
-rownames(SalivaThermal_set3) <- SalivaThermal_set3$ID
-SalivaThermal_set3$RepID <- NULL
-SalivaThermal_set3$ID <- NULL
-SalivaThermal_set3$Ct <- NULL
-
-SalivaThermal_Avg <- (SalivaThermal_set1 + SalivaThermal_set2 + SalivaThermal_set3)/3
-
-colnames(SalivaThermal_Avg) <- paste("V",colnames(SalivaThermal_Avg),sep="_")
-
-SalivaThermal_Avg$class <- 1*(str_detect(rownames(SalivaThermal_Avg),"P"))
 
 ```
+
 
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-dataframe <- SalivaThermal_Avg
+dataframe <- gravierset
 outcome <- "class"
 
 trainFraction <- 0.5
-rhoThreshold <- 0.8
+rhoThreshold <- 0.5
 TopVariables <- 5
 
 set.seed(5)
@@ -116,6 +86,7 @@ varlist <- varlist[varlist != outcome]
 varlist <- as.data.frame(cbind(name=varlist,desc=varlist))
 
 ```
+
 
 
 ## Univariate
@@ -332,20 +303,20 @@ pander::pander(max(abs(cormat)))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
 pander::pander(c(Raw_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  breaks = breaks,
-                  main = "Raw Correlation",
-                  cexRow = 0.25,
-                  cexCol = 0.25,
-                  srtCol=35,
-                  srtRow=75,
-                  key.title=NA,
-                  key.xlab="Spearman Correlation",
-                  xlab="Feature", ylab="Feature"
-                  )
+# gplots::heatmap.2(abs(cormat),
+#                   trace = "none",
+#                   mar = c(5,5),
+#                   col=rev(heat.colors(5)),
+#                   breaks = breaks,
+#                   main = "Raw Correlation",
+#                   cexRow = 0.25,
+#                   cexCol = 0.25,
+#                   srtCol=35,
+#                   srtRow=75,
+#                   key.title=NA,
+#                   key.xlab="Spearman Correlation",
+#                   xlab="Feature", ylab="Feature"
+#                   )
 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
@@ -383,19 +354,19 @@ pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
 pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  breaks = breaks,
-                  main = "Correlation after HCA",
-                  cexRow = 0.25,
-                  cexCol = 0.25,
-                  srtCol=35,
-                  srtRow=75,
-                  key.title=NA,
-                  key.xlab="Spearman Correlation",
-                  xlab="Feature", ylab="Feature")
+# gplots::heatmap.2(abs(cormat),
+#                   trace = "none",
+#                   mar = c(5,5),
+#                   col=rev(heat.colors(5)),
+#                   breaks = breaks,
+#                   main = "Correlation after HCA",
+#                   cexRow = 0.25,
+#                   cexCol = 0.25,
+#                   srtCol=35,
+#                   srtRow=75,
+#                   key.title=NA,
+#                   key.xlab="Spearman Correlation",
+#                   xlab="Feature", ylab="Feature")
 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
@@ -436,19 +407,19 @@ pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
 pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  breaks = breaks,
-                  main = "Correlation after HCA:Spearman",
-                  cexRow = 0.25,
-                  cexCol = 0.25,
-                  srtCol=35,
-                  srtRow=75,
-                  key.title=NA,
-                  key.xlab="Spearman Correlation",
-                  xlab="Feature", ylab="Feature")
+# gplots::heatmap.2(abs(cormat),
+#                   trace = "none",
+#                   mar = c(5,5),
+#                   col=rev(heat.colors(5)),
+#                   breaks = breaks,
+#                   main = "Correlation after HCA:Spearman",
+#                   cexRow = 0.25,
+#                   cexCol = 0.25,
+#                   srtCol=35,
+#                   srtRow=75,
+#                   key.title=NA,
+#                   key.xlab="Spearman Correlation",
+#                   xlab="Feature", ylab="Feature")
 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
@@ -488,19 +459,19 @@ pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
 pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  breaks = breaks,
-                  main = "Correlation after Driven-HCA",
-                  cexRow = 0.25,
-                  cexCol = 0.25,
-                  srtCol=35,
-                  srtRow=75,
-                  key.title=NA,
-                  key.xlab="Spearman Correlation",
-                  xlab="Feature", ylab="Feature")
+# gplots::heatmap.2(abs(cormat),
+#                   trace = "none",
+#                   mar = c(5,5),
+#                   col=rev(heat.colors(5)),
+#                   breaks = breaks,
+#                   main = "Correlation after Driven-HCA",
+#                   cexRow = 0.25,
+#                   cexCol = 0.25,
+#                   srtCol=35,
+#                   srtRow=75,
+#                   key.title=NA,
+#                   key.xlab="Spearman Correlation",
+#                   xlab="Feature", ylab="Feature")
 #hist(cormat,freq=FALSE,
 #     density=NULL,
 #     xlim=c(-1,1),
@@ -538,19 +509,19 @@ pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
 pander::pander(c(HCAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  breaks = breaks,
-                  main = "Correlation: Driven/Spearman",
-                  cexRow = 0.25,
-                  cexCol = 0.25,
-                  srtCol=35,
-                  srtRow=75,
-                  key.title=NA,
-                  key.xlab="Spearman Correlation",
-                  xlab="Feature", ylab="Feature")
+# gplots::heatmap.2(abs(cormat),
+#                   trace = "none",
+#                   mar = c(5,5),
+#                   col=rev(heat.colors(5)),
+#                   breaks = breaks,
+#                   main = "Correlation: Driven/Spearman",
+#                   cexRow = 0.25,
+#                   cexCol = 0.25,
+#                   srtCol=35,
+#                   srtRow=75,
+#                   key.title=NA,
+#                   key.xlab="Spearman Correlation",
+#                   xlab="Feature", ylab="Feature")
 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
@@ -589,20 +560,20 @@ pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
 pander::pander(c(PCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  breaks = breaks,
-                  main = "Correlation after PCA",
-                  cexRow = 0.25,
-                  cexCol = 0.25,
-                  srtCol=35,
-                  srtRow=75,
-                  key.title=NA,
-                  key.xlab="Spearman Correlation",
-                  xlab="Feature", ylab="Feature")
-
+# gplots::heatmap.2(abs(cormat),
+#                   trace = "none",
+#                   mar = c(5,5),
+#                   col=rev(heat.colors(5)),
+#                   breaks = breaks,
+#                   main = "Correlation after PCA",
+#                   cexRow = 0.25,
+#                   cexCol = 0.25,
+#                   srtCol=35,
+#                   srtRow=75,
+#                   key.title=NA,
+#                   key.xlab="Spearman Correlation",
+#                   xlab="Feature", ylab="Feature")
+# 
 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
@@ -639,20 +610,20 @@ pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
 pander::pander(c(EFA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  breaks = breaks,
-                  main = "Correlation after EFA",
-                  cexRow = 0.25,
-                  cexCol = 0.25,
-                  srtCol=35,
-                  srtRow=75,
-                  key.title=NA,
-                  key.xlab="Spearman Correlation",
-                  xlab="Feature", ylab="Feature")
-
+# gplots::heatmap.2(abs(cormat),
+#                   trace = "none",
+#                   mar = c(5,5),
+#                   col=rev(heat.colors(5)),
+#                   breaks = breaks,
+#                   main = "Correlation after EFA",
+#                   cexRow = 0.25,
+#                   cexCol = 0.25,
+#                   srtCol=35,
+#                   srtRow=75,
+#                   key.title=NA,
+#                   key.xlab="Spearman Correlation",
+#                   xlab="Feature", ylab="Feature")
+# 
 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
@@ -689,19 +660,19 @@ pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
 pander::pander(c(PCAWhite_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  breaks = breaks,
-                  main = "Correlation after PCAWhite",
-                  cexRow = 0.25,
-                  cexCol = 0.25,
-                  srtCol=35,
-                  srtRow=75,
-                  key.title=NA,
-                  key.xlab="Spearman Correlation",
-                  xlab="Feature", ylab="Feature")
+# gplots::heatmap.2(abs(cormat),
+#                   trace = "none",
+#                   mar = c(5,5),
+#                   col=rev(heat.colors(5)),
+#                   breaks = breaks,
+#                   main = "Correlation after PCAWhite",
+#                   cexRow = 0.25,
+#                   cexCol = 0.25,
+#                   srtCol=35,
+#                   srtRow=75,
+#                   key.title=NA,
+#                   key.xlab="Spearman Correlation",
+#                   xlab="Feature", ylab="Feature")
 
 
 #hist(cormat,freq=FALSE,

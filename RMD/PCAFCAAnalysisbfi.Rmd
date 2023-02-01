@@ -1,5 +1,5 @@
 ---
-title: "PCA EFA: COVID-19"
+title: "PCA EFA: BFI"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output: 
@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
 ```
 
-# SALIVA-COVID-19 PCA-EFA-GDSTM
+# BFI Univariate
 
 ### Loading the libraries
 
@@ -40,61 +40,30 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 
 
 
-## Data: The COVID_19 Data-Set
 
-The data to process is described in:
+## The Data
 
-<https://zenodo.org/record/4156647#.Y1bSF3bMKUk>
-
-
-Thermal Saliva Testing Dataset
-
-
-10.5281/zenodo.4156647
-<https://doi.org/10.5281/zenodo.4156647>
-
-
-I added a column to the data identifying the repeated experiments.
 
 ```{r}
 
-SalivaThermal <- as.data.frame(read_excel("~/GitHub/FCA/Data/SalivaThermal_Source_Data_2.xlsx"))
-
-
-SalivaThermal_set1 <- subset(SalivaThermal,RepID==1)
-rownames(SalivaThermal_set1) <- SalivaThermal_set1$ID
-SalivaThermal_set1$RepID <- NULL
-SalivaThermal_set1$ID <- NULL
-SalivaThermal_set1$Ct <- NULL
-
-SalivaThermal_set2 <- subset(SalivaThermal,RepID==2)
-rownames(SalivaThermal_set2) <- SalivaThermal_set2$ID
-SalivaThermal_set2$RepID <- NULL
-SalivaThermal_set2$ID <- NULL
-SalivaThermal_set2$Ct <- NULL
-
-SalivaThermal_set3 <- subset(SalivaThermal,RepID==3)
-rownames(SalivaThermal_set3) <- SalivaThermal_set3$ID
-SalivaThermal_set3$RepID <- NULL
-SalivaThermal_set3$ID <- NULL
-SalivaThermal_set3$Ct <- NULL
-
-SalivaThermal_Avg <- (SalivaThermal_set1 + SalivaThermal_set2 + SalivaThermal_set3)/3
-
-colnames(SalivaThermal_Avg) <- paste("V",colnames(SalivaThermal_Avg),sep="_")
-
-SalivaThermal_Avg$class <- 1*(str_detect(rownames(SalivaThermal_Avg),"P"))
+data(bfi)
+bfi <- as.data.frame(bfi)
+bfi[,1:ncol(bfi)] <- sapply(bfi,as.numeric)
+bfi <- bfi[complete.cases(bfi),]
+bfi$gender <- 1*(bfi$gender==2)
+summary(bfi)
 
 ```
+
 
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-dataframe <- SalivaThermal_Avg
-outcome <- "class"
+dataframe <- bfi
+outcome <- "gender"
 
 trainFraction <- 0.5
-rhoThreshold <- 0.8
+rhoThreshold <- 0.4
 TopVariables <- 5
 
 set.seed(5)
@@ -116,6 +85,7 @@ varlist <- varlist[varlist != outcome]
 varlist <- as.data.frame(cbind(name=varlist,desc=varlist))
 
 ```
+
 
 
 ## Univariate
@@ -226,7 +196,7 @@ univarDeDriSpear <- uniRankVar(varlistDeSpear,
 
 ### Get continous correlated features
 ```{r}
-iscontinous <- sapply(apply(trainDataFrame,2,unique),length) > 5 ## Only variables with enough samples
+iscontinous <- sapply(apply(trainDataFrame,2,unique),length) > 4 ## Only variables with enough samples
 
 noclassData <- trainDataFrame[,iscontinous]
 cmat <- cor(noclassData);
@@ -248,7 +218,7 @@ noclassTestData <- testDataFrame[,topcor]
 
 ### PCA 
 
-pc <- principal(noclassData,2*TopVariables,rotate="varimax")   #principal components
+pc <- principal(noclassData,TopVariables,rotate="varimax")   #principal components
 pander::pander(t(pc$loadings[1:TopVariables,1:TopVariables]))
 PCA_Train <- as.data.frame(cbind(predict(pc,noclassData),trainDataFrame[,notcorr]))
 colnames(PCA_Train) <- c(colnames(predict(pc,noclassData)),notcorr)
@@ -270,7 +240,7 @@ univarPCA <- uniRankVar(varlistPCA,
 ## EFA
 ```{r results = "asis"}
 
-uls <- fa(noclassData,2*TopVariables,rotate="varimax")  #unweighted least squares is minres 
+uls <- fa(noclassData,TopVariables,rotate="varimax")  #unweighted least squares is minres 
 pander::pander(t(uls$weights[1:TopVariables,1:TopVariables])) 
 EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),trainDataFrame[,notcorr]))
 colnames(EFA_Train) <- c(colnames(predict(uls,noclassData)),notcorr)
@@ -501,6 +471,7 @@ gplots::heatmap.2(abs(cormat),
                   key.title=NA,
                   key.xlab="Spearman Correlation",
                   xlab="Feature", ylab="Feature")
+
 #hist(cormat,freq=FALSE,
 #     density=NULL,
 #     xlim=c(-1,1),

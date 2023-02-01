@@ -3,16 +3,16 @@ title: 'Univariate: Parkinson'
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
-  word_document:
-    reference_docx: WordStyle_FRESA.docx
-    toc: yes
-    fig_caption: yes
-  pdf_document:
-    toc: yes
   html_document:
     toc: yes
     fig_caption: yes
     number_sections: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
 editor_options:
   chunk_output_type: console
 fontsize: 10pt
