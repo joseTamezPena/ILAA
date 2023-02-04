@@ -1,6 +1,6 @@
 # Latent Biomarker Discovery
 
-This repository showcase the use of the **FRESA.CAD::GDSTMDecorrelation()** and the **FRESA.CAD::getLatentCoefficients()** for the discovery of Latent Biomarkers from tabular data-sets.
+This repository showcase the use of the **FRESA.CAD::IDeA()** and the **FRESA.CAD::getLatentCoefficients()** for the discovery of Latent Biomarkers from tabular data-sets.
 
 In many biomarker-discovery studies, a large set of measurements and variables are recorded aiming to find surrogate markers of disease stage or markers of therapeutical efficiency (i.e., the biomarker). In many cases, simple feature selection approaches are enough to discover the relevant variables associated with the desired outcome, but in many cases, these simple approaches fail to return a simple set of features or fail to discover a strong candidate with clinical utility. The issue is mainly present when a large set of these measurements are correlated hence cluttering the discovery process. This repository shows how to use the FRESA.CAD R package to decorrelate the data features and extract a set of Latent biomarkers that may be used as alternative markers.
 
@@ -11,7 +11,7 @@ library("FRESA.CAD")
 data('iris')
 
 ##FCA Decorrelation at 0.25 threshold, pearson and fast estimation 
-irisDecor <- GDSTMDecorrelation(iris,thr=0.25)
+irisDecor <- IDeA(iris,thr=0.25)
 
 ### Print the latent variables
 print(getLatentCoefficients(irisDecor))

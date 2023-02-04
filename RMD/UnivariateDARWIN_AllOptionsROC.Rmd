@@ -101,7 +101,7 @@ corRank <- c(FALSE,TRUE)
 
 ## Decorrelation Analysis 
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 8.0, fig.width= 6.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 8.0, fig.width= 6.0}
 
 if (dataLoad)
 {
@@ -158,7 +158,7 @@ if (dataLoad)
   
             if (DeOut != "T_Driven")
             {
-              DEdataframeTrain <- GDSTMDecorrelation(dataframe,
+              DEdataframeTrain <- IDeA(dataframe,
                                                      thr=thrs,
                                                      method=meth,
                                                      type=typ,
@@ -167,7 +167,7 @@ if (dataLoad)
                                                      verbose = FALSE)
             } else
             {
-              DEdataframeTrain <- GDSTMDecorrelation(dataframe,
+              DEdataframeTrain <- IDeA(dataframe,
                                                      Outcome=outcome,
                                                      thr=thrs,
                                                      method=meth,
@@ -176,7 +176,7 @@ if (dataLoad)
                                                      relaxed=TRUE,
                                                      verbose = FALSE)
             }
-            demat <- attr(DEdataframeTrain,"GDSTM")
+            demat <- attr(DEdataframeTrain,"UPSTM")
             DEdataframe <- predictDecorrelate(DEdataframeTrain,dataframeTest)
             totFe <- ncol(DEdataframe)-1
             totBa <- c(totBa,length(attr(DEdataframeTrain,"unaltered")))
@@ -253,7 +253,7 @@ par(op)
 ### Printing the analysis outputs
 
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 3.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.0, fig.width= 7.0}
 par(op)
 par(mfrow=c(1,2),cex=0.6)
 

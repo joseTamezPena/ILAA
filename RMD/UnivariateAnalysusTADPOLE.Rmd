@@ -74,7 +74,7 @@ rownames(TADPOLE_D1_D2_Dict) <- TADPOLE_D1_D2_Dict$FLDNAME
 
 ## Conditioning the data
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
 
 # mm3 to mm
 isVolume <- c("Ventricles","Hippocampus","WholeBrain","Entorhinal","Fusiform","MidTemp","ICV",
@@ -191,7 +191,7 @@ pander::pander(table(validBaselineTadpole$DX))
 
 ## Get the Time To Event on MCI Subjects
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
 
 subjectsID <- rownames(validBaselineTadpole)
 visitsID <- unique(TADPOLE_D1_D2$VISCODE)
@@ -255,7 +255,7 @@ MCI_No_converters <- subset(MCI_No_converters,TimeToEvent > 0)
 # Prognosis MCI to AD Conversion
 
 ## the set
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
 
 MCIPrognosisIDs <- c(MCIconverters$PTID,MCI_No_converters$PTID)
 
@@ -317,11 +317,11 @@ topfiveOrg <- rownames(univar$orderframe[1:5,])
 ## Decorrelation Analysis
 
 ```{r results = "asis"}
-DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE)
+DEdataframe <- IDeA(dataframe,thr=0.80,verbose = TRUE)
 
 pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"La_"))/(ncol(DEdataframe)-1)))
 pander::pander(c(Base_Fraction=sum(str_detect(colnames(DEdataframe),"Ba_"))/(ncol(DEdataframe)-1)))
-demat <- attr(DEdataframe,"GDSTM")
+demat <- attr(DEdataframe,"UPSTM")
 pander::pander(c(sparse_Fraction=1.0-sum(demat==0)/ncol(demat)/nrow(demat)))
 varlistDe <-  colnames(DEdataframe)[colnames(DEdataframe) != "class"];
 varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
@@ -357,7 +357,7 @@ gplots::heatmap.2(abs(cormat),
 #                  scale = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
-                  main = "Spearman Correlation: After GDSTM",
+                  main = "Spearman Correlation: After UPSTM",
                   cexRow = 0.35,
                   cexCol = 0.35,
                   key.title=NA,
@@ -418,7 +418,7 @@ pander::pander(c(meanSize=mean(sapply(dc,length))))
 
 ## CV ROC Analysis
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 8.0}
 par(op)
 par(mfrow=c(1,2),cex=0.9)
 fraction <-0.80

@@ -29,6 +29,7 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 library("FRESA.CAD")
 library(psych)
 library(whitening)
+library("vioplot")
 
 library(readxl)
 op <- par(no.readonly = TRUE)
@@ -57,15 +58,16 @@ gravier <- NULL
 ```
 
 
-#### Standarize the names for the reporting
+#### Training and testing sets
 
 ```{r results = "asis"}
 dataframe <- gravierset
 outcome <- "class"
 
 trainFraction <- 0.5
-rhoThreshold <- 0.5
+rhoThreshold <- 0.6
 TopVariables <- 5
+aucTHR <- 0.55
 
 set.seed(5)
 trainSample <- sample(nrow(dataframe),nrow(dataframe)*trainFraction)
@@ -76,38 +78,51 @@ testDataFrame <- dataframe[-trainSample,]
 ```
 
 
+### Data specs
 
 ```{r results = "asis"}
 pander::pander(c(rows=nrow(dataframe),col=ncol(dataframe)-1))
 pander::pander(table(dataframe[,outcome]))
+pander::pander(table(trainDataFrame[,outcome]))
+pander::pander(table(testDataFrame[,outcome]))
 
 varlist <- colnames(dataframe)
 varlist <- varlist[varlist != outcome]
-varlist <- as.data.frame(cbind(name=varlist,desc=varlist))
 
 ```
-
 
 
 ## Univariate
 
 ```{r results = "asis"}
 
-univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","wilcox.Zvalue")
+univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","IDI","ROCAUC","cStatCorr")
 univar <- uniRankVar(varlist,
 	           paste(outcome,"~1"),
 	           outcome,
 	           trainDataFrame,
-              rankingTest = "AUC")
+              rankingTest = "CStat")
 
 
+#univar$orderframe[1:5,univariate_columns]
+univarTest <- uniRankVar(varlist,
+	           paste(outcome,"~1"),
+	           outcome,
+	           trainDataFrame,
+	           testData=testDataFrame,
+              rankingTest = "CStat")
+
+univar$orderframe$BACC <- (univar$orderframe$Sensitivity + univar$orderframe$Specificity)/2.0
+univarTest$orderframe$BACC <- (univarTest$orderframe$Sensitivity + univarTest$orderframe$Specificity)/2.0
+
+#pROC::roc(trainDataFrame$class,trainDataFrame[,univar$orderframe$Name[1]],direction=">",plot=TRUE,auc=TRUE,quiet = TRUE)
 
 ```
 
-## Decorrelation with GDSTM Blind
+## Decorrelation with UPSTM Blind
 
 ```{r results = "asis"}
-DEdataframe <- GDSTMDecorrelation(trainDataFrame,thr=rhoThreshold)
+DEdataframe <- IDeA(trainDataFrame,thr=rhoThreshold)
 predTestDe <- predictDecorrelate(DEdataframe,testDataFrame)
 
 ltvar <- getLatentCoefficients(DEdataframe);
@@ -121,15 +136,29 @@ univarDe <- uniRankVar(varlistDe,
               paste(outcome,"~1"),
 	            outcome,
               DEdataframe,
-              rankingTest = "AUC")
+              rankingTest = "CStat")
 
+univarDeTest <- uniRankVar(varlistDe,
+              paste(outcome,"~1"),
+	            outcome,
+              DEdataframe,
+              testData=predTestDe,
+              rankingTest = "CStat")
+
+univarDe$orderframe$BACC <- (univarDe$orderframe$Sensitivity + univarDe$orderframe$Specificity)/2.0
+univarDeTest$orderframe$BACC <- (univarDeTest$orderframe$Sensitivity + univarDeTest$orderframe$Specificity)/2.0
+
+#univarDe$orderframe[1:5,univariate_columns]
+#univarDeTest$orderframe[1:5,univariate_columns]
+
+#pROC::roc(DEdataframe$class,DEdataframe[,univarDe$orderframe$Name[1]],direction=">",plot=TRUE,auc=TRUE,quiet = TRUE)
 
 ```
 
-## Decorrelation with GDSTM Blind/Spearman
+## Decorrelation with UPSTM Blind/Spearman
 
 ```{r results = "asis"}
-DEdataframeSpear <- GDSTMDecorrelation(trainDataFrame,thr=rhoThreshold,method="spearman")
+DEdataframeSpear <- IDeA(trainDataFrame,thr=rhoThreshold,method="spearman")
 predTestDeSpear <- predictDecorrelate(DEdataframeSpear,testDataFrame)
 
 ltvar <- getLatentCoefficients(DEdataframeSpear);
@@ -143,16 +172,25 @@ univarDeSpear <- uniRankVar(varlistDeSpear,
               paste(outcome,"~1"),
 	            outcome,
               DEdataframeSpear,
-              rankingTest = "AUC")
+              rankingTest = "CStat")
 
+univarDeSpearTest <- uniRankVar(varlistDeSpear,
+              paste(outcome,"~1"),
+	            outcome,
+              DEdataframeSpear,
+              testData=predTestDeSpear,
+              rankingTest = "CStat")
+
+univarDeSpear$orderframe$BACC <- (univarDeSpear$orderframe$Sensitivity + univarDeSpear$orderframe$Specificity)/2.0
+univarDeSpearTest$orderframe$BACC <- (univarDeSpearTest$orderframe$Sensitivity + univarDeSpearTest$orderframe$Specificity)/2.0
 
 ```
 
-## Decorrelation with GDSTM Driven
+## Decorrelation with UPSTM Driven
 
 ```{r results = "asis"}
 
-DriDEdataframe <- GDSTMDecorrelation(trainDataFrame,Outcome=outcome,thr=rhoThreshold)
+DriDEdataframe <- IDeA(trainDataFrame,Outcome=outcome,thr=rhoThreshold)
 predTestDri <- predictDecorrelate(DriDEdataframe,testDataFrame)
 
 
@@ -167,16 +205,25 @@ univarDeDri <- uniRankVar(varlistDe,
               paste(outcome,"~1"),
 	            outcome,
               DriDEdataframe,
-              rankingTest = "AUC")
+              rankingTest = "CStat")
 
+univarDeDriTest <- uniRankVar(varlistDe,
+              paste(outcome,"~1"),
+	            outcome,
+              DriDEdataframe,
+              testData=predTestDri,
+              rankingTest = "CStat")
+
+univarDeDri$orderframe$BACC <- (univarDeDri$orderframe$Sensitivity + univarDeDri$orderframe$Specificity)/2.0
+univarDeDriTest$orderframe$BACC <- (univarDeDriTest$orderframe$Sensitivity + univarDeDriTest$orderframe$Specificity)/2.0
 
 ```
 
-## Decorrelation with GDSTM Driven and Spearman
+## Decorrelation with UPSTM Driven and Spearman
 
 ```{r results = "asis"}
 
-DriDEdataframeSpear <- GDSTMDecorrelation(trainDataFrame,Outcome=outcome,thr=rhoThreshold,method="spearman")
+DriDEdataframeSpear <- IDeA(trainDataFrame,Outcome=outcome,thr=rhoThreshold,method="spearman")
 predTestDriSpear <- predictDecorrelate(DriDEdataframeSpear,testDataFrame)
 
 
@@ -191,7 +238,17 @@ univarDeDriSpear <- uniRankVar(varlistDeSpear,
               paste(outcome,"~1"),
 	            outcome,
               DriDEdataframeSpear,
-              rankingTest = "AUC")
+              rankingTest = "CStat")
+
+univarDeDriSpearTest <- uniRankVar(varlistDeSpear,
+              paste(outcome,"~1"),
+	            outcome,
+              DriDEdataframeSpear,
+              testData=predTestDriSpear,
+              rankingTest = "CStat")
+
+univarDeDriSpear$orderframe$BACC <- (univarDeDriSpear$orderframe$Sensitivity + univarDeDriSpear$orderframe$Specificity)/2.0
+univarDeDriSpearTest$orderframe$BACC <- (univarDeDriSpearTest$orderframe$Sensitivity + univarDeDriSpearTest$orderframe$Specificity)/2.0
 
 ```
 
@@ -211,6 +268,8 @@ notcorr <- colnames(trainDataFrame)[!(colnames(trainDataFrame) %in% topcor)]
 noclassData <- noclassData[,topcor]
 noclassTestData <- testDataFrame[,topcor]
 
+
+
 ```
 
 ## PCA Analysis
@@ -219,7 +278,7 @@ noclassTestData <- testDataFrame[,topcor]
 
 ### PCA 
 
-pc <- principal(noclassData,2*TopVariables,rotate="varimax")   #principal components
+pc <- principal(noclassData,4*TopVariables,rotate="varimax")   #principal components
 pander::pander(t(pc$loadings[1:TopVariables,1:TopVariables]))
 PCA_Train <- as.data.frame(cbind(predict(pc,noclassData),trainDataFrame[,notcorr]))
 colnames(PCA_Train) <- c(colnames(predict(pc,noclassData)),notcorr)
@@ -227,33 +286,54 @@ colnames(PCA_Train) <- c(colnames(predict(pc,noclassData)),notcorr)
 PCA_Predicted <- as.data.frame(cbind(predict(pc,noclassTestData),testDataFrame[,notcorr]))
 colnames(PCA_Predicted) <- c(colnames(predict(pc,noclassTestData)),notcorr)
 
-varlistPCA <-  colnames(PCA_Predicted)[colnames(PCA_Predicted) != "class"];
+iscontinous <- colnames(PCA_Predicted)[sapply(apply(PCA_Predicted,2,unique),length) > 5] ## Only variables with enough samples
+varlistPCA <-  iscontinous;
+
 univarPCA <- uniRankVar(varlistPCA,
               paste(outcome,"~1"),
 	            outcome,
               PCA_Train,
-              rankingTest = "AUC")
+              rankingTest = "CStat")
 
+univarPCATest <- uniRankVar(varlistPCA,
+              paste(outcome,"~1"),
+	            outcome,
+              PCA_Train,
+              testData=PCA_Predicted,
+              rankingTest = "CStat")
 
+univarPCA$orderframe$BACC <- (univarPCA$orderframe$Sensitivity + univarPCA$orderframe$Specificity)/2.0
+univarPCATest$orderframe$BACC <- (univarPCATest$orderframe$Sensitivity + univarPCATest$orderframe$Specificity)/2.0
 
 ```
 
 ## EFA
 ```{r results = "asis"}
 
-uls <- fa(noclassData,2*TopVariables,rotate="varimax")  #unweighted least squares is minres 
+uls <- fa(noclassData,4*TopVariables,rotate="varimax")  #unweighted least squares is minres 
 pander::pander(t(uls$weights[1:TopVariables,1:TopVariables])) 
 EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),trainDataFrame[,notcorr]))
 colnames(EFA_Train) <- c(colnames(predict(uls,noclassData)),notcorr)
 EFA_Predicted <- as.data.frame(cbind(predict(uls,noclassTestData),testDataFrame[,notcorr]))
 colnames(EFA_Predicted) <- c(colnames(predict(uls,noclassTestData)),notcorr)
 
-varlistEFA <-  colnames(EFA_Predicted)[colnames(EFA_Predicted) != "class"];
+iscontinous <- colnames(EFA_Predicted)[sapply(apply(EFA_Predicted,2,unique),length) > 5] ## Only variables with enough 
+varlistEFA <-  iscontinous
 univarEFA <- uniRankVar(varlistEFA,
               paste(outcome,"~1"),
 	            outcome,
               EFA_Train,
-              rankingTest = "AUC")
+              rankingTest = "CStat")
+
+univarEFATest <- uniRankVar(varlistEFA,
+              paste(outcome,"~1"),
+	            outcome,
+              EFA_Train,
+              testData=EFA_Predicted,
+              rankingTest = "CStat")
+
+univarEFA$orderframe$BACC <- (univarEFA$orderframe$Sensitivity + univarEFA$orderframe$Specificity)/2.0
+univarEFATest$orderframe$BACC <- (univarEFATest$orderframe$Sensitivity + univarEFATest$orderframe$Specificity)/2.0
 
 
 ```
@@ -262,12 +342,14 @@ univarEFA <- uniRankVar(varlistEFA,
 ## White
 ```{r results = "asis"}
 WhiteMat = whiteningMatrix(cov(noclassData), method="PCA")
+sum(is.na(WhiteMat))
 tokeep <- apply(is.na(WhiteMat),1,sum) == 0
 WhiteMat <- WhiteMat[tokeep,]
 sum(is.na(WhiteMat))
+sum(apply(abs(WhiteMat),1,sum) > 1.0e6)
 tokeep <- apply(abs(WhiteMat),1,sum) < 1.0e6
 WhiteMat <- WhiteMat[tokeep,]
-#apply(abs(WhiteMat),1,sum)
+sum(apply(abs(WhiteMat),1,sum) > 1.0e6)
 
 pander::pander(c(ncol=ncol(WhiteMat),nrow=nrow(WhiteMat)))
 
@@ -275,18 +357,38 @@ pander::pander(WhiteMat[1:TopVariables,1:TopVariables])
 PCAWhite_Train <- as.data.frame(cbind(tcrossprod(as.matrix(noclassData), WhiteMat),trainDataFrame[,notcorr]))
 colnames(PCAWhite_Train) <- c(colnames(tcrossprod(as.matrix(noclassData), WhiteMat)),notcorr)
 
+sum(is.na(PCAWhite_Train))
+
+
+
 PCAWhitePredicted <- as.data.frame(cbind(tcrossprod(as.matrix(noclassTestData), WhiteMat),testDataFrame[,notcorr]))
 colnames(PCAWhitePredicted) <- c(colnames(tcrossprod(as.matrix(noclassTestData), WhiteMat)),notcorr)
 
-varlistWhite <-  colnames(PCAWhitePredicted)[colnames(PCAWhitePredicted) != "class"];
+sum(is.na(PCAWhitePredicted))
+
+iscontinous <- colnames(PCAWhitePredicted)[sapply(apply(PCAWhitePredicted,2,unique),length) > 5] ## Only variables with enough 
+varlistWhite <-  iscontinous
+
 univarWhite <- uniRankVar(varlistWhite,
               paste(outcome,"~1"),
 	            outcome,
               PCAWhite_Train,
-              rankingTest = "AUC")
+              rankingTest = "CStat")
+
+
+univarWhiteTest <- uniRankVar(varlistWhite,
+              paste(outcome,"~1"),
+	            outcome,
+              PCAWhite_Train,
+              testData=PCAWhitePredicted,
+              rankingTest = "CStat")
+
+univarWhite$orderframe$BACC <- (univarWhite$orderframe$Sensitivity + univarWhite$orderframe$Specificity)/2.0
+univarWhiteTest$orderframe$BACC <- (univarWhiteTest$orderframe$Sensitivity + univarWhiteTest$orderframe$Specificity)/2.0
 
 
 ```
+
 
 ## Correlation Matrices
 
@@ -328,7 +430,7 @@ rawDen <- density(cormat,from=-1,to=1)
 par(op)
 ```
 
-### GDSTM Blind
+### UPSTM Blind
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
 par(cex=1.0,cex.main=0.8)
@@ -367,12 +469,12 @@ pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(co
 #                   key.title=NA,
 #                   key.xlab="Spearman Correlation",
 #                   xlab="Feature", ylab="Feature")
-
+# 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
 #     xlim=c(-1,1),
 #     ylim=c(0,4.0),
-#     main="Correlation after GDSTM",xlab="Spearman Correlation")
+#     main="Correlation after UPSTM",xlab="Spearman Correlation")
 
 DeDen <- density(cormat,from=-1,to=1)
 
@@ -381,7 +483,7 @@ par(op)
 
 ```
 
-### GDSTM Blind/Spearman
+### UPSTM Blind/Spearman
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
 par(cex=1.0,cex.main=0.8)
@@ -425,7 +527,7 @@ pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(co
 #     density=NULL,
 #     xlim=c(-1,1),
 #     ylim=c(0,4.0),
-#     main="Correlation after GDSTM",xlab="Spearman Correlation")
+#     main="Correlation after UPSTM",xlab="Spearman Correlation")
 
 DeSpearDen <- density(cormat,from=-1,to=1)
 
@@ -434,7 +536,7 @@ par(op)
 
 ```
 
-### GDSTM Driven
+### UPSTM Driven
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
 par(cex=1.0,cex.main=0.8)
@@ -472,11 +574,12 @@ pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(co
 #                   key.title=NA,
 #                   key.xlab="Spearman Correlation",
 #                   xlab="Feature", ylab="Feature")
+
 #hist(cormat,freq=FALSE,
 #     density=NULL,
 #     xlim=c(-1,1),
 #     ylim=c(0,4.0),
-#     main="Correlation after Driven-GDSTM",xlab="Spearman Correlation")
+#     main="Correlation after Driven-UPSTM",xlab="Spearman Correlation")
 
 DeDrivDen <- density(cormat,from=-1,to=1)
 par(op)
@@ -484,7 +587,7 @@ par(op)
 
 ```
 
-### GDSTM Spearman
+### UPSTM Spearman
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
 par(cex=1.0,cex.main=0.8)
 
@@ -527,7 +630,7 @@ pander::pander(c(HCAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(c
 #     density=NULL,
 #     xlim=c(-1,1),
 #     ylim=c(0,4.0),
-#     main="Correlation after GDSTM with Spearman",xlab="Spearman Correlation")
+#     main="Correlation after UPSTM with Spearman",xlab="Spearman Correlation")
 
 DeDrivSpearDen <- density(cormat,from=-1,to=1)
 par(op)
@@ -573,7 +676,7 @@ pander::pander(c(PCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(co
 #                   key.title=NA,
 #                   key.xlab="Spearman Correlation",
 #                   xlab="Feature", ylab="Feature")
-# 
+
 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
@@ -623,7 +726,7 @@ pander::pander(c(EFA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(co
 #                   key.title=NA,
 #                   key.xlab="Spearman Correlation",
 #                   xlab="Feature", ylab="Feature")
-# 
+
 
 #hist(cormat,freq=FALSE,
 #     density=NULL,
@@ -688,27 +791,29 @@ par(op)
 
 ## The Density Plot
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 6}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
 par(cex=0.7)
+colors=c("red","blue","green","darkblue","darkgreen","purple","orange","darkred");
+
 plot(rawDen,
      xlim=c(-1,1),
      ylim=c(0,7.0),
-     col="red",
+     col=colors[1],
      lty=1,
      lwd=4,
      main="Test: Correlation Distribution",xlab="Spearman Correlation")
 
-lines(DeDen,col="blue",lty=2,lwd=4)
-lines(DeSpearDen,col="green",lty=3,lwd=4)
-lines(DeDrivDen,col="darkblue",lty=4,lwd=2)
-lines(DeDrivSpearDen,col="darkgreen",lty=5,lwd=2)
+lines(DeDen,col=colors[2],lty=2,lwd=4)
+lines(DeSpearDen,col=colors[3],lty=3,lwd=4)
+lines(DeDrivDen,col=colors[4],lty=4,lwd=2)
+lines(DeDrivSpearDen,col=colors[5],lty=5,lwd=2)
 
-lines(PCADen,col="purple",lty=6,lwd=1)
-lines(EFADen,col="purple",lty=7,lwd=1)
-lines(WhiteDen,col="gray",lty=8,lwd=1)
+lines(PCADen,col=colors[6],lty=6,lwd=1)
+lines(EFADen,col=colors[7],lty=7,lwd=1)
+lines(WhiteDen,col=colors[8],lty=8,lwd=1)
 
 names=c("Raw","HCA:P","HCA:S","DHCA:P","DHCA:S","PCA","EFA","White:PCA")
-colors=c("red","blue","green","blue","green","purple","purple","gray");
+#colors=c("red","blue","green","blue","green","purple","purple","gray");
 lines=c(1,2,3,4,5,6,7,8)
 lwds=c(4,4,4,2,2,1,1,1)
 
@@ -718,18 +823,494 @@ par(op)
 ```
 
 
+
+### Differences between train and test ROC AUC
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+AUCResults <- list();
+diffAUC <- list();
+thenames <- rownames(univar$orderframe)[(rownames(univar$orderframe) %in% colnames(testDataFrame))]
+rawAUC <- univar$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[rawAUC >= aucTHR]
+rawAUC <- univar$orderframe[thenames,"ROCAUC"]
+rawAUCTest <- univarTest$orderframe[thenames,"ROCAUC"]
+AUCResults$RAW <- rawAUCTest
+diffAUC$RAW <-  rawAUCTest-rawAUC
+plot(rawAUC,rawAUCTest-rawAUC,
+     xlab="TRAIN ROC AUC",
+     ylab="Test:AUC-Train:AUC",
+     xlim=c(0.5,1.0),
+     ylim=c(-0.25,0.25),
+     pch=1,
+     col=colors[1],
+     main="ROC AUC Difference Between Test and Train")
+
+thenames <- rownames(univarDe$orderframe)[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+HCAP <- univarDe$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[HCAP >= aucTHR]
+HCAP <- univarDe$orderframe[thenames,"ROCAUC"]
+HCAPTest <- univarDeTest$orderframe[thenames,"ROCAUC"]
+AUCResults$HCAP <- HCAP
+AUCResults$HCAP_T <- HCAPTest
+diffAUC$HCAP <-  HCAPTest-HCAP
+
+points(HCAP,HCAPTest-HCAP,pch=2,col=colors[2])
+
+thenames <- rownames(univarDeSpear$orderframe)[!(rownames(univarDeSpear$orderframe) %in% colnames(testDataFrame))]
+HCAS <- univarDeSpear$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[HCAS >= aucTHR]
+HCAS <- univarDeSpear$orderframe[thenames,"ROCAUC"]
+HCASTest <- univarDeSpearTest$orderframe[thenames,"ROCAUC"]
+AUCResults$HCAS <- HCAS
+AUCResults$HCAS_T <- HCASTest
+diffAUC$HCAS <-  HCASTest-HCAS
+
+points(HCAS,HCASTest-HCAS,pch=3,col=colors[3])
+
+thenames <- rownames(univarDeDri$orderframe)[!(rownames(univarDeDri$orderframe) %in% colnames(testDataFrame))]
+DHCAP <- univarDeDri$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[DHCAP >= aucTHR]
+DHCAP <- univarDeDri$orderframe[thenames,"ROCAUC"]
+DHCAPTest <- univarDeDriTest$orderframe[thenames,"ROCAUC"]
+AUCResults$DHCAP <- DHCAP
+AUCResults$DHCAP_T <- DHCAPTest
+diffAUC$DHCAP <-  DHCAPTest-DHCAP
+
+points(DHCAP,DHCAPTest-DHCAP,pch=4,col=colors[4])
+
+thenames <- rownames(univarDeDriSpear$orderframe)[!(rownames(univarDeDriSpear$orderframe) %in% colnames(testDataFrame))]
+DHCAS <- univarDeDriSpear$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[DHCAS >= aucTHR]
+DHCAS <- univarDeDriSpear$orderframe[thenames,"ROCAUC"]
+DHCASTest <- univarDeDriSpearTest$orderframe[thenames,"ROCAUC"]
+AUCResults$DHCAS <- DHCAS
+AUCResults$DHCAS_T <- DHCASTest
+diffAUC$DHCAS <-  DHCASTest-DHCAS
+
+points(DHCAS,DHCASTest-DHCAS,pch=5,col=colors[5])
+
+thenames <- rownames(univarPCA$orderframe)[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
+PCA <- univarPCA$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[PCA >= aucTHR]
+PCA <- univarPCA$orderframe[thenames,"ROCAUC"]
+PCATest <- univarPCATest$orderframe[thenames,"ROCAUC"]
+AUCResults$PCA <- PCA
+AUCResults$PCA_T <- PCATest
+diffAUC$PCA <-  PCATest-PCA
+
+points(PCA,PCATest-PCA,pch=6,col=colors[6])
+
+thenames <- rownames(univarEFA$orderframe)[!(rownames(univarEFA$orderframe) %in% colnames(testDataFrame))]
+EFA <- univarEFA$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[EFA >= aucTHR]
+EFA <- univarEFA$orderframe[thenames,"ROCAUC"]
+
+EFATest <- univarEFATest$orderframe[thenames,"ROCAUC"]
+AUCResults$EFA <- EFA
+AUCResults$EFA_T <- EFATest
+diffAUC$EFA <-  EFATest-EFA
+
+points(EFA,EFATest-EFA,pch=7,col=colors[7])
+
+thenames <- rownames(univarWhite$orderframe)[!(rownames(univarWhite$orderframe) %in% colnames(testDataFrame))]
+WPCA <- univarWhite$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[WPCA >= aucTHR]
+WPCA <- univarWhite$orderframe[thenames,"ROCAUC"]
+WPCATest <- univarWhiteTest$orderframe[thenames,"ROCAUC"]
+AUCResults$WPCA <- WPCA
+AUCResults$WPCA_T <- WPCATest
+diffAUC$WPCA <-  WPCATest-WPCA
+
+
+points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
+
+
+names=c("Raw","HCA:P","HCA:S","DHCA:P","DHCA:S","PCA","EFA","White:PCA")
+pchs=c(1,2,3,4,5,6,7,8)
+
+legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
+par(op)
+
+
+
+```
+
+### Violin of differences
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+vioplot(diffAUC,
+        ylim=c(-0.25,0.25),
+        ylab="Test-Train",
+        main="Test-Train Paired ROC AUC Difference",
+        col=colors,
+        cex.axis=0.6,
+        las=2
+)
+stripchart(diffAUC, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffAUC),lapply(diffAUC,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+
+### Distribution of ROC AUC in latent Variables
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+colors2 <- length(AUCResults)
+colors2[1] <- colors[1];
+colors2[2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+colors2[1+2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+vioplot(AUCResults,
+        ylim=c(0.3,1.0),
+        ylab="ROC AUC",
+        main="ROC AUC of Latent Variables",
+        col=colors2,
+        cex.axis=0.6,
+        las=2
+)
+abline(h=0.5,col="black")
+stripchart(AUCResults, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(AUCResults),lapply(AUCResults,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+
+### Differences between train and test Balanced Accuracy
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+BACCTHR <- 0.5
+BACCResults <- list();
+diffBACC <- list();
+thenames <- rownames(univar$orderframe)[(rownames(univar$orderframe) %in% colnames(testDataFrame))]
+rawBACC <- univar$orderframe[thenames,"BACC"]
+thenames <- thenames[rawBACC >= BACCTHR]
+rawBACC <- univar$orderframe[thenames,"BACC"]
+rawBACCTest <- univarTest$orderframe[thenames,"BACC"]
+BACCResults$RAW <- rawBACCTest
+diffBACC$RAW <-  rawBACCTest-rawBACC
+plot(rawBACC,rawBACCTest-rawBACC,
+     xlab="TRAIN Balanced Acc",
+     ylab="Test:BACC-Train:BACC",
+     xlim=c(0.5,1.0),
+     ylim=c(-0.25,0.25),
+     pch=1,
+     col=colors[1],
+     main="Balanced Acc Difference Between Test and Train")
+
+thenames <- rownames(univarDe$orderframe)[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+HCAP <- univarDe$orderframe[thenames,"BACC"]
+thenames <- thenames[HCAP >= BACCTHR]
+HCAP <- univarDe$orderframe[thenames,"BACC"]
+HCAPTest <- univarDeTest$orderframe[thenames,"BACC"]
+BACCResults$HCAP <- HCAP
+BACCResults$HCAP_T <- HCAPTest
+diffBACC$HCAP <-  HCAPTest-HCAP
+
+points(HCAP,HCAPTest-HCAP,pch=2,col=colors[2])
+
+thenames <- rownames(univarDeSpear$orderframe)[!(rownames(univarDeSpear$orderframe) %in% colnames(testDataFrame))]
+HCAS <- univarDeSpear$orderframe[thenames,"BACC"]
+thenames <- thenames[HCAS >= BACCTHR]
+HCAS <- univarDeSpear$orderframe[thenames,"BACC"]
+HCASTest <- univarDeSpearTest$orderframe[thenames,"BACC"]
+BACCResults$HCAS <- HCAS
+BACCResults$HCAS_T <- HCASTest
+diffBACC$HCAS <-  HCASTest-HCAS
+
+points(HCAS,HCASTest-HCAS,pch=3,col=colors[3])
+
+thenames <- rownames(univarDeDri$orderframe)[!(rownames(univarDeDri$orderframe) %in% colnames(testDataFrame))]
+DHCAP <- univarDeDri$orderframe[thenames,"BACC"]
+thenames <- thenames[DHCAP >= BACCTHR]
+DHCAP <- univarDeDri$orderframe[thenames,"BACC"]
+DHCAPTest <- univarDeDriTest$orderframe[thenames,"BACC"]
+BACCResults$DHCAP <- DHCAP
+BACCResults$DHCAP_T <- DHCAPTest
+diffBACC$DHCAP <-  DHCAPTest-DHCAP
+
+points(DHCAP,DHCAPTest-DHCAP,pch=4,col=colors[4])
+
+thenames <- rownames(univarDeDriSpear$orderframe)[!(rownames(univarDeDriSpear$orderframe) %in% colnames(testDataFrame))]
+DHCAS <- univarDeDriSpear$orderframe[thenames,"BACC"]
+thenames <- thenames[DHCAS >= BACCTHR]
+DHCAS <- univarDeDriSpear$orderframe[thenames,"BACC"]
+DHCASTest <- univarDeDriSpearTest$orderframe[thenames,"BACC"]
+BACCResults$DHCAS <- DHCAS
+BACCResults$DHCAS_T <- DHCASTest
+diffBACC$DHCAS <-  DHCASTest-DHCAS
+
+points(DHCAS,DHCASTest-DHCAS,pch=5,col=colors[5])
+
+thenames <- rownames(univarPCA$orderframe)[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
+PCA <- univarPCA$orderframe[thenames,"BACC"]
+thenames <- thenames[PCA >= BACCTHR]
+PCA <- univarPCA$orderframe[thenames,"BACC"]
+PCATest <- univarPCATest$orderframe[thenames,"BACC"]
+BACCResults$PCA <- PCA
+BACCResults$PCA_T <- PCATest
+diffBACC$PCA <-  PCATest-PCA
+
+points(PCA,PCATest-PCA,pch=6,col=colors[6])
+
+thenames <- rownames(univarEFA$orderframe)[!(rownames(univarEFA$orderframe) %in% colnames(testDataFrame))]
+EFA <- univarEFA$orderframe[thenames,"BACC"]
+thenames <- thenames[EFA >= BACCTHR]
+EFA <- univarEFA$orderframe[thenames,"BACC"]
+
+EFATest <- univarEFATest$orderframe[thenames,"BACC"]
+BACCResults$EFA <- EFA
+BACCResults$EFA_T <- EFATest
+diffBACC$EFA <-  EFATest-EFA
+
+points(EFA,EFATest-EFA,pch=7,col=colors[7])
+
+thenames <- rownames(univarWhite$orderframe)[!(rownames(univarWhite$orderframe) %in% colnames(testDataFrame))]
+WPCA <- univarWhite$orderframe[thenames,"BACC"]
+thenames <- thenames[WPCA >= BACCTHR]
+WPCA <- univarWhite$orderframe[thenames,"BACC"]
+WPCATest <- univarWhiteTest$orderframe[thenames,"BACC"]
+BACCResults$WPCA <- WPCA
+BACCResults$WPCA_T <- WPCATest
+diffBACC$WPCA <-  WPCATest-WPCA
+
+
+points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
+
+
+names=c("Raw","HCA:P","HCA:S","DHCA:P","DHCA:S","PCA","EFA","White:PCA")
+pchs=c(1,2,3,4,5,6,7,8)
+
+legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
+par(op)
+
+
+
+```
+
+### Violin of differences
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+vioplot(diffBACC,
+        ylim=c(-0.25,0.25),
+        ylab="Test-Train",
+        main="Test-Train Paired Balanced Acc Difference",
+        col=colors,
+        cex.axis=0.6,
+        las=2
+)
+stripchart(diffBACC, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffBACC),lapply(diffBACC,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+
+### Distribution of Balanced Acc in latent Variables
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+colors2 <- length(BACCResults)
+colors2[1] <- colors[1];
+colors2[2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+colors2[1+2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+vioplot(BACCResults,
+        ylim=c(0.3,1.0),
+        ylab="Balanced Acc",
+        main="Balanced Acc of Latent Variables",
+        col=colors2,
+        cex.axis=0.6,
+        las=2
+)
+abline(h=0.5,col="black")
+stripchart(BACCResults, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(BACCResults),lapply(BACCResults,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+### Differences between train and test IDI
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+testIDI <- list();
+diffIDI <- list();
+rawIDI <- univar$orderframe$IDI
+rawIDITest <- univarTest$orderframe$IDI
+testIDI$RAW <- rawIDITest
+diffIDI$RAW <-  rawIDITest-rawIDI
+plot(rawIDI,rawIDITest-rawIDI,
+     xlab="TRAIN Test IDI",
+     ylab="Test:IDI-Train:IDI",
+     xlim=c(0,0.5),
+     ylim=c(-0.2,0.2),
+     pch=1,
+     col=colors[1],
+     main="Predict IDI Difference Between Test and Train")
+
+HCAP <- univarDe$orderframe$IDI[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+HCAPTest <-univarDeTest$orderframe$IDI[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+testIDI$HCAP <- HCAP
+testIDI$HCAP_T <- HCAPTest
+diffIDI$HCAP <-  HCAPTest-HCAP
+
+points(HCAP,HCAPTest-HCAP,pch=2,col=colors[2])
+
+HCAS <- univarDeSpear$orderframe$IDI[!(rownames(univarDeSpearTest$orderframe) %in% colnames(testDataFrame))]
+HCASTest <- univarDeSpearTest$orderframe$IDI[!(rownames(univarDeSpearTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$HCAS <- HCAS
+testIDI$HCAS_T <- HCASTest
+diffIDI$HCAS <-  HCASTest-HCAS
+
+points(HCAS,HCASTest-HCAS,pch=3,col=colors[3])
+
+DHCAP <- univarDeDri$orderframe$IDI[!(rownames(univarDeDriTest$orderframe) %in% colnames(testDataFrame))]
+DHCAPTest <- univarDeDriTest$orderframe$IDI[!(rownames(univarDeDriTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$DHCAP <- DHCAP
+testIDI$DHCAP_T <- DHCAPTest
+diffIDI$DHCAP <-  DHCAPTest-DHCAP
+
+points(DHCAP,DHCAPTest-DHCAP,pch=4,col=colors[4])
+
+DHCAS <- univarDeDriSpear$orderframe$IDI[!(rownames(univarDeDriSpearTest$orderframe) %in% colnames(testDataFrame))]
+DHCASTest <- univarDeDriSpearTest$orderframe$IDI[!(rownames(univarDeDriSpearTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$DHCAS <- DHCAS
+testIDI$DHCAS_T <- DHCASTest
+diffIDI$DHCAS <-  DHCASTest-DHCAS
+
+points(DHCAS,DHCASTest-DHCAS,pch=5,col=colors[5])
+
+PCA <- univarPCA$orderframe$IDI[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
+PCATest <- univarPCATest$orderframe$IDI[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
+testIDI$PCA <- PCA
+testIDI$PCA_T <- PCATest
+diffIDI$PCA <-  PCATest-PCA
+
+points(PCA,PCATest-PCA,pch=6,col=colors[6])
+
+EFA <- univarEFA$orderframe$IDI[!(rownames(univarEFA$orderframe) %in% colnames(testDataFrame))]
+EFATest <- univarEFATest$orderframe$IDI[!(rownames(univarEFA$orderframe) %in% colnames(testDataFrame))]
+testIDI$EFA <- EFA
+testIDI$EFA_T <- EFATest
+diffIDI$EFA <-  EFATest-EFA
+
+points(EFA,EFATest-EFA,pch=7,col=colors[7])
+
+WPCA <- univarWhite$orderframe$IDI[!(rownames(univarWhite$orderframe) %in% colnames(testDataFrame))]
+WPCATest <- univarWhiteTest$orderframe$IDI[!(rownames(univarWhite$orderframe) %in% colnames(testDataFrame))]
+testIDI$WPCA <- WPCA
+testIDI$WPCA_T <- WPCATest
+diffIDI$WPCA <-  WPCATest-WPCA
+
+
+points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
+
+
+names=c("Raw","HCA:P","HCA:S","DHCA:P","DHCA:S","PCA","EFA","White:PCA")
+pchs=c(1,2,3,4,5,6,7,8)
+
+legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
+par(op)
+
+
+
+```
+
+### Violin of differences
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+vioplot(diffIDI,
+        ylim=c(-0.2,0.2),
+        ylab="Test-Train",
+        main="Test-Train Paired Predict IDI Difference",
+        col=colors,
+        cex.axis=0.6,
+        las=2
+)
+stripchart(diffIDI, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffIDI),lapply(diffIDI,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+
+### Distribution of Predict IDI in latent Variables
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+colors2 <- length(testIDI)
+colors2[1] <- colors[1];
+colors2[2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+colors2[1+2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+vioplot(testIDI,
+        ylim=c(0.0,0.5),
+        ylab="Predict IDI",
+        main="Predict IDI of Latent Variables",
+        col=colors2,
+        cex.axis=0.6,
+        las=2
+)
+stripchart(testIDI, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(testIDI),lapply(testIDI,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
 ### The tables
 
 ```{r results = "asis"}
 
-pander::pander(univar$orderframe[1:TopVariables,univariate_columns])
-pander::pander(univarDe$orderframe[1:TopVariables,univariate_columns])
-pander::pander(univarDeSpear$orderframe[1:TopVariables,univariate_columns])
-pander::pander(univarDeDri$orderframe[1:TopVariables,univariate_columns])
-pander::pander(univarDeDriSpear$orderframe[1:TopVariables,univariate_columns])
-pander::pander(univarPCA$orderframe[1:TopVariables,univariate_columns])
-pander::pander(univarEFA$orderframe[1:TopVariables,univariate_columns])
-pander::pander(univarWhite$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeSpearTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeDriTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeDriSpearTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarPCATest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarEFATest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarWhiteTest$orderframe[1:TopVariables,univariate_columns])
 
 topUni <- univar$orderframe$Name[1:TopVariables]
 topDe <- univarDe$orderframe$Name[1:TopVariables]
@@ -860,3 +1441,4 @@ par(cex=0.6)
   par(op)
 
 ```
+

@@ -1,0 +1,652 @@
+---
+title: "IDeA,EFA: Cross Validation TADPOLE"
+author: "Jose Tamez"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+```
+
+# TADPOLE EFA/IDeA
+
+### Loading the libraries
+
+```{r}
+library("FRESA.CAD")
+library(psych)
+library(whitening)
+library("vioplot")
+
+library(readxl)
+op <- par(no.readonly = TRUE)
+pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+
+```
+
+
+## The data set
+
+```{r}
+TADPOLE_D1_D2 <- read.csv("~/GitHub/BSWiMS/Data/TADPOLE/TADPOLE_D1_D2.csv")
+TADPOLE_D1_D2_Dict <- read.csv("~/GitHub/BSWiMS/Data/TADPOLE/TADPOLE_D1_D2_Dict.csv")
+TADPOLE_D1_D2_Dict_LR <- as.data.frame(read_excel("~/GitHub/BSWiMS/Data/TADPOLE/TADPOLE_D1_D2_Dict_LR.xlsx",sheet = "LeftRightFeatures"))
+
+
+rownames(TADPOLE_D1_D2_Dict) <- TADPOLE_D1_D2_Dict$FLDNAME
+
+```
+
+## Conditioning the data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+# mm3 to mm
+isVolume <- c("Ventricles","Hippocampus","WholeBrain","Entorhinal","Fusiform","MidTemp","ICV",
+              TADPOLE_D1_D2_Dict$FLDNAME[str_detect(TADPOLE_D1_D2_Dict$TEXT,"Volume")]
+              )
+
+
+#TADPOLE_D1_D2[,isVolume] <- apply(TADPOLE_D1_D2[,isVolume],2,'^',(1/3))
+TADPOLE_D1_D2[,isVolume] <- TADPOLE_D1_D2[,isVolume]^(1/3)
+
+# mm2 to mm
+isArea <- TADPOLE_D1_D2_Dict$FLDNAME[str_detect(TADPOLE_D1_D2_Dict$TEXT,"Area")]
+TADPOLE_D1_D2[,isArea] <- sqrt(TADPOLE_D1_D2[,isArea])
+
+# Get only cross sectional measurements
+FreeSurfersetCross <- str_detect(colnames(TADPOLE_D1_D2),"UCSFFSX")
+
+# The subset of baseline measurements
+baselineTadpole <- subset(TADPOLE_D1_D2,VISCODE=="bl")
+table(baselineTadpole$DX)
+table(baselineTadpole$DX_bl)
+
+rownames(baselineTadpole) <- baselineTadpole$PTID
+
+
+validBaselineTadpole <- cbind(DX=baselineTadpole$DX_bl,
+                                 AGE=baselineTadpole$AGE,
+                                 Gender=1*(baselineTadpole$PTGENDER=="Female"),
+                                 ADAS11=baselineTadpole$ADAS11,
+                                 ADAS13=baselineTadpole$ADAS13,
+                                 MMSE=baselineTadpole$MMSE,
+                                 RAVLT_immediate=baselineTadpole$RAVLT_immediate,
+                                 RAVLT_learning=baselineTadpole$RAVLT_learning,
+                                 RAVLT_forgetting=baselineTadpole$RAVLT_forgetting,
+                                 RAVLT_perc_forgetting=baselineTadpole$RAVLT_perc_forgetting,
+                                 FAQ=baselineTadpole$FAQ,
+                                 Ventricles=baselineTadpole$Ventricles,
+                                 Hippocampus=baselineTadpole$Hippocampus,
+                                 WholeBrain=baselineTadpole$WholeBrain,
+                                 Entorhinal=baselineTadpole$Entorhinal,
+                                 Fusiform=baselineTadpole$Fusiform,
+                                 MidTemp=baselineTadpole$MidTemp,
+                                 ICV=baselineTadpole$ICV,
+                                 baselineTadpole[,FreeSurfersetCross])
+
+
+LeftFields <- TADPOLE_D1_D2_Dict_LR$LFN
+names(LeftFields) <- LeftFields
+LeftFields <- LeftFields[LeftFields %in% colnames(validBaselineTadpole)]
+RightFields <- TADPOLE_D1_D2_Dict_LR$RFN
+names(RightFields) <- RightFields
+RightFields <- RightFields[RightFields %in% colnames(validBaselineTadpole)]
+
+## Normalize to ICV
+validBaselineTadpole$Ventricles=validBaselineTadpole$Ventricles/validBaselineTadpole$ICV
+validBaselineTadpole$Hippocampus=validBaselineTadpole$Hippocampus/validBaselineTadpole$ICV
+validBaselineTadpole$WholeBrain=validBaselineTadpole$WholeBrain/validBaselineTadpole$ICV
+validBaselineTadpole$Entorhinal=validBaselineTadpole$Entorhinal/validBaselineTadpole$ICV
+validBaselineTadpole$Fusiform=validBaselineTadpole$Fusiform/validBaselineTadpole$ICV
+validBaselineTadpole$MidTemp=validBaselineTadpole$MidTemp/validBaselineTadpole$ICV
+
+leftData <- validBaselineTadpole[,LeftFields]/validBaselineTadpole$ICV
+RightData <- validBaselineTadpole[,RightFields]/validBaselineTadpole$ICV
+
+## get mean and relative difference 
+meanLeftRight <- (leftData + RightData)/2
+difLeftRight <- abs(leftData - RightData)
+reldifLeftRight <- difLeftRight/meanLeftRight
+colnames(meanLeftRight) <- paste("M",colnames(meanLeftRight),sep="_")
+colnames(difLeftRight) <- paste("D",colnames(difLeftRight),sep="_")
+colnames(reldifLeftRight) <- paste("RD",colnames(reldifLeftRight),sep="_")
+
+
+validBaselineTadpole <- validBaselineTadpole[,!(colnames(validBaselineTadpole) %in% 
+                                               c(LeftFields,RightFields))]
+#validBaselineTadpole <- cbind(validBaselineTadpole,meanLeftRight,difLeftRight,reldifLeftRight)
+validBaselineTadpole <- cbind(validBaselineTadpole,meanLeftRight,difLeftRight)
+
+## Remove columns with too many NA more than %15 of NA
+nacount <- apply(is.na(validBaselineTadpole),2,sum)/nrow(validBaselineTadpole) < 0.15
+diagnose <- validBaselineTadpole$DX
+pander::pander(table(diagnose))
+validBaselineTadpole <- validBaselineTadpole[,nacount]
+## Remove character columns
+ischar <- sapply(validBaselineTadpole,class) == "character"
+validBaselineTadpole <- validBaselineTadpole[,!ischar]
+## Place back diagnose
+validBaselineTadpole$DX <- diagnose
+
+
+validBaselineTadpole <- validBaselineTadpole[complete.cases(validBaselineTadpole),]
+ischar <- sapply(validBaselineTadpole,class) == "character"
+validBaselineTadpole[,!ischar] <- sapply(validBaselineTadpole[,!ischar],as.numeric)
+
+colnames(validBaselineTadpole) <- str_remove_all(colnames(validBaselineTadpole),"_UCSFFSX_11_02_15_UCSFFSX51_08_01_16")
+colnames(validBaselineTadpole) <- str_replace_all(colnames(validBaselineTadpole)," ","_")
+validBaselineTadpole$LONISID <- NULL
+validBaselineTadpole$IMAGEUID <- NULL
+validBaselineTadpole$LONIUID <- NULL
+
+diagnose <- as.character(validBaselineTadpole$DX)
+validBaselineTadpole$DX <- diagnose
+pander::pander(table(validBaselineTadpole$DX))
+
+
+validBaselineTadpole[validBaselineTadpole$DX %in% c("EMCI","LMCI"),"DX"] <- "MCI" 
+validBaselineTadpole[validBaselineTadpole$DX %in% c("CN","SMC"),"DX"] <- "NL" 
+
+pander::pander(table(validBaselineTadpole$DX))
+
+
+
+```
+
+## Get the Time To Event on MCI Subjects
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+subjectsID <- rownames(validBaselineTadpole)
+visitsID <- unique(TADPOLE_D1_D2$VISCODE)
+baseDx <- TADPOLE_D1_D2[TADPOLE_D1_D2$VISCODE=="bl",c("PTID","DX","EXAMDATE")]
+rownames(baseDx) <- baseDx$PTID 
+baseDx <- baseDx[subjectsID,]
+lastDx <- baseDx
+toDementia <- baseDx
+table(lastDx$DX)
+hasDementia <- lastDx$PTID[str_detect(lastDx$DX,"Dementia")]
+
+
+for (vid in visitsID)
+{
+  DxValue <- TADPOLE_D1_D2[TADPOLE_D1_D2$VISCODE==vid,c("PTID","DX","EXAMDATE")]
+  rownames(DxValue) <- DxValue$PTID 
+  DxValue <- DxValue[DxValue$PTID %in% subjectsID,]
+  noDX <- DxValue$PTID[nchar(DxValue$DX) < 1]
+  print(length(noDX))
+  DxValue[noDX,] <- lastDx[noDX,]
+  inLast <- lastDx$PTID[lastDx$PTID %in% DxValue$PTID]
+  print(length(inLast))
+  lastDx[inLast,] <- DxValue[inLast,]
+  noDementia <- !(toDementia$PTID %in% hasDementia)
+  toDementia[noDementia,] <- lastDx[noDementia,]
+  hasDementia <- unique(c(hasDementia,lastDx$PTID[str_detect(lastDx$DX,"Dementia")]))
+}
+table(lastDx$DX)
+baseMCI <-baseDx$PTID[baseDx$DX == "MCI"]
+lastDementia <- lastDx$PTID[str_detect(lastDx$DX,"Dementia")]
+lastDementia2 <- toDementia$PTID[str_detect(toDementia$DX,"Dementia")]
+lastNL <- lastDx$PTID[str_detect(lastDx$DX,"NL")]
+
+MCIatBaseline <- baseDx[baseMCI,]
+MCIatEvent <- toDementia[baseMCI,]
+MCIatLast <- lastDx[baseMCI,]
+
+MCIconverters <- MCIatBaseline[baseMCI %in% lastDementia,]
+MCI_No_converters <- MCIatBaseline[!(baseMCI %in% MCIconverters$PTID),]
+MCIconverters$TimeToEvent <- (as.Date(toDementia[MCIconverters$PTID,"EXAMDATE"]) 
+                                   - as.Date(MCIconverters$EXAMDATE))
+
+sum(MCIconverters$TimeToEvent ==0)
+
+
+MCIconverters$AtEventDX <- MCIatEvent[MCIconverters$PTID,"DX"]
+MCIconverters$LastDX <- MCIatLast[MCIconverters$PTID,"DX"]
+
+MCI_No_converters$TimeToEvent <- (as.Date(lastDx[MCI_No_converters$PTID,"EXAMDATE"]) 
+                                   - as.Date(MCI_No_converters$EXAMDATE))
+
+MCI_No_converters$LastDX <- MCIatLast[MCI_No_converters$PTID,"DX"]
+
+MCI_No_converters <- subset(MCI_No_converters,TimeToEvent > 0)
+
+
+
+```
+
+
+# Prognosis MCI to AD Conversion
+
+## the set
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+MCIPrognosisIDs <- c(MCIconverters$PTID,MCI_No_converters$PTID)
+
+TADPOLECrossMRI <- validBaselineTadpole[MCIPrognosisIDs,]
+table(TADPOLECrossMRI$DX)
+TADPOLECrossMRI$DX <- NULL
+TADPOLECrossMRI$status <- 1*(rownames(TADPOLECrossMRI) %in% MCIconverters$PTID)
+table(TADPOLECrossMRI$status)
+
+```
+
+#### Training and testing sets
+
+```{r results = "asis"}
+dataframe <- TADPOLECrossMRI
+outcome <- "status"
+
+trainFraction <- 0.5
+cvloops <- 30
+rhoThreshold <- 0.6
+nEFAFactors <- 20
+topFeat <- 20
+
+aucTHR <- 0.60
+
+set.seed(10)
+colors=c("red","blue","darkblue","green","darkgreen")
+
+```
+
+
+### Data specs
+
+```{r results = "asis"}
+pander::pander(c(rows=nrow(dataframe),col=ncol(dataframe)-1))
+pander::pander(table(dataframe[,outcome]))
+
+
+```
+
+
+## Shrinkage Analysis
+
+```{r results = "asis"}
+
+AUCthrlist <- numeric()
+RawAUCs <- numeric()
+IDeAAUCs <- numeric()
+IDeAAUCs_LV <- numeric()
+EFAAUCs <- numeric()
+EFAAUCs_LV <- numeric()
+
+RawBACs <- numeric()
+IDeABACs <- numeric()
+IDeABACs_LV <- numeric()
+EFABACs <- numeric()
+EFABACs_LV <- numeric()
+
+ChangeRawAUCs <- numeric()
+ChangeIDeAAUCs <- numeric()
+ChangeIDeAAUCs_LV <- numeric()
+ChangeEFAAUCs <- numeric()
+ChangeEFAAUCs_LV <- numeric()
+
+ChangeRawBACs <- numeric()
+ChangeIDeABACs <- numeric()
+ChangeIDeABACs_LV <- numeric()
+ChangeEFABACs <- numeric()
+ChangeEFABACs_LV <- numeric()
+
+
+allposRaw <- numeric()
+allposIDeA <- numeric()
+allposIDeA_LV <- numeric()
+allposEFA <- numeric()
+allposEFA_LV <- numeric()
+
+cvloop <- 1
+varlist <- colnames(dataframe)
+varlist <- varlist[varlist != outcome]
+for (cvloop in c(1:cvloops))
+{
+    trainSample <- sample(nrow(dataframe),nrow(dataframe)*trainFraction)
+    
+    trainDataFrame <- dataframe[trainSample,]
+    testDataFrame <- dataframe[-trainSample,]
+    
+    univar <- uniRankVar(varlist,
+    	           paste(outcome,"~1"),
+    	           outcome,
+    	           trainDataFrame,
+                  rankingTest = "CStat")
+    
+    
+    univarTest <- uniRankVar(varlist,
+    	           paste(outcome,"~1"),
+    	           outcome,
+    	           trainDataFrame,
+    	           testData=testDataFrame,
+                  rankingTest = "CStat")
+    
+    topfeat <- c(1:nrow(univar$orderframe)) <= topFeat
+    posdisc <- (univar$orderframe$ROCAUC >= aucTHR) & topfeat
+    RAWaucTHR <- min(univar$orderframe[posdisc,"ROCAUC"])
+    AUCthrlist <- c(AUCthrlist,RAWaucTHR)
+    postestrain <- posdisc & (univarTest$orderframe$ROCAUC >= aucTHR)
+    allposRaw <- c(allposRaw,sum(postestrain)/(0.00001+sum(posdisc)))
+    
+    trainBACC <- (univar$orderframe$Sensitivity[posdisc] + univar$orderframe$Specificity[posdisc])/2.0
+    testBACC <- (univarTest$orderframe$Sensitivity[posdisc] + univarTest$orderframe$Specificity[posdisc])/2.0
+    ChangeRawAUCs <- c(ChangeRawAUCs,univarTest$orderframe$ROCAUC[posdisc] - univar$orderframe$ROCAUC[posdisc])
+    ChangeRawBACs <- c(ChangeRawBACs,testBACC - trainBACC)
+    
+    RawAUCs <- c(RawAUCs,univarTest$orderframe$ROCAUC[posdisc])
+    RawBACs <- c(RawBACs,testBACC[posdisc])
+    
+    #################################### IDeA Pearson
+    
+    DEdataframe <- IDeA(trainDataFrame,thr=rhoThreshold)
+    predTestDe <- predictDecorrelate(DEdataframe,testDataFrame)
+    
+    
+    varlistDe <-  colnames(DEdataframe)[colnames(DEdataframe) != outcome];
+    univarDe <- uniRankVar(varlistDe,
+                  paste(outcome,"~1"),
+    	            outcome,
+                  DEdataframe,
+                  rankingTest = "CStat")
+    
+    univarDeTest <- uniRankVar(varlistDe,
+                  paste(outcome,"~1"),
+    	            outcome,
+                  DEdataframe,
+                  testData=predTestDe,
+                  rankingTest = "CStat")
+    
+    topfeat <- c(1:nrow(univarDe$orderframe)) <= topFeat
+    posdisc <- (univarDe$orderframe$ROCAUC >= RAWaucTHR) & topfeat
+    postestrain <- posdisc & (univarDeTest$orderframe$ROCAUC >= RAWaucTHR)
+    allposIDeA <- c(allposIDeA,sum(postestrain)/(0.00001+sum(posdisc)))
+
+    trainBACC <- (univarDe$orderframe$Sensitivity + univarDe$orderframe$Specificity)/2.0
+    testBACC <- (univarDeTest$orderframe$Sensitivity + univarDeTest$orderframe$Specificity)/2.0
+    ChangeIDeAAUCs <- c(ChangeIDeAAUCs,univarDeTest$orderframe$ROCAUC[posdisc] - univarDe$orderframe$ROCAUC[posdisc])
+    ChangeIDeABACs <- c(ChangeIDeABACs,testBACC[posdisc] - trainBACC[posdisc])
+    
+    notinRaw <- (!(univarDe$orderframe$Name %in% colnames(dataframe)) & posdisc) 
+    
+    ChangeIDeAAUCs_LV <- c(ChangeIDeAAUCs_LV,univarDeTest$orderframe$ROCAUC[notinRaw] - univarDe$orderframe$ROCAUC[notinRaw])
+    ChangeIDeABACs_LV <- c(ChangeIDeABACs_LV,testBACC[notinRaw] - trainBACC[notinRaw])
+    
+    posdisc_LV <- posdisc & notinRaw
+    postestrain_LV <- posdisc_LV & (univarDeTest$orderframe$ROCAUC >= RAWaucTHR)
+    allposIDeA_LV <- c(allposIDeA_LV,sum(postestrain_LV)/(0.00001+sum(posdisc_LV)))
+
+    
+    IDeAAUCs <- c(IDeAAUCs,univarDeTest$orderframe$ROCAUC[posdisc])
+    IDeABACs <- c(IDeABACs,testBACC[posdisc])
+
+    IDeAAUCs_LV <- c(IDeAAUCs_LV,univarDeTest$orderframe$ROCAUC[notinRaw])
+    IDeABACs_LV <- c(IDeABACs_LV,testBACC[notinRaw])
+
+
+    ####################### FCA
+    
+    iscontinous <- sapply(apply(trainDataFrame,2,unique),length) > 5 ## Only variables with enough samples
+    
+    noclassData <- trainDataFrame[,iscontinous]
+    cmat <- cor(noclassData);
+    diag(cmat) <- 0;
+    maxcor <- apply(cmat,2,max);
+    topcor <- names(maxcor[maxcor>rhoThreshold]) ## Only correlated features will be PCA
+    cmat <- NULL
+    
+    notcorr <- colnames(trainDataFrame)[!(colnames(trainDataFrame) %in% topcor)]
+    noclassData <- noclassData[,topcor]
+    noclassTestData <- testDataFrame[,topcor]
+    
+    
+    ## EFA
+    
+    uls <- fa(noclassData,nEFAFactors,rotate="varimax")  #unweighted least squares is minres 
+    EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),trainDataFrame[,notcorr]))
+    colnames(EFA_Train) <- c(colnames(predict(uls,noclassData)),notcorr)
+    EFA_Predicted <- as.data.frame(cbind(predict(uls,noclassTestData),testDataFrame[,notcorr]))
+    colnames(EFA_Predicted) <- c(colnames(predict(uls,noclassTestData)),notcorr)
+    
+    iscontinous <- colnames(EFA_Predicted)[sapply(apply(EFA_Predicted,2,unique),length) > 5] ## Only variables with enough 
+    varlistEFA <-  iscontinous
+    univarEFA <- uniRankVar(varlistEFA,
+                  paste(outcome,"~1"),
+    	            outcome,
+                  EFA_Train,
+                  rankingTest = "CStat")
+    
+    univarEFATest <- uniRankVar(varlistEFA,
+                  paste(outcome,"~1"),
+    	            outcome,
+                  EFA_Train,
+                  testData=EFA_Predicted,
+                  rankingTest = "CStat")
+    
+    topfeat <- c(1:nrow(univarEFA$orderframe)) <= topFeat
+    posdisc <- (univarEFA$orderframe$ROCAUC >= RAWaucTHR) & topfeat
+    postestrain <- posdisc & (univarEFATest$orderframe$ROCAUC >= RAWaucTHR)
+    allposEFA <- c(allposEFA,sum(postestrain)/(0.00001+sum(posdisc)))
+
+    trainBACC <- (univarEFA$orderframe$Sensitivity + univarEFA$orderframe$Specificity)/2.0
+    testBACC <- (univarEFATest$orderframe$Sensitivity + univarEFATest$orderframe$Specificity)/2.0
+    ChangeEFAAUCs <- c(ChangeEFAAUCs,univarEFATest$orderframe$ROCAUC[posdisc] - univarEFA$orderframe$ROCAUC[posdisc])
+    ChangeEFABACs <- c(ChangeEFABACs,testBACC[posdisc] - trainBACC[posdisc])
+    
+    notinRaw <- (!(univarEFA$orderframe$Name %in% colnames(dataframe)) & posdisc) 
+    
+    ChangeEFAAUCs_LV <- c(ChangeEFAAUCs_LV,univarEFATest$orderframe$ROCAUC[notinRaw] - univarEFA$orderframe$ROCAUC[notinRaw])
+    ChangeEFABACs_LV <- c(ChangeEFABACs_LV,testBACC[notinRaw] - trainBACC[notinRaw])
+
+    posdisc_LV <- posdisc & notinRaw
+    postestrain_LV <- posdisc_LV & (univarEFATest$orderframe$ROCAUC >= RAWaucTHR)
+    allposEFA_LV <- c(allposEFA_LV,sum(postestrain_LV)/(0.00001+sum(posdisc_LV)))
+    
+    EFAAUCs <- c(EFAAUCs,univarEFATest$orderframe$ROCAUC[posdisc])
+    EFABACs <- c(EFABACs,testBACC[posdisc])
+
+    EFAAUCs_LV <- c(EFAAUCs_LV,univarEFATest$orderframe$ROCAUC[notinRaw])
+    EFABACs_LV <- c(EFABACs_LV,testBACC[notinRaw])
+
+
+}
+
+
+```
+
+```{r results = "asis"}
+
+pander::pander(AUCthrlist)
+pander::pander(mean(AUCthrlist))
+```
+
+
+### Violin of ROC AUC 
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+AUCs <- list(RAW=RawAUCs,IDeA=IDeAAUCs,IDeA_LV=IDeAAUCs_LV,EFA=EFAAUCs,EFA_LV=EFAAUCs_LV)
+vioplot(AUCs,
+        ylim=c(0.5,1.0),
+        ylab="Test AUC",
+        main="Test ROC AUC",
+        col=colors,
+        cex.axis=0.8
+)
+#stripchart(diffAUC, method = "jitter", col = "gray",
+#           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(AUCs),lapply(AUCs,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(AUCs,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+
+### Violin of Balanced Accuracy 
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+BACs <- list(RAW=RawBACs,IDeA=IDeABACs,IDeA_LV=IDeABACs_LV,EFA=EFABACs,EFA_LV=EFABACs_LV)
+vioplot(BACs,
+        ylim=c(0.5,1.0),
+        ylab="Test BAC",
+        main="Test Balanced Accuracy",
+        col=colors,
+        cex.axis=0.8
+)
+#stripchart(diffBAC, method = "jitter", col = "gray",
+#           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(BACs),lapply(BACs,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(BACs,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+
+
+### Violin of ROC AUC Changes
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+colors=c("red","blue","darkblue","green","darkgreen")
+par(mfrow=c(1,1),cex=0.7)
+
+diffAUC <- list(RAW=ChangeRawAUCs,IDeA=ChangeIDeAAUCs,IDeA_LV=ChangeIDeAAUCs_LV,EFA=ChangeEFAAUCs,EFA_LV=ChangeEFAAUCs_LV)
+vioplot(diffAUC,
+        ylim=c(-0.5,0.5),
+        ylab="Test-Train",
+        main="Test-Train Paired ROC AUC",
+        col=colors,
+        cex.axis=0.8
+)
+#stripchart(diffAUC, method = "jitter", col = "gray",
+#           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffAUC),lapply(diffAUC,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(diffAUC,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+
+### Violin of Balance Accuracy Changes
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+diffBAC <- list(RAW=ChangeRawBACs,IDeA=ChangeIDeABACs,IDeA_LV=ChangeIDeABACs_LV,EFA=ChangeEFABACs,EFA_LV=ChangeEFABACs_LV)
+vioplot(diffBAC,
+        ylim=c(-0.5,0.5),
+        ylab="Test-Train",
+        main="Test-Train Paired Balance Accuracy",
+        col=colors,
+        cex.axis=0.8
+)
+#stripchart(diffAUC, method = "jitter", col = "gray",
+#           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffBAC),lapply(diffBAC,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+bp<- boxplot(diffBAC,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+
+```
+
+
+### Violin of Booth Positive
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+posFind <- list(RAW=allposRaw,IDeA=allposIDeA,IDeA_LV=allposIDeA_LV,EFA=allposEFA,EFA_LV=allposEFA_LV)
+vioplot(posFind,
+        ylim=c(0,1.0),
+        ylab="TPR",
+        main="Positive Discovery Rate",
+        col=colors,
+        cex.axis=0.8
+)
+stripchart(posFind, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.5)
+points(1:length(posFind),lapply(posFind,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(posFind,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+
+### Violin of Booth Positive top 
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+posFind <- list(RAW=allposRaw,IDeA=allposIDeA,EFA=allposEFA)
+vioplot(posFind,
+        ylim=c(0,1.0),
+        ylab="TPR",
+        main="Positive Discovery Rate",
+        col=colors[c(1,2,4)],
+        cex.axis=0.8
+)
+stripchart(posFind, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.5)
+points(1:length(posFind),lapply(posFind,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(posFind,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+

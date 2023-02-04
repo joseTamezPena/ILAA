@@ -1,5 +1,5 @@
 ---
-title: "Decorrelation-Based Feature Discovery: Thermal COVID_19"
+title: "Decorrelation-Based Feature Discovery: IR COVID_19"
 author: "Jose Tamez"
 date: "2022-10-02"
 output:
@@ -21,9 +21,9 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 
 ```
 
-# Effect of GDSTM-Based Decorrelation on Feature Discovery
+# Effect of UPSTM-Based Decorrelation on Feature Discovery
 
-Here I showcase of to use BSWiMS feature selection/modeling function coupled with Goal Driven Sparse Transformation Matrix (GDSTM) as a pre-processing step to decorrelate highly correlated features. The aim(s) are:
+Here I showcase of to use BSWiMS feature selection/modeling function coupled with Goal Driven Sparse Transformation Matrix (UPSTM) as a pre-processing step to decorrelate highly correlated features. The aim(s) are:
 
 1.  To improve model performance by uncovering the hidden information between correlated features.
 
@@ -31,7 +31,7 @@ Here I showcase of to use BSWiMS feature selection/modeling function coupled wit
 
 This demo will use:
 
--   *FRESA.CAD::GDSTMDecorrelation()*. For Decorrelation of Multidimensional data sets
+-   *FRESA.CAD::IDeA()*. For Decorrelation of Multidimensional data sets
 
     -   *FRESA.CAD::getLatentCoefficients()*. For the extraction of the model of the newly discovered of decorrelated features.
 
@@ -83,7 +83,7 @@ The data to process is described in:
 <https://zenodo.org/record/4156647#.Y1bSF3bMKUk>
 
 
-Thermal Saliva Testing Dataset
+IR Saliva Testing Dataset
 
 
 10.5281/zenodo.4156647
@@ -94,51 +94,51 @@ I added a column to the data identifying the repeated experiments.
 
 ```{r}
 
-SalivaThermal <- as.data.frame(read_excel("~/GitHub/FCA/Data/SalivaThermal_Source_Data_2.xlsx"))
+SalivaIR <- as.data.frame(read_excel("~/GitHub/FCA/Data/SalivaThermal_Source_Data_2.xlsx"))
 
 
-SalivaThermal_set1 <- subset(SalivaThermal,RepID==1)
-rownames(SalivaThermal_set1) <- SalivaThermal_set1$ID
-SalivaThermal_set1$RepID <- NULL
-SalivaThermal_set1$ID <- NULL
-SalivaThermal_set1$Ct <- NULL
+SalivaIR_set1 <- subset(SalivaIR,RepID==1)
+rownames(SalivaIR_set1) <- SalivaIR_set1$ID
+SalivaIR_set1$RepID <- NULL
+SalivaIR_set1$ID <- NULL
+SalivaIR_set1$Ct <- NULL
 
-SalivaThermal_set2 <- subset(SalivaThermal,RepID==2)
-rownames(SalivaThermal_set2) <- SalivaThermal_set2$ID
-SalivaThermal_set2$RepID <- NULL
-SalivaThermal_set2$ID <- NULL
-SalivaThermal_set2$Ct <- NULL
+SalivaIR_set2 <- subset(SalivaIR,RepID==2)
+rownames(SalivaIR_set2) <- SalivaIR_set2$ID
+SalivaIR_set2$RepID <- NULL
+SalivaIR_set2$ID <- NULL
+SalivaIR_set2$Ct <- NULL
 
-SalivaThermal_set3 <- subset(SalivaThermal,RepID==3)
-rownames(SalivaThermal_set3) <- SalivaThermal_set3$ID
-SalivaThermal_set3$RepID <- NULL
-SalivaThermal_set3$ID <- NULL
-SalivaThermal_set3$Ct <- NULL
+SalivaIR_set3 <- subset(SalivaIR,RepID==3)
+rownames(SalivaIR_set3) <- SalivaIR_set3$ID
+SalivaIR_set3$RepID <- NULL
+SalivaIR_set3$ID <- NULL
+SalivaIR_set3$Ct <- NULL
 
-SalivaThermal_Avg <- (SalivaThermal_set1 + SalivaThermal_set2 + SalivaThermal_set3)/3
+SalivaIR_Avg <- (SalivaIR_set1 + SalivaIR_set2 + SalivaIR_set3)/3
 
-SalivaThermal_d1 <- SalivaThermal_Avg[,-1] - SalivaThermal_Avg[,c(1:ncol(SalivaThermal_Avg)-1)]
-#SalivaThermal_d1[,ncol(SalivaThermal_d1)] <- 0
-#plot(apply(SalivaThermal_d1,2,mean))
-SalivaThermal_d2 <-  -SalivaThermal_d1[,c(1:ncol(SalivaThermal_d1)-1)] + SalivaThermal_d1[,-1]
-#SalivaThermal_d2[,ncol(SalivaThermal_d2)] <- 0
-#plot(apply(SalivaThermal_d2,2,mean))
-colnames(SalivaThermal_d2) <- paste("DD",colnames(SalivaThermal_d2),sep="_")
-colnames(SalivaThermal_d1) <- paste("D",colnames(SalivaThermal_d1),sep="_")
+SalivaIR_d1 <- SalivaIR_Avg[,-1] - SalivaIR_Avg[,c(1:ncol(SalivaIR_Avg)-1)]
+#SalivaIR_d1[,ncol(SalivaIR_d1)] <- 0
+#plot(apply(SalivaIR_d1,2,mean))
+SalivaIR_d2 <-  -SalivaIR_d1[,c(1:ncol(SalivaIR_d1)-1)] + SalivaIR_d1[,-1]
+#SalivaIR_d2[,ncol(SalivaIR_d2)] <- 0
+#plot(apply(SalivaIR_d2,2,mean))
+colnames(SalivaIR_d2) <- paste("DD",colnames(SalivaIR_d2),sep="_")
+colnames(SalivaIR_d1) <- paste("D",colnames(SalivaIR_d1),sep="_")
 
-colnames(SalivaThermal_Avg) <- paste("V",colnames(SalivaThermal_Avg),sep="_")
+colnames(SalivaIR_Avg) <- paste("V",colnames(SalivaIR_Avg),sep="_")
 
-#SalivaThermal_Avg <- cbind(SalivaThermal_Avg,SalivaThermal_d1,SalivaThermal_d2)
-#SalivaThermal_Avg <- cbind(SalivaThermal_Avg,SalivaThermal_d1,SalivaThermal_d2)
-#SalivaThermal_Avg <- SalivaThermal_d2
-SalivaThermal_Avg$class <- 1*(str_detect(rownames(SalivaThermal_Avg),"P"))
+#SalivaIR_Avg <- cbind(SalivaIR_Avg,SalivaIR_d1,SalivaIR_d2)
+#SalivaIR_Avg <- cbind(SalivaIR_Avg,SalivaIR_d1,SalivaIR_d2)
+#SalivaIR_Avg <- SalivaIR_d2
+SalivaIR_Avg$class <- 1*(str_detect(rownames(SalivaIR_Avg),"P"))
 ##The fraction of samples in the training set
-pander::pander(c(row=nrow(SalivaThermal_Avg),col=ncol(SalivaThermal_Avg)))
+pander::pander(c(row=nrow(SalivaIR_Avg),col=ncol(SalivaIR_Avg)))
 
-pander::pander(table(SalivaThermal_Avg$class))
+pander::pander(table(SalivaIR_Avg$class))
 trainFraction=0.90
 
-SalivaThermal_d2$class <- 1*(str_detect(rownames(SalivaThermal_d2),"P"))
+SalivaIR_d2$class <- 1*(str_detect(rownames(SalivaIR_d2),"P"))
 
 ```
 
@@ -146,7 +146,7 @@ SalivaThermal_d2$class <- 1*(str_detect(rownames(SalivaThermal_d2),"P"))
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-hm <- heatMaps(data=SalivaThermal_Avg,
+hm <- heatMaps(data=SalivaIR_Avg,
                Outcome="class",
                Scale=TRUE,
                hCluster = "row",
@@ -159,16 +159,16 @@ par(op)
 ### The UMAP
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 lnames <- c("Neg","Pos")
-featnames <- colnames(SalivaThermal_Avg)
+featnames <- colnames(SalivaIR_Avg)
 featnames <- featnames[featnames != "class"]
-datasetframe.umap = umap(FRESAScale(SalivaThermal_Avg[,featnames])$scaledData,n_components=2)
-plot(datasetframe.umap$layout,col=(SalivaThermal_Avg$class+1),xlab="U1",ylab="U2",main="UMAP: Original",t='n')
-text(datasetframe.umap$layout,labels=lnames[1+SalivaThermal_Avg$class],col=(SalivaThermal_Avg$class+1))
+datasetframe.umap = umap(FRESAScale(SalivaIR_Avg[,featnames])$scaledData,n_components=2)
+plot(datasetframe.umap$layout,col=(SalivaIR_Avg$class+1),xlab="U1",ylab="U2",main="UMAP: Original",t='n')
+text(datasetframe.umap$layout,labels=lnames[1+SalivaIR_Avg$class],col=(SalivaIR_Avg$class+1))
 
-#colors = rainbow(length(unique(SalivaThermal_Avg$class)))
-#names(colors) = unique(SalivaThermal_Avg$class)
-#ecb = function(x,y){ plot(x,t='n'); text(x,labels=SalivaThermal_Avg$class, col=colors[as.character(SalivaThermal_Avg$class)]) }
-#tsne_iris = tsne(SalivaThermal_Avg[,featnames], epoch_callback = ecb, perplexity=50)
+#colors = rainbow(length(unique(SalivaIR_Avg$class)))
+#names(colors) = unique(SalivaIR_Avg$class)
+#ecb = function(x,y){ plot(x,t='n'); text(x,labels=SalivaIR_Avg$class, col=colors[as.character(SalivaIR_Avg$class)]) }
+#tsne_iris = tsne(SalivaIR_Avg[,featnames], epoch_callback = ecb, perplexity=50)
 
 
 ```
@@ -181,7 +181,7 @@ The heat map of the testing set.
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 par(cex=0.6,cex.main=0.85,cex.axis=0.7)
-cormat <- cor(SalivaThermal_Avg[,colnames(SalivaThermal_Avg) != "class"],method="spearman")
+cormat <- cor(SalivaIR_Avg[,colnames(SalivaIR_Avg) != "class"],method="spearman")
 cormat[is.na(cormat)] <- 0
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
@@ -196,22 +196,22 @@ gplots::heatmap.2(abs(cormat),
                   xlab="Feature", ylab="Feature")
 
 ## The decorrelation
-deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,thr=0.80,verbose = TRUE)
-#deThermal <- GDSTMDecorrelation(SalivaThermal_Avg,thr=0.80,relaxed=FALSE,verbose = TRUE)
+deIR <- IDeA(SalivaIR_Avg,thr=0.80,verbose = TRUE)
+#deIR <- IDeA(SalivaIR_Avg,thr=0.80,relaxed=FALSE,verbose = TRUE)
 
-pander::pander(sum(apply(SalivaThermal_Avg,2,var)))
-pander::pander(sum(apply(deThermal,2,var)))
-pander::pander(entropy(discretize(unlist(SalivaThermal_Avg[,colnames(SalivaThermal_Avg) != "class"]), 256)))
-pander::pander(entropy(discretize(unlist(deThermal[,colnames(deThermal) != "class"]), 256)))
+pander::pander(sum(apply(SalivaIR_Avg,2,var)))
+pander::pander(sum(apply(deIR,2,var)))
+pander::pander(entropy(discretize(unlist(SalivaIR_Avg[,colnames(SalivaIR_Avg) != "class"]), 256)))
+pander::pander(entropy(discretize(unlist(deIR[,colnames(deIR) != "class"]), 256)))
 
-cormat <- cor(deThermal[,colnames(deThermal) != "class"],method="spearman")
+cormat <- cor(deIR[,colnames(deIR) != "class"],method="spearman")
 cormat[is.na(cormat)] <- 0
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
 #                  scale = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
-                  main = "COVID-19 Correlation after GDSTM",
+                  main = "COVID-19 Correlation after UPSTM",
                   cexRow = 0.35,
                   cexCol = 0.35,
                   key.title=NA,
@@ -225,8 +225,8 @@ par(op)
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-#hm <- heatMaps(data=deThermal,Outcome="class",Scale=TRUE,hCluster = "col")
-hm <- heatMaps(data=deThermal,
+#hm <- heatMaps(data=deIR,Outcome="class",Scale=TRUE,hCluster = "col")
+hm <- heatMaps(data=deIR,
                Outcome="class",
                Scale=TRUE,
                hCluster = "row",
@@ -238,18 +238,18 @@ par(op)
 
 ### The decorralted UMAP
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-featnames <- colnames(deThermal)
+featnames <- colnames(deIR)
 featnames <- featnames[featnames != "class"]
-datasetframe.umap = umap(FRESAScale(deThermal[,featnames])$scaledData,n_components=2)
-#plot(datasetframe.umap$layout,col=(deThermal$class+1),xlab="U1",ylab="U2",main="UMAP")
-plot(datasetframe.umap$layout,col=(deThermal$class+1),xlab="U1",ylab="U2",main="UMAP: After Transformation",t='n')
-text(datasetframe.umap$layout,labels=lnames[1+deThermal$class],col=(deThermal$class+1))
+datasetframe.umap = umap(FRESAScale(deIR[,featnames])$scaledData,n_components=2)
+#plot(datasetframe.umap$layout,col=(deIR$class+1),xlab="U1",ylab="U2",main="UMAP")
+plot(datasetframe.umap$layout,col=(deIR$class+1),xlab="U1",ylab="U2",main="UMAP: After Transformation",t='n')
+text(datasetframe.umap$layout,labels=lnames[1+deIR$class],col=(deIR$class+1))
 
 
-#colors = rainbow(length(unique(deThermal$class)))
-#names(colors) = unique(deThermal$class)
-#ecb = function(x,y){ plot(x,t='n'); text(x,labels=deThermal$class, col=colors[as.character(deThermal$class)]) }
-#tsne_iris = tsne(deThermal[,featnames], epoch_callback = ecb, perplexity=50)
+#colors = rainbow(length(unique(deIR$class)))
+#names(colors) = unique(deIR$class)
+#ecb = function(x,y){ plot(x,t='n'); text(x,labels=deIR$class, col=colors[as.character(deIR$class)]) }
+#tsne_iris = tsne(deIR[,featnames], epoch_callback = ecb, perplexity=50)
 
 ```
 
@@ -260,12 +260,12 @@ text(datasetframe.umap$layout,labels=lnames[1+deThermal$class],col=(deThermal$cl
 
 par(cex=0.6,cex.main=0.85,cex.axis=0.7)
 
-GDSTM <- attr(deThermal,"GDSTM")
-fscores <- attr(deThermal,"fscore")
+UPSTM <- attr(deIR,"UPSTM")
+fscores <- attr(deIR,"fscore")
 fscores <- fscores[order(-fscores)]
 #fscores[fscores>0]
 
-gplots::heatmap.2(log(abs(1000*GDSTM)+1),
+gplots::heatmap.2(log(abs(1000*UPSTM)+1),
                   trace = "none",
 #                  scale = "none",
                   mar = c(5,5),
@@ -283,24 +283,25 @@ par(op)
 
 ### Plots
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 5.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 5.0}
 par(mfrow=c(2,1),cex=0.8,cex.axis=0.7,cex.main=0.8)
 
-varlist <- colnames(SalivaThermal_Avg)[!(colnames(SalivaThermal_Avg) %in% "class")]
+varlist <- colnames(SalivaIR_Avg)[!(colnames(SalivaIR_Avg) %in% "class")]
 #varlist <- cbind(varlist,varlist)
+#class(varlist)
 
 univar <- uniRankVar(varlist,
 	           "class~1",
 	           "class",
-	           SalivaThermal_Avg,
+	           SalivaIR_Avg,
 	           categorizationType = "Raw",
 	           type = "LOGIT",
 	           rankingTest = "AUC",
 	            uniType = "Binary")
 
-cases <- subset(SalivaThermal_Avg,class==1)
+cases <- subset(SalivaIR_Avg,class==1)
 cases$class <- NULL
-controls <- subset(SalivaThermal_Avg,class==0)
+controls <- subset(SalivaIR_Avg,class==0)
 controls$class <- NULL
 colnames(cases) <- str_remove_all(colnames(cases),"V_")
 bpcases <- boxplot(cases,
@@ -317,7 +318,7 @@ title("Absorbance")
 legend("topright",legend=c("Cases", "Controls"),
        col=c("red", "blue"), lty=1:1,lwd=c(1,3), cex=0.6)
 
-effectSize <- (apply(cases,2,mean)-apply(controls,2,mean))/apply(SalivaThermal_Avg[,str_detect(colnames(SalivaThermal_Avg),"V_")],2,sd)
+effectSize <- (apply(cases,2,mean)-apply(controls,2,mean))/apply(SalivaIR_Avg[,str_detect(colnames(SalivaIR_Avg),"V_")],2,sd)
 wavenumber=as.numeric(str_remove_all(names(effectSize),"V_"))
 
 aucvalue <- univar$orderframe$ROCAUC
@@ -335,23 +336,23 @@ title("Difference in Absorbance")
 
 
 
-varlist <- colnames(deThermal)[!(colnames(deThermal) %in% "class")]
+varlist <- colnames(deIR)[!(colnames(deIR) %in% "class")]
 #varlist <- cbind(varlist,varlist)
 
 univarDe <- uniRankVar(varlist,
 	           "class~1",
 	           "class",
-	           deThermal,
+	           deIR,
 	           categorizationType = "Raw",
 	           type = "LOGIT",
 	           rankingTest = "AUC",
 	            uniType = "Binary")
 
 
-decorfeat <- colnames(deThermal)[str_detect(colnames(deThermal),"La_")]
+decorfeat <- colnames(deIR)[str_detect(colnames(deIR),"La_")]
 parentfeat <- str_remove_all(decorfeat,"La_")
-reldecor <- deThermal[,decorfeat]
-reldecor$class <- SalivaThermal_Avg$class
+reldecor <- deIR[,decorfeat]
+reldecor$class <- SalivaIR_Avg$class
 cases <- subset(reldecor,class==1)
 cases <- cases[,str_detect(colnames(cases),"La_")]
 colnames(cases) <- str_remove_all(colnames(cases),"La_V_")
@@ -414,16 +415,16 @@ par(op)
 
 ### Comparing Univariate ROC AUC
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 5.0, fig.width= 6.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 6.0}
 par(cex=0.8)
-varlist <- colnames(SalivaThermal_d2)[!(colnames(SalivaThermal_d2) %in% "class")]
+varlist <- colnames(SalivaIR_d2)[!(colnames(SalivaIR_d2) %in% "class")]
 #varlist <- cbind(varlist,varlist)
-pthr <- 0.10/(ncol(SalivaThermal)-1)
+pthr <- 0.10/(ncol(SalivaIR)-1)
 
 univarD2 <- uniRankVar(varlist,
 	           "class~1",
 	           "class",
-	           SalivaThermal_d2,
+	           SalivaIR_d2,
 	           categorizationType = "Raw",
 	           type = "LOGIT",
 	           rankingTest = "AUC",
@@ -457,7 +458,7 @@ points(wavenumberDD[valroc],aucvalueDD[valroc],col="blue",lwd=3)
 #bpdiff <- plot
 valroc <- depcvalue < pthr
 
-dc <- getLatentCoefficients(deThermal)
+dc <- getLatentCoefficients(deIR)
 for (dename in names(dc))
 {
   wave <- as.numeric(str_remove(dename,"La_V_"))

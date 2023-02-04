@@ -130,10 +130,10 @@ topfiveOrg <- rownames(univar$orderframe[1:5,])
 ## Decorrelation Analysis
 
 ```{r results = "asis"}
-DEdataframe <- GDSTMDecorrelation(dataframe,thr=0.80,verbose = TRUE)
+DEdataframe <- IDeA(dataframe,thr=0.80,verbose = TRUE)
 
 pander::pander(c(Decorrleated_Fraction=sum(str_detect(colnames(DEdataframe),"La_"))/(ncol(DEdataframe)-1)))
-demat <- attr(DEdataframe,"GDSTM")
+demat <- attr(DEdataframe,"UPSTM")
 pander::pander(c(sparse_Fraction=1.0-sum(demat==0)/ncol(demat)/nrow(demat)))
 varlistDe <-  colnames(DEdataframe)[colnames(DEdataframe) != "class"];
 varlistDe <- as.data.frame(cbind(name=varlistDe,desc=varlistDe))
@@ -171,7 +171,7 @@ gplots::heatmap.2(abs(cormat),
 #                  scale = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
-                  main = "Spearman Correlation: After GDSTM",
+                  main = "Spearman Correlation: After UPSTM",
                   cexRow = 0.35,
                   cexCol = 0.35,
                   key.title=NA,
@@ -231,7 +231,7 @@ pander::pander(c(meanSize=mean(sapply(dc,length))))
 
 ## CV ROC Analysis
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 8.0}
 par(op)
 par(mfrow=c(1,2),cex=0.9)
 fraction <-0.70

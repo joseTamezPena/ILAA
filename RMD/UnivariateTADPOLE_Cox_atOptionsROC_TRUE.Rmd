@@ -74,7 +74,7 @@ rownames(TADPOLE_D1_D2_Dict) <- TADPOLE_D1_D2_Dict$FLDNAME
 
 ## Conditioning the data
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
 
 # mm3 to mm
 isVolume <- c("Ventricles","Hippocampus","WholeBrain","Entorhinal","Fusiform","MidTemp","ICV",
@@ -191,7 +191,7 @@ pander::pander(table(validBaselineTadpole$DX))
 
 ## Get the Time To Event on MCI Subjects
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
 
 subjectsID <- rownames(validBaselineTadpole)
 visitsID <- unique(TADPOLE_D1_D2$VISCODE)
@@ -255,7 +255,7 @@ MCI_No_converters <- subset(MCI_No_converters,TimeToEvent > 0)
 # Prognosis MCI to AD Conversion
 
 ## the set
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 6.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
 
 MCIPrognosisIDs <- c(MCIconverters$PTID,MCI_No_converters$PTID)
 
@@ -363,10 +363,10 @@ univar$orderframe$pvalue=pnorm(abs(univar$orderframe$ZGLM),lower.tail = FALSE)
 
 if (DeOutcome != "Driven")
 {
-  DEdataframeTrain <- GDSTMDecorrelation(dataframe,thr=thr,method=method,type=type,corRank=corRank,relaxed=FALSE,verbose = TRUE)
+  DEdataframeTrain <- IDeA(dataframe,thr=thr,method=method,type=type,corRank=corRank,relaxed=FALSE,verbose = TRUE)
 } else
 {
-  DEdataframeTrain <- GDSTMDecorrelation(dataframe,Outcome=outcome,thr=thr,method=method,type=type,relaxed=FALSE,corRank=corRank,verbose = TRUE)
+  DEdataframeTrain <- IDeA(dataframe,Outcome=outcome,thr=thr,method=method,type=type,relaxed=FALSE,corRank=corRank,verbose = TRUE)
 }
 
 #cormat <- abs(cor(DEdataframeTrain[,colnames(DEdataframeTrain) != outcome],method="spearman"));
@@ -389,7 +389,7 @@ pander::pander(max(cormat))
 maxcor <- apply(cormat,2,max)
 #pander::pander(maxcor[maxcor>thr])
 
-demat <- attr(DEdataframeTrain,"GDSTM")
+demat <- attr(DEdataframeTrain,"UPSTM")
 DEdataframe <- predictDecorrelate(DEdataframeTrain,dataframeTest)
 
 
@@ -610,7 +610,7 @@ save(finalTable,file=paste("FinalTable",thr,method,type,DeOutcome,corRankS,"TRUE
 
 
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 8.0}
 
 par(op)
 par(mfrow=c(1,2),cex=0.9)
@@ -723,7 +723,7 @@ pander::pander(pbMaha$aucs)
 
 ### Comparing the ROC KNN Train Test curves
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 4.0, fig.width= 8.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 8.0}
 par(op)
 par(mfrow=c(1,2),cex=0.8)
 

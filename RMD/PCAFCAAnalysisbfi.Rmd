@@ -103,10 +103,10 @@ univar <- uniRankVar(varlist,
 
 ```
 
-## Decorrelation with GDSTM Blind
+## Decorrelation with UPSTM Blind
 
 ```{r results = "asis"}
-DEdataframe <- GDSTMDecorrelation(trainDataFrame,thr=rhoThreshold)
+DEdataframe <- IDeA(trainDataFrame,thr=rhoThreshold)
 predTestDe <- predictDecorrelate(DEdataframe,testDataFrame)
 
 ltvar <- getLatentCoefficients(DEdataframe);
@@ -125,10 +125,10 @@ univarDe <- uniRankVar(varlistDe,
 
 ```
 
-## Decorrelation with GDSTM Blind/Spearman
+## Decorrelation with UPSTM Blind/Spearman
 
 ```{r results = "asis"}
-DEdataframeSpear <- GDSTMDecorrelation(trainDataFrame,thr=rhoThreshold,method="spearman")
+DEdataframeSpear <- IDeA(trainDataFrame,thr=rhoThreshold,method="spearman")
 predTestDeSpear <- predictDecorrelate(DEdataframeSpear,testDataFrame)
 
 ltvar <- getLatentCoefficients(DEdataframeSpear);
@@ -147,11 +147,11 @@ univarDeSpear <- uniRankVar(varlistDeSpear,
 
 ```
 
-## Decorrelation with GDSTM Driven
+## Decorrelation with UPSTM Driven
 
 ```{r results = "asis"}
 
-DriDEdataframe <- GDSTMDecorrelation(trainDataFrame,Outcome=outcome,thr=rhoThreshold)
+DriDEdataframe <- IDeA(trainDataFrame,Outcome=outcome,thr=rhoThreshold)
 predTestDri <- predictDecorrelate(DriDEdataframe,testDataFrame)
 
 
@@ -171,11 +171,11 @@ univarDeDri <- uniRankVar(varlistDe,
 
 ```
 
-## Decorrelation with GDSTM Driven and Spearman
+## Decorrelation with UPSTM Driven and Spearman
 
 ```{r results = "asis"}
 
-DriDEdataframeSpear <- GDSTMDecorrelation(trainDataFrame,Outcome=outcome,thr=rhoThreshold,method="spearman")
+DriDEdataframeSpear <- IDeA(trainDataFrame,Outcome=outcome,thr=rhoThreshold,method="spearman")
 predTestDriSpear <- predictDecorrelate(DriDEdataframeSpear,testDataFrame)
 
 
@@ -327,7 +327,7 @@ rawDen <- density(cormat,from=-1,to=1)
 par(op)
 ```
 
-### GDSTM Blind
+### UPSTM Blind
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
 par(cex=1.0,cex.main=0.8)
@@ -371,7 +371,7 @@ gplots::heatmap.2(abs(cormat),
 #     density=NULL,
 #     xlim=c(-1,1),
 #     ylim=c(0,4.0),
-#     main="Correlation after GDSTM",xlab="Spearman Correlation")
+#     main="Correlation after UPSTM",xlab="Spearman Correlation")
 
 DeDen <- density(cormat,from=-1,to=1)
 
@@ -380,7 +380,7 @@ par(op)
 
 ```
 
-### GDSTM Blind/Spearman
+### UPSTM Blind/Spearman
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
 par(cex=1.0,cex.main=0.8)
@@ -424,7 +424,7 @@ gplots::heatmap.2(abs(cormat),
 #     density=NULL,
 #     xlim=c(-1,1),
 #     ylim=c(0,4.0),
-#     main="Correlation after GDSTM",xlab="Spearman Correlation")
+#     main="Correlation after UPSTM",xlab="Spearman Correlation")
 
 DeSpearDen <- density(cormat,from=-1,to=1)
 
@@ -433,7 +433,7 @@ par(op)
 
 ```
 
-### GDSTM Driven
+### UPSTM Driven
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
 par(cex=1.0,cex.main=0.8)
@@ -476,7 +476,7 @@ gplots::heatmap.2(abs(cormat),
 #     density=NULL,
 #     xlim=c(-1,1),
 #     ylim=c(0,4.0),
-#     main="Correlation after Driven-GDSTM",xlab="Spearman Correlation")
+#     main="Correlation after Driven-UPSTM",xlab="Spearman Correlation")
 
 DeDrivDen <- density(cormat,from=-1,to=1)
 par(op)
@@ -484,7 +484,7 @@ par(op)
 
 ```
 
-### GDSTM Spearman
+### UPSTM Spearman
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
 par(cex=1.0,cex.main=0.8)
 
@@ -527,7 +527,7 @@ gplots::heatmap.2(abs(cormat),
 #     density=NULL,
 #     xlim=c(-1,1),
 #     ylim=c(0,4.0),
-#     main="Correlation after GDSTM with Spearman",xlab="Spearman Correlation")
+#     main="Correlation after UPSTM with Spearman",xlab="Spearman Correlation")
 
 DeDrivSpearDen <- density(cormat,from=-1,to=1)
 par(op)

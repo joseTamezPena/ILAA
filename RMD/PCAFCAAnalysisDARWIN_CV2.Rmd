@@ -1,0 +1,440 @@
+---
+title: "PCA EFA: DARWIN"
+author: "Jose Tamez"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+```
+
+# DARWIN Univariate
+
+### Loading the libraries
+
+```{r}
+library("FRESA.CAD")
+library(psych)
+library(whitening)
+library("vioplot")
+
+library(readxl)
+op <- par(no.readonly = TRUE)
+pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+
+```
+
+
+
+## The Data
+
+```{r}
+DARWIN <- read.csv("~/GitHub/FCA/Data/DARWIN/DARWIN.csv")
+rownames(DARWIN) <- DARWIN$ID
+DARWIN$ID <- NULL
+DARWIN$class <- 1*(DARWIN$class=="P")
+print(table(DARWIN$class))
+
+DARWIN[,1:ncol(DARWIN)] <- sapply(DARWIN,as.numeric)
+
+signedlog <- function(x) { return (sign(x)*log(abs(1.0e12*x)+1.0))}
+whof <- !(colnames(DARWIN) %in% c("class"));
+DARWIN[,whof] <- signedlog(DARWIN[,whof])
+
+
+
+```
+
+
+#### Standarize the names for the reporting
+
+```{r results = "asis"}
+dataframe <- DARWIN
+outcome <- "class"
+
+
+trainFraction <- 0.5
+cvloops <- 30
+rhoThreshold <- 0.6
+nEFAFactors <- 10
+topFeat <- 10
+
+
+set.seed(10)
+colors=c("red","blue","darkblue","green","darkgreen")
+
+binOutcome <- dataframe[,outcome]
+getAUC <- function(x)
+{
+  return (pROC::roc(binOutcome,x,plot=FALSE,auc=TRUE,quiet = TRUE)$auc[1])
+}
+
+```
+
+
+### Data specs
+
+```{r results = "asis"}
+pander::pander(c(rows=nrow(dataframe),col=ncol(dataframe)-1))
+pander::pander(table(dataframe[,outcome]))
+
+
+```
+
+
+## Shrinkage Analysis
+
+```{r results = "asis", warning = FALSE}
+
+RawAUCs <- numeric()
+IDeAAUCs <- numeric()
+IDeAAUCs_LV <- numeric()
+EFAAUCs <- numeric()
+EFAAUCs_LV <- numeric()
+
+
+ChangeRawAUCs <- numeric()
+ChangeIDeAAUCs <- numeric()
+ChangeIDeAAUCs_LV <- numeric()
+ChangeEFAAUCs <- numeric()
+ChangeEFAAUCs_LV <- numeric()
+
+
+overlapRaw <- numeric()
+overlapIDeA <- numeric()
+overlapIDeA_LV <- numeric()
+overlapEFA <- numeric()
+overlapEFA_LV <- numeric()
+
+cvloop <- 1
+varlist <- colnames(dataframe)
+varlist <- varlist[varlist != outcome]
+for (cvloop in c(1:cvloops))
+{
+    print(cvloop)
+    foldSample <- sample(nrow(dataframe),nrow(dataframe)*trainFraction)
+    
+    foldOne <- dataframe[foldSample,]
+    foldTwo <- dataframe[-foldSample,]
+#    pander::pander(table(foldOne[,outcome]))
+#    pander::pander(table(foldTwo[,outcome]))
+    
+    #################### Fold One ##################################
+    topSigfeatOnep <- univariate_Wilcoxon(foldOne,outcome,limit=0,thr=rhoThreshold)
+    if (length(topSigfeatOnep)>topFeat)
+    {
+      topSigfeatOnep <- topSigfeatOnep[1:topFeat]
+    }
+    topSigfeatOne <- names(topSigfeatOnep)
+    
+
+    #################### Fold Two ##################################
+    topSigfeatTwo <- names(univariate_Wilcoxon(foldTwo,outcome,limit=-1,thr=0.999))
+
+    ##################### Overlap #################################
+    
+    botFoldFeat <- unique(c(topSigfeatOne,topSigfeatTwo))
+    
+    binOutcome <- foldOne[,outcome]
+    foldAUCOne <- apply(as.data.frame(foldOne[,botFoldFeat]),2,getAUC)
+    names(foldAUCOne) <- botFoldFeat
+
+    binOutcome <- foldTwo[,outcome]
+    foldAUCTwo <- apply(as.data.frame(foldTwo[,botFoldFeat]),2,getAUC)
+    names(foldAUCTwo) <- botFoldFeat
+
+    
+    ChangeRawAUCs <- c(ChangeRawAUCs,
+                       foldAUCTwo[topSigfeatOne] - foldAUCOne[topSigfeatOne]
+                      )
+
+    RawAUCs <- c(RawAUCs,foldAUCTwo[topSigfeatOne])
+    
+    if (topSigfeatOnep[1]<0.2)
+    {
+      overlapRaw <- c(overlapRaw,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+    }
+    else
+    {
+       overlapRaw <- c(overlapRaw,0)
+    }
+
+    #################################### IDeA Pearson
+    
+    ############# Fold One to Two
+    IDeAData <- IDeA(foldOne,thr=rhoThreshold)
+    predIDeAData <- predictDecorrelate(IDeAData,foldTwo)
+    
+    topSigfeatOnep <- univariate_Wilcoxon(IDeAData,outcome,limit=0,thr=rhoThreshold)
+    if (length(topSigfeatOnep)>topFeat)
+    {
+      topSigfeatOnep <- topSigfeatOnep[1:topFeat]
+    }
+
+    topSigfeatOne <- names(topSigfeatOnep)
+    
+    topSigfeatTwo <- names(univariate_Wilcoxon(predIDeAData,outcome,limit=-1,thr=0.999))
+
+    botFoldFeat <- unique(c(topSigfeatOne,topSigfeatTwo))
+    
+    binOutcome <- foldOne[,outcome]
+    foldAUCOne <- apply(as.data.frame(IDeAData[,botFoldFeat]),2,getAUC)
+    names(foldAUCOne) <- botFoldFeat
+
+    binOutcome <- foldTwo[,outcome]
+    foldAUCTwo <- apply(as.data.frame(predIDeAData[,botFoldFeat]),2,getAUC)
+    names(foldAUCTwo) <- botFoldFeat
+
+    
+    ChangeIDeAAUCs <- c(ChangeIDeAAUCs,
+                        foldAUCTwo[topSigfeatOne] - foldAUCOne[topSigfeatOne]
+                      )
+
+    IDeAAUCs <- c(IDeAAUCs,foldAUCTwo[topSigfeatOne])
+    if (topSigfeatOnep[1]<0.2)
+    {
+      overlapIDeA <- c(overlapIDeA,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+    }
+    else
+    {
+      overlapIDeA <- c(overlapIDeA,0)
+    }
+    
+    #################### Only Latent Analysis #########################
+    latentVar <- colnames(IDeAData)[!(colnames(IDeAData) %in% varlist)]
+    topSigfeatOne <- topSigfeatOne[topSigfeatOne %in% latentVar]
+    topSigfeatTwo <- topSigfeatTwo[topSigfeatTwo %in% latentVar]
+
+    ChangeIDeAAUCs_LV <- c(ChangeIDeAAUCs_LV,
+                       foldAUCTwo[topSigfeatOne] - foldAUCOne[topSigfeatOne]
+                      )
+
+    IDeAAUCs_LV <- c(IDeAAUCs_LV,foldAUCTwo[topSigfeatOne])
+    if (topSigfeatOnep[1]<0.2)
+    {
+      overlapIDeA_LV <- c(overlapIDeA_LV,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+    }
+    else
+    {
+      overlapIDeA_LV <- c(overlapIDeA_LV,0)
+    }
+    
+
+    ####################### EFA Viable Features #############################
+    
+    iscontinous <- sapply(apply(foldOne,2,unique),length) > 5 ## Only variables with enough samples
+    
+    noclassData <- foldOne[,iscontinous]
+    cmat <- cor(noclassData);
+    diag(cmat) <- 0;
+    maxcor <- apply(cmat,2,max);
+    topcor <- names(maxcor[maxcor>rhoThreshold]) ## Only correlated features will be PCA
+    cmat <- NULL
+    
+    notcorr <- colnames(foldOne)[!(colnames(foldOne) %in% topcor)]
+    noclassData <- noclassData[,topcor]
+    noclassDataTest <- foldTwo[,topcor]
+        
+    ## EFA Fold One to Two
+    
+    uls <- fa(noclassData,nEFAFactors,rotate="varimax")  #unweighted least squares is minres 
+    EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),foldOne[,notcorr]))
+    colnames(EFA_Train) <- c(colnames(predict(uls,noclassData)),notcorr)
+    EFA_Predicted <- as.data.frame(cbind(predict(uls,noclassDataTest),foldTwo[,notcorr]))
+    colnames(EFA_Predicted) <- c(colnames(predict(uls,noclassDataTest)),notcorr)
+    
+
+    topSigfeatOnep <- univariate_Wilcoxon(EFA_Train,outcome,limit=0,thr=rhoThreshold)
+    if (length(topSigfeatOnep)>topFeat)
+    {
+      topSigfeatOnep <- topSigfeatOnep[1:topFeat]
+    }
+
+    topSigfeatOne <- names(topSigfeatOnep)
+
+    topSigfeatTwo <- names(univariate_Wilcoxon(EFA_Predicted,outcome,limit=-1,thr=0.999))
+
+    botFoldFeat <- unique(c(topSigfeatOne,topSigfeatTwo))
+    
+    binOutcome <- foldOne[,outcome]
+    foldAUCOne <- apply(as.data.frame(EFA_Train[,botFoldFeat]),2,getAUC)
+    names(foldAUCOne) <- botFoldFeat
+
+    binOutcome <- foldTwo[,outcome]
+    foldAUCTwo <- apply(as.data.frame(EFA_Predicted[,botFoldFeat]),2,getAUC)
+    names(foldAUCTwo) <- botFoldFeat
+
+    
+    ChangeEFAAUCs <- c(ChangeEFAAUCs,
+                       foldAUCTwo[topSigfeatOne]- foldAUCOne[topSigfeatOne]
+                      )
+
+    EFAAUCs <- c(EFAAUCs,foldAUCTwo[topSigfeatOne])
+    if (topSigfeatOnep[1]<0.2)
+    {
+      overlapEFA <- c(overlapEFA,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+    }
+    else
+    {
+      overlapEFA <- c(overlapEFA,0)
+    }
+    
+    #################### Only Latent Analysis #########################
+    latentVar <- colnames(EFA_Train)[!(colnames(EFA_Train) %in% varlist)]
+    topSigfeatOne <- topSigfeatOne[topSigfeatOne %in% latentVar]
+    topSigfeatTwo <- topSigfeatTwo[topSigfeatTwo %in% latentVar]
+
+    ChangeEFAAUCs_LV <- c(ChangeEFAAUCs_LV,
+                       foldAUCTwo[topSigfeatOne] - foldAUCOne[topSigfeatOne]
+                      )
+
+    EFAAUCs_LV <- c(EFAAUCs_LV,foldAUCTwo[topSigfeatOne])
+    if (topSigfeatOnep[1]<0.2)
+    {
+      overlapEFA_LV <- c(overlapEFA_LV,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+    }
+    else
+    {
+      overlapEFA_LV <- c(overlapEFA_LV,0)
+    }
+    
+
+    
+}
+
+
+```
+
+
+### Violin of ROC AUC 
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+AUCs <- list(RAW=RawAUCs,IDeA=IDeAAUCs,IDeA_LV=IDeAAUCs_LV,EFA=EFAAUCs,EFA_LV=EFAAUCs_LV)
+vioplot(AUCs,
+        ylim=c(0.5,1.0),
+        ylab="Test AUC",
+        main="Test ROC AUC",
+        col=colors,
+        cex.axis=0.8
+)
+#stripchart(diffAUC, method = "jitter", col = "gray",
+#           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(AUCs),lapply(AUCs,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(AUCs,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+
+
+### Violin of ROC AUC Changes
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+colors=c("red","blue","darkblue","green","darkgreen")
+par(mfrow=c(1,1),cex=0.7)
+
+diffAUC <- list(RAW=ChangeRawAUCs,IDeA=ChangeIDeAAUCs,IDeA_LV=ChangeIDeAAUCs_LV,EFA=ChangeEFAAUCs,EFA_LV=ChangeEFAAUCs_LV)
+vioplot(diffAUC,
+        ylim=c(-0.5,0.5),
+        ylab="Test-Train",
+        main="Test-Train Paired ROC AUC",
+        col=colors,
+        cex.axis=0.8
+)
+#stripchart(diffAUC, method = "jitter", col = "gray",
+#           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffAUC),lapply(diffAUC,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(diffAUC,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+
+
+### Violin of Overlap
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+posFind <- list(RAW=overlapRaw,IDeA=overlapIDeA,IDeA_LV=overlapIDeA_LV,EFA=overlapEFA,EFA_LV=overlapEFA_LV)
+vioplot(posFind,
+        ylim=c(0,1.0),
+        ylab="Overlap",
+        main="Selection Overlap",
+        col=colors,
+        cex.axis=0.8
+)
+stripchart(posFind, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.5)
+points(1:length(posFind),lapply(posFind,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(posFind,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+
+### Violin of Booth Positive top 
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+posFind <- list(RAW=overlapRaw,IDeA=overlapIDeA,EFA=overlapEFA)
+vioplot(posFind,
+        ylim=c(0,1.0),
+        ylab="Overlap",
+        main="Selection Overlap",
+        col=colors[c(1,2,4)],
+        cex.axis=0.8
+)
+stripchart(posFind, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.5)
+points(1:length(posFind),lapply(posFind,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+bp<- boxplot(posFind,plot=FALSE)
+bpstats <- as.data.frame(bp$stats)
+rownames(bpstats) <- c("lower whisker","lower hinge","median","upper hinge","upper whisker")
+colnames(bpstats) <- bp$names
+pander::pander(bpstats)
+
+```
+
