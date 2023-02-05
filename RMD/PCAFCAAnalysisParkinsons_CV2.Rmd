@@ -81,6 +81,9 @@ avgParkison[,whof] <- (rep1Parkison[,whof] + rep2Parkison[,whof] + rep3Parkison[
 pander::pander(table(avgParkison$class))
 
 
+signedlog <- function(x) { return (sign(x)*log(abs(1.0e12*x)+1.0))}
+whof <- !(colnames(avgParkison) %in% c("gender","class"));
+avgParkison[,whof] <- signedlog(avgParkison[,whof])
 
 
 ```
@@ -92,9 +95,9 @@ dataframe <- avgParkison
 outcome <- "class"
 
 trainFraction <- 0.5
-cvloops <- 30
+cvloops <- 50
 rhoThreshold <- 0.6
-nEFAFactors <- 10
+nEFAFactors <- 20
 topFeat <- 10
 
 

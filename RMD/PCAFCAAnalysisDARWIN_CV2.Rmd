@@ -69,9 +69,9 @@ outcome <- "class"
 
 
 trainFraction <- 0.5
-cvloops <- 30
+cvloops <- 50
 rhoThreshold <- 0.6
-nEFAFactors <- 10
+nEFAFactors <- 20
 topFeat <- 10
 
 

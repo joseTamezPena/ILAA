@@ -175,7 +175,7 @@ for (cvloop in c(1:cvloops))
     #################################### IDeA Pearson
     
     ############# Fold One to Two
-    IDeAData <- IDeA(foldOne,thr=rhoThreshold)
+    IDeAData <- IDeA(foldOne,thr=rhoThreshold,method="spearman")
     predIDeAData <- predictDecorrelate(IDeAData,foldTwo)
     
     topSigfeatOnep <- univariate_Wilcoxon(IDeAData,outcome,limit=0,thr=rhoThreshold)
