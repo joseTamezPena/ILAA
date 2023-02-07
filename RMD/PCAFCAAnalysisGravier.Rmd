@@ -260,7 +260,7 @@ noclassData <- trainDataFrame[,iscontinous]
 cmat <- cor(noclassData);
 diag(cmat) <- 0;
 maxcor <- apply(cmat>rhoThreshold,2,sum);
-topcor <- names(maxcor[maxcor > 4]) ## Only correlated features will be PCA
+topcor <- names(maxcor[maxcor > 0]) ## Only correlated features will be PCA
 pander::pander(c(Ncor=length(topcor)))
 cmat <- NULL
 
