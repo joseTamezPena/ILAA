@@ -290,8 +290,8 @@ iscontinous <- sapply(apply(trainDataFrame,2,unique),length) > 5 ## Only variabl
 noclassData <- trainDataFrame[,iscontinous]
 cmat <- cor(noclassData);
 diag(cmat) <- 0;
-maxcor <- apply(cmat,2,max);
-topcor <- names(maxcor[maxcor>rhoThreshold]) ## Only correlated features will be PCA
+maxcor <- apply(cmat>rhoThreshold,2,sum);
+topcor <- names(maxcor[maxcor > 4]) ## Only correlated features will be PCA
 pander::pander(c(Ncor=length(topcor)))
 cmat <- NULL
 
@@ -476,7 +476,7 @@ diag(cormat) <- 0;
 
 pander::pander(c(Train=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
-pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
 ## Test Correlation
 cormat <- cor(predTestDe,method="spearman")
@@ -485,14 +485,14 @@ diag(cormat) <- 0;
 
 pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
-pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
                   breaks = breaks,
-                  main = "Correlation after HCA",
+                  main = "Correlation after IDeA",
                   cexRow = 0.25,
                   cexCol = 0.25,
                   srtCol=35,
@@ -529,7 +529,7 @@ diag(cormat) <- 0;
 
 pander::pander(c(Train=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
-pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
 ## Test Correlation
 cormat <- cor(predTestDeSpear,method="spearman")
@@ -538,14 +538,14 @@ diag(cormat) <- 0;
 
 pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
-pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
                   breaks = breaks,
-                  main = "Correlation after HCA:Spearman",
+                  main = "Correlation after IDeA:Spearman",
                   cexRow = 0.25,
                   cexCol = 0.25,
                   srtCol=35,
@@ -581,7 +581,7 @@ diag(cormat) <- 0;
 
 pander::pander(c(Train=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
-pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
 ## Test Correlation
 cormat <- cor(DriDEdataframe,method="spearman")
@@ -590,14 +590,14 @@ diag(cormat) <- 0;
 
 pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
-pander::pander(c(HCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
                   breaks = breaks,
-                  main = "Correlation after Driven-HCA",
+                  main = "Correlation after Driven-IDeA",
                   cexRow = 0.25,
                   cexCol = 0.25,
                   srtCol=35,
@@ -630,7 +630,7 @@ diag(cormat) <- 0;
 
 pander::pander(c(Train=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
-pander::pander(c(HCAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+pander::pander(c(IDeAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
 ## Test Correlation
 
@@ -640,7 +640,7 @@ diag(cormat) <- 0;
 
 pander::pander(c(Test=max(abs(cormat))))
 pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
-pander::pander(c(HCAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+pander::pander(c(IDeAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
 
 gplots::heatmap.2(abs(cormat),
                   trace = "none",
@@ -827,10 +827,11 @@ colors=c("red","blue","green","darkblue","darkgreen","purple","orange","darkred"
 
 plot(rawDen,
      xlim=c(-1,1),
-     ylim=c(0,7.0),
+     ylim=c(0.001,7.0),
      col=colors[1],
      lty=1,
      lwd=4,
+     log="y",
      main="Test: Correlation Distribution",xlab="Spearman Correlation")
 
 lines(DeDen,col=colors[2],lty=2,lwd=4)
@@ -842,7 +843,7 @@ lines(PCADen,col=colors[6],lty=6,lwd=1)
 lines(EFADen,col=colors[7],lty=7,lwd=1)
 lines(WhiteDen,col=colors[8],lty=8,lwd=1)
 
-names=c("Raw","HCA:P","HCA:S","DHCA:P","DHCA:S","PCA","EFA","White:PCA")
+names=c("Raw","IDeA:P","IDeA:S","DIDeA:P","DIDeA:S","PCA","EFA","White:PCA")
 #colors=c("red","blue","green","blue","green","purple","purple","gray");
 lines=c(1,2,3,4,5,6,7,8)
 lwds=c(4,4,4,2,2,1,1,1)
@@ -879,48 +880,48 @@ plot(rawAUC,rawAUCTest-rawAUC,
      main="ROC AUC Difference Between Test and Train")
 
 thenames <- rownames(univarDe$orderframe)[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
-HCAP <- univarDe$orderframe[thenames,"ROCAUC"]
-thenames <- thenames[HCAP >= aucTHR]
-HCAP <- univarDe$orderframe[thenames,"ROCAUC"]
-HCAPTest <- univarDeTest$orderframe[thenames,"ROCAUC"]
-AUCResults$HCAP <- HCAP
-AUCResults$HCAP_T <- HCAPTest
-diffAUC$HCAP <-  HCAPTest-HCAP
+IDeAP <- univarDe$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[IDeAP >= aucTHR]
+IDeAP <- univarDe$orderframe[thenames,"ROCAUC"]
+IDeAPTest <- univarDeTest$orderframe[thenames,"ROCAUC"]
+AUCResults$IDeAP <- IDeAP
+AUCResults$IDeAP_T <- IDeAPTest
+diffAUC$IDeAP <-  IDeAPTest-IDeAP
 
-points(HCAP,HCAPTest-HCAP,pch=2,col=colors[2])
+points(IDeAP,IDeAPTest-IDeAP,pch=2,col=colors[2])
 
 thenames <- rownames(univarDeSpear$orderframe)[!(rownames(univarDeSpear$orderframe) %in% colnames(testDataFrame))]
-HCAS <- univarDeSpear$orderframe[thenames,"ROCAUC"]
-thenames <- thenames[HCAS >= aucTHR]
-HCAS <- univarDeSpear$orderframe[thenames,"ROCAUC"]
-HCASTest <- univarDeSpearTest$orderframe[thenames,"ROCAUC"]
-AUCResults$HCAS <- HCAS
-AUCResults$HCAS_T <- HCASTest
-diffAUC$HCAS <-  HCASTest-HCAS
+IDeAS <- univarDeSpear$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[IDeAS >= aucTHR]
+IDeAS <- univarDeSpear$orderframe[thenames,"ROCAUC"]
+IDeASTest <- univarDeSpearTest$orderframe[thenames,"ROCAUC"]
+AUCResults$IDeAS <- IDeAS
+AUCResults$IDeAS_T <- IDeASTest
+diffAUC$IDeAS <-  IDeASTest-IDeAS
 
-points(HCAS,HCASTest-HCAS,pch=3,col=colors[3])
+points(IDeAS,IDeASTest-IDeAS,pch=3,col=colors[3])
 
 thenames <- rownames(univarDeDri$orderframe)[!(rownames(univarDeDri$orderframe) %in% colnames(testDataFrame))]
-DHCAP <- univarDeDri$orderframe[thenames,"ROCAUC"]
-thenames <- thenames[DHCAP >= aucTHR]
-DHCAP <- univarDeDri$orderframe[thenames,"ROCAUC"]
-DHCAPTest <- univarDeDriTest$orderframe[thenames,"ROCAUC"]
-AUCResults$DHCAP <- DHCAP
-AUCResults$DHCAP_T <- DHCAPTest
-diffAUC$DHCAP <-  DHCAPTest-DHCAP
+DIDeAP <- univarDeDri$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[DIDeAP >= aucTHR]
+DIDeAP <- univarDeDri$orderframe[thenames,"ROCAUC"]
+DIDeAPTest <- univarDeDriTest$orderframe[thenames,"ROCAUC"]
+AUCResults$DIDeAP <- DIDeAP
+AUCResults$DIDeAP_T <- DIDeAPTest
+diffAUC$DIDeAP <-  DIDeAPTest-DIDeAP
 
-points(DHCAP,DHCAPTest-DHCAP,pch=4,col=colors[4])
+points(DIDeAP,DIDeAPTest-DIDeAP,pch=4,col=colors[4])
 
 thenames <- rownames(univarDeDriSpear$orderframe)[!(rownames(univarDeDriSpear$orderframe) %in% colnames(testDataFrame))]
-DHCAS <- univarDeDriSpear$orderframe[thenames,"ROCAUC"]
-thenames <- thenames[DHCAS >= aucTHR]
-DHCAS <- univarDeDriSpear$orderframe[thenames,"ROCAUC"]
-DHCASTest <- univarDeDriSpearTest$orderframe[thenames,"ROCAUC"]
-AUCResults$DHCAS <- DHCAS
-AUCResults$DHCAS_T <- DHCASTest
-diffAUC$DHCAS <-  DHCASTest-DHCAS
+DIDeAS <- univarDeDriSpear$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[DIDeAS >= aucTHR]
+DIDeAS <- univarDeDriSpear$orderframe[thenames,"ROCAUC"]
+DIDeASTest <- univarDeDriSpearTest$orderframe[thenames,"ROCAUC"]
+AUCResults$DIDeAS <- DIDeAS
+AUCResults$DIDeAS_T <- DIDeASTest
+diffAUC$DIDeAS <-  DIDeASTest-DIDeAS
 
-points(DHCAS,DHCASTest-DHCAS,pch=5,col=colors[5])
+points(DIDeAS,DIDeASTest-DIDeAS,pch=5,col=colors[5])
 
 thenames <- rownames(univarPCA$orderframe)[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
 PCA <- univarPCA$orderframe[thenames,"ROCAUC"]
@@ -958,7 +959,7 @@ diffAUC$WPCA <-  WPCATest-WPCA
 points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
 
 
-names=c("Raw","HCA:P","HCA:S","DHCA:P","DHCA:S","PCA","EFA","White:PCA")
+names=c("Raw","IDeA:P","IDeA:S","DIDeA:P","DIDeA:S","PCA","EFA","White:PCA")
 pchs=c(1,2,3,4,5,6,7,8)
 
 legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
@@ -1047,48 +1048,48 @@ plot(rawBACC,rawBACCTest-rawBACC,
      main="Balanced Acc Difference Between Test and Train")
 
 thenames <- rownames(univarDe$orderframe)[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
-HCAP <- univarDe$orderframe[thenames,"BACC"]
-thenames <- thenames[HCAP >= BACCTHR]
-HCAP <- univarDe$orderframe[thenames,"BACC"]
-HCAPTest <- univarDeTest$orderframe[thenames,"BACC"]
-BACCResults$HCAP <- HCAP
-BACCResults$HCAP_T <- HCAPTest
-diffBACC$HCAP <-  HCAPTest-HCAP
+IDeAP <- univarDe$orderframe[thenames,"BACC"]
+thenames <- thenames[IDeAP >= BACCTHR]
+IDeAP <- univarDe$orderframe[thenames,"BACC"]
+IDeAPTest <- univarDeTest$orderframe[thenames,"BACC"]
+BACCResults$IDeAP <- IDeAP
+BACCResults$IDeAP_T <- IDeAPTest
+diffBACC$IDeAP <-  IDeAPTest-IDeAP
 
-points(HCAP,HCAPTest-HCAP,pch=2,col=colors[2])
+points(IDeAP,IDeAPTest-IDeAP,pch=2,col=colors[2])
 
 thenames <- rownames(univarDeSpear$orderframe)[!(rownames(univarDeSpear$orderframe) %in% colnames(testDataFrame))]
-HCAS <- univarDeSpear$orderframe[thenames,"BACC"]
-thenames <- thenames[HCAS >= BACCTHR]
-HCAS <- univarDeSpear$orderframe[thenames,"BACC"]
-HCASTest <- univarDeSpearTest$orderframe[thenames,"BACC"]
-BACCResults$HCAS <- HCAS
-BACCResults$HCAS_T <- HCASTest
-diffBACC$HCAS <-  HCASTest-HCAS
+IDeAS <- univarDeSpear$orderframe[thenames,"BACC"]
+thenames <- thenames[IDeAS >= BACCTHR]
+IDeAS <- univarDeSpear$orderframe[thenames,"BACC"]
+IDeASTest <- univarDeSpearTest$orderframe[thenames,"BACC"]
+BACCResults$IDeAS <- IDeAS
+BACCResults$IDeAS_T <- IDeASTest
+diffBACC$IDeAS <-  IDeASTest-IDeAS
 
-points(HCAS,HCASTest-HCAS,pch=3,col=colors[3])
+points(IDeAS,IDeASTest-IDeAS,pch=3,col=colors[3])
 
 thenames <- rownames(univarDeDri$orderframe)[!(rownames(univarDeDri$orderframe) %in% colnames(testDataFrame))]
-DHCAP <- univarDeDri$orderframe[thenames,"BACC"]
-thenames <- thenames[DHCAP >= BACCTHR]
-DHCAP <- univarDeDri$orderframe[thenames,"BACC"]
-DHCAPTest <- univarDeDriTest$orderframe[thenames,"BACC"]
-BACCResults$DHCAP <- DHCAP
-BACCResults$DHCAP_T <- DHCAPTest
-diffBACC$DHCAP <-  DHCAPTest-DHCAP
+DIDeAP <- univarDeDri$orderframe[thenames,"BACC"]
+thenames <- thenames[DIDeAP >= BACCTHR]
+DIDeAP <- univarDeDri$orderframe[thenames,"BACC"]
+DIDeAPTest <- univarDeDriTest$orderframe[thenames,"BACC"]
+BACCResults$DIDeAP <- DIDeAP
+BACCResults$DIDeAP_T <- DIDeAPTest
+diffBACC$DIDeAP <-  DIDeAPTest-DIDeAP
 
-points(DHCAP,DHCAPTest-DHCAP,pch=4,col=colors[4])
+points(DIDeAP,DIDeAPTest-DIDeAP,pch=4,col=colors[4])
 
 thenames <- rownames(univarDeDriSpear$orderframe)[!(rownames(univarDeDriSpear$orderframe) %in% colnames(testDataFrame))]
-DHCAS <- univarDeDriSpear$orderframe[thenames,"BACC"]
-thenames <- thenames[DHCAS >= BACCTHR]
-DHCAS <- univarDeDriSpear$orderframe[thenames,"BACC"]
-DHCASTest <- univarDeDriSpearTest$orderframe[thenames,"BACC"]
-BACCResults$DHCAS <- DHCAS
-BACCResults$DHCAS_T <- DHCASTest
-diffBACC$DHCAS <-  DHCASTest-DHCAS
+DIDeAS <- univarDeDriSpear$orderframe[thenames,"BACC"]
+thenames <- thenames[DIDeAS >= BACCTHR]
+DIDeAS <- univarDeDriSpear$orderframe[thenames,"BACC"]
+DIDeASTest <- univarDeDriSpearTest$orderframe[thenames,"BACC"]
+BACCResults$DIDeAS <- DIDeAS
+BACCResults$DIDeAS_T <- DIDeASTest
+diffBACC$DIDeAS <-  DIDeASTest-DIDeAS
 
-points(DHCAS,DHCASTest-DHCAS,pch=5,col=colors[5])
+points(DIDeAS,DIDeASTest-DIDeAS,pch=5,col=colors[5])
 
 thenames <- rownames(univarPCA$orderframe)[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
 PCA <- univarPCA$orderframe[thenames,"BACC"]
@@ -1126,7 +1127,7 @@ diffBACC$WPCA <-  WPCATest-WPCA
 points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
 
 
-names=c("Raw","HCA:P","HCA:S","DHCA:P","DHCA:S","PCA","EFA","White:PCA")
+names=c("Raw","IDeA:P","IDeA:S","DIDeA:P","DIDeA:S","PCA","EFA","White:PCA")
 pchs=c(1,2,3,4,5,6,7,8)
 
 legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
@@ -1209,37 +1210,37 @@ plot(rawIDI,rawIDITest-rawIDI,
      col=colors[1],
      main="Predict IDI Difference Between Test and Train")
 
-HCAP <- univarDe$orderframe$IDI[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
-HCAPTest <-univarDeTest$orderframe$IDI[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
-testIDI$HCAP <- HCAP
-testIDI$HCAP_T <- HCAPTest
-diffIDI$HCAP <-  HCAPTest-HCAP
+IDeAP <- univarDe$orderframe$IDI[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+IDeAPTest <-univarDeTest$orderframe$IDI[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+testIDI$IDeAP <- IDeAP
+testIDI$IDeAP_T <- IDeAPTest
+diffIDI$IDeAP <-  IDeAPTest-IDeAP
 
-points(HCAP,HCAPTest-HCAP,pch=2,col=colors[2])
+points(IDeAP,IDeAPTest-IDeAP,pch=2,col=colors[2])
 
-HCAS <- univarDeSpear$orderframe$IDI[!(rownames(univarDeSpearTest$orderframe) %in% colnames(testDataFrame))]
-HCASTest <- univarDeSpearTest$orderframe$IDI[!(rownames(univarDeSpearTest$orderframe) %in% colnames(testDataFrame))]
-testIDI$HCAS <- HCAS
-testIDI$HCAS_T <- HCASTest
-diffIDI$HCAS <-  HCASTest-HCAS
+IDeAS <- univarDeSpear$orderframe$IDI[!(rownames(univarDeSpearTest$orderframe) %in% colnames(testDataFrame))]
+IDeASTest <- univarDeSpearTest$orderframe$IDI[!(rownames(univarDeSpearTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$IDeAS <- IDeAS
+testIDI$IDeAS_T <- IDeASTest
+diffIDI$IDeAS <-  IDeASTest-IDeAS
 
-points(HCAS,HCASTest-HCAS,pch=3,col=colors[3])
+points(IDeAS,IDeASTest-IDeAS,pch=3,col=colors[3])
 
-DHCAP <- univarDeDri$orderframe$IDI[!(rownames(univarDeDriTest$orderframe) %in% colnames(testDataFrame))]
-DHCAPTest <- univarDeDriTest$orderframe$IDI[!(rownames(univarDeDriTest$orderframe) %in% colnames(testDataFrame))]
-testIDI$DHCAP <- DHCAP
-testIDI$DHCAP_T <- DHCAPTest
-diffIDI$DHCAP <-  DHCAPTest-DHCAP
+DIDeAP <- univarDeDri$orderframe$IDI[!(rownames(univarDeDriTest$orderframe) %in% colnames(testDataFrame))]
+DIDeAPTest <- univarDeDriTest$orderframe$IDI[!(rownames(univarDeDriTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$DIDeAP <- DIDeAP
+testIDI$DIDeAP_T <- DIDeAPTest
+diffIDI$DIDeAP <-  DIDeAPTest-DIDeAP
 
-points(DHCAP,DHCAPTest-DHCAP,pch=4,col=colors[4])
+points(DIDeAP,DIDeAPTest-DIDeAP,pch=4,col=colors[4])
 
-DHCAS <- univarDeDriSpear$orderframe$IDI[!(rownames(univarDeDriSpearTest$orderframe) %in% colnames(testDataFrame))]
-DHCASTest <- univarDeDriSpearTest$orderframe$IDI[!(rownames(univarDeDriSpearTest$orderframe) %in% colnames(testDataFrame))]
-testIDI$DHCAS <- DHCAS
-testIDI$DHCAS_T <- DHCASTest
-diffIDI$DHCAS <-  DHCASTest-DHCAS
+DIDeAS <- univarDeDriSpear$orderframe$IDI[!(rownames(univarDeDriSpearTest$orderframe) %in% colnames(testDataFrame))]
+DIDeASTest <- univarDeDriSpearTest$orderframe$IDI[!(rownames(univarDeDriSpearTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$DIDeAS <- DIDeAS
+testIDI$DIDeAS_T <- DIDeASTest
+diffIDI$DIDeAS <-  DIDeASTest-DIDeAS
 
-points(DHCAS,DHCASTest-DHCAS,pch=5,col=colors[5])
+points(DIDeAS,DIDeASTest-DIDeAS,pch=5,col=colors[5])
 
 PCA <- univarPCA$orderframe$IDI[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
 PCATest <- univarPCATest$orderframe$IDI[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
@@ -1267,7 +1268,7 @@ diffIDI$WPCA <-  WPCATest-WPCA
 points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
 
 
-names=c("Raw","HCA:P","HCA:S","DHCA:P","DHCA:S","PCA","EFA","White:PCA")
+names=c("Raw","IDeA:P","IDeA:S","DIDeA:P","DIDeA:S","PCA","EFA","White:PCA")
 pchs=c(1,2,3,4,5,6,7,8)
 
 legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
@@ -1365,22 +1366,22 @@ prRaw <- predictionStats_binary(cbind(testDataFrame[,outcome],predict(lmRAW,test
 lmDe <- glm(paste(outcome,"~."),
             DEdataframe[,c(outcome,topDe)],
             family="binomial")
-prDe <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDe,predTestDe)),"Top HCA:P",cex=0.75)
+prDe <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDe,predTestDe)),"Top IDeA:P",cex=0.75)
 
 lmDeSpear <- glm(paste(outcome,"~."),
             DEdataframeSpear[,c(outcome,topDeSpear)],
             family="binomial")
-prSpear <- predictionStats_binary(cbind(predTestDeSpear[,outcome],predict(lmDeSpear,predTestDeSpear)),"Top HCA:S",cex=0.75)
+prSpear <- predictionStats_binary(cbind(predTestDeSpear[,outcome],predict(lmDeSpear,predTestDeSpear)),"Top IDeA:S",cex=0.75)
 
 lmDri <- glm(paste(outcome,"~."),
             DriDEdataframe[,c(outcome,topDeDri)],
             family="binomial")
-prDri <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDri,predTestDri)),"Top DHCA:P",cex=0.75)
+prDri <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDri,predTestDri)),"Top DIDeA:P",cex=0.75)
 
 lmDriSpear <- glm(paste(outcome,"~."),
             DriDEdataframeSpear[,c(outcome,topDeDriSpear)],
             family="binomial")
-prDriSpear <- predictionStats_binary(cbind(predTestDriSpear[,outcome],predict(lmDriSpear,predTestDriSpear)),"Top DHCA:S",cex=0.7)
+prDriSpear <- predictionStats_binary(cbind(predTestDriSpear[,outcome],predict(lmDriSpear,predTestDriSpear)),"Top DIDeA:S",cex=0.7)
 
 
 lmPCA <- glm(paste(outcome,"~."),
@@ -1420,10 +1421,10 @@ par(cex=0.6)
 
   
   rownames(aucs) <- c("RAW",
-                        "HCA:P",
-                        "HCA:S",
-                        "DHCA:P",
-                        "DHCA:S",
+                        "IDeA:P",
+                        "IDeA:S",
+                        "DIDeA:P",
+                        "DIDeA:S",
                         "PCA",
                         "EFA",
                         "WPCA"

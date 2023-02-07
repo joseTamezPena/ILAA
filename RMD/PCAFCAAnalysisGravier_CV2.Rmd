@@ -66,11 +66,14 @@ outcome <- "class"
 
 
 
+outcomeIDeA <- outcome
+#outcomeIDeA <- NULL
+cormethod <- "fast"
 trainFraction <- 0.5
-cvloops <- 30
-rhoThreshold <- 0.6
-nEFAFactors <- 20
-topFeat <- 10
+cvloops <- 50
+rhoThreshold <- 0.8
+nEFAFactors <- 10
+topFeat <- 20
 
 
 set.seed(10)
@@ -120,8 +123,16 @@ overlapEFA <- numeric()
 overlapEFA_LV <- numeric()
 
 cvloop <- 1
-varlist <- colnames(dataframe)
-varlist <- varlist[varlist != outcome]
+rawthecolnames <- colnames(dataframe)
+varlist <- rawthecolnames[rawthecolnames != outcome]
+selvarRAW <- numeric();
+selvarIDeA <- numeric();
+selvarEFA <- numeric();
+selvarIDeA_LV <- numeric();
+selvarEFA_LV <- numeric();
+corvar <- numeric();
+IDeALVsize <- numeric();
+
 for (cvloop in c(1:cvloops))
 {
     print(cvloop)
@@ -134,11 +145,12 @@ for (cvloop in c(1:cvloops))
     
     #################### Fold One ##################################
     topSigfeatOnep <- univariate_Wilcoxon(foldOne,outcome,limit=0,thr=rhoThreshold)
-    if (length(topSigfeatOnep)>topFeat)
-    {
-      topSigfeatOnep <- topSigfeatOnep[1:topFeat]
-    }
+    selvarRAW <- c(selvarRAW,length(topSigfeatOnep))
     topSigfeatOne <- names(topSigfeatOnep)
+    if (length(topSigfeatOne)>topFeat)
+    {
+      topSigfeatOne <- topSigfeatOne[1:topFeat]
+    }
     
 
     #################### Fold Two ##################################
@@ -162,7 +174,8 @@ for (cvloop in c(1:cvloops))
                       )
 
     RawAUCs <- c(RawAUCs,foldAUCTwo[topSigfeatOne])
-    
+
+    topSigfeatOne <- names(topSigfeatOnep)
     if (topSigfeatOnep[1]<0.2)
     {
       overlapRaw <- c(overlapRaw,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
@@ -172,23 +185,22 @@ for (cvloop in c(1:cvloops))
        overlapRaw <- c(overlapRaw,0)
     }
 
-    #################################### IDeA Pearson
+    #################################### IDeA ################################
     
-    ############# Fold One to Two
-    IDeAData <- IDeA(foldOne,thr=rhoThreshold)
+    IDeAData <- IDeA(foldOne,thr=rhoThreshold,method=cormethod,Outcome=outcomeIDeA)
     predIDeAData <- predictDecorrelate(IDeAData,foldTwo)
     
+    
     topSigfeatOnep <- univariate_Wilcoxon(IDeAData,outcome,limit=0,thr=rhoThreshold)
-    if (length(topSigfeatOnep)>topFeat)
-    {
-      topSigfeatOnep <- topSigfeatOnep[1:topFeat]
-    }
+    selvarIDeA <- c(selvarIDeA,length(topSigfeatOnep))
 
     topSigfeatOne <- names(topSigfeatOnep)
-    
     topSigfeatTwo <- names(univariate_Wilcoxon(predIDeAData,outcome,limit=-1,thr=0.999))
-
     botFoldFeat <- unique(c(topSigfeatOne,topSigfeatTwo))
+
+    
+    LVars <- getLatentCoefficients(IDeAData);
+    IDeALVsize <- c(IDeALVsize,mean(sapply(LVars,length)))
     
     binOutcome <- foldOne[,outcome]
     foldAUCOne <- apply(as.data.frame(IDeAData[,botFoldFeat]),2,getAUC)
@@ -198,12 +210,34 @@ for (cvloop in c(1:cvloops))
     foldAUCTwo <- apply(as.data.frame(predIDeAData[,botFoldFeat]),2,getAUC)
     names(foldAUCTwo) <- botFoldFeat
 
+    ### Only Top AUC
+    topOneFeat <- topSigfeatOne
+    if (length(topOneFeat)>topFeat)
+    {
+      topOneFeat <- topOneFeat[1:topFeat]
+    }
     
     ChangeIDeAAUCs <- c(ChangeIDeAAUCs,
-                        foldAUCTwo[topSigfeatOne] - foldAUCOne[topSigfeatOne]
+                        foldAUCTwo[topOneFeat] - foldAUCOne[topOneFeat]
                       )
 
-    IDeAAUCs <- c(IDeAAUCs,foldAUCTwo[topSigfeatOne])
+    IDeAAUCs <- c(IDeAAUCs,foldAUCTwo[topOneFeat])
+
+    
+    #################### Only Latent Analysis #########################
+    latentVar <- colnames(IDeAData)[!(colnames(IDeAData) %in% rawthecolnames)]
+    selvarIDeA_LV <- c(selvarIDeA_LV,sum(topSigfeatOne %in% latentVar))
+    
+    top_LV <-topOneFeat[topOneFeat %in% latentVar]
+    if (length(top_LV) > 0)
+    {
+      ChangeIDeAAUCs_LV <- c(ChangeIDeAAUCs_LV,
+                         foldAUCTwo[top_LV] - foldAUCOne[top_LV]
+                        )
+  
+      IDeAAUCs_LV <- c(IDeAAUCs_LV,foldAUCTwo[top_LV])
+    }
+    
     if (topSigfeatOnep[1]<0.2)
     {
       overlapIDeA <- c(overlapIDeA,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
@@ -212,20 +246,12 @@ for (cvloop in c(1:cvloops))
     {
       overlapIDeA <- c(overlapIDeA,0)
     }
-    
-    #################### Only Latent Analysis #########################
-    latentVar <- colnames(IDeAData)[!(colnames(IDeAData) %in% varlist)]
-    topSigfeatOne <- topSigfeatOne[topSigfeatOne %in% latentVar]
-    topSigfeatTwo <- topSigfeatTwo[topSigfeatTwo %in% latentVar]
 
-    ChangeIDeAAUCs_LV <- c(ChangeIDeAAUCs_LV,
-                       foldAUCTwo[topSigfeatOne] - foldAUCOne[topSigfeatOne]
-                      )
-
-    IDeAAUCs_LV <- c(IDeAAUCs_LV,foldAUCTwo[topSigfeatOne])
-    if (topSigfeatOnep[1]<0.2)
+    sigOne_LV <- topSigfeatOne[topSigfeatOne %in% latentVar]
+    sigTwo_LV <- topSigfeatTwo[topSigfeatTwo %in% latentVar]
+    if ((topSigfeatOnep[1]<0.2) && (length(sigOne_LV)>0))
     {
-      overlapIDeA_LV <- c(overlapIDeA_LV,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+      overlapIDeA_LV <- c(overlapIDeA_LV,sum(sigOne_LV %in% sigTwo_LV)/length(sigOne_LV))
     }
     else
     {
@@ -241,82 +267,120 @@ for (cvloop in c(1:cvloops))
     cmat <- cor(noclassData);
     diag(cmat) <- 0;
     maxcor <- apply(cmat,2,max);
-    topcor <- names(maxcor[maxcor>rhoThreshold]) ## Only correlated features will be PCA
+    sumcor <- apply(cmat>=rhoThreshold,2,sum)
+    topcor <- names(maxcor[sumcor > (1 + 0.5*nEFAFactors)]) ## Only correlated features will create latent variables
     cmat <- NULL
-    
+    corvar <- c(corvar,length(topcor))
     notcorr <- colnames(foldOne)[!(colnames(foldOne) %in% topcor)]
     noclassData <- noclassData[,topcor]
     noclassDataTest <- foldTwo[,topcor]
         
     ## EFA Fold One to Two
     
-    uls <- fa(noclassData,nEFAFactors,rotate="varimax")  #unweighted least squares is minres 
-    EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),foldOne[,notcorr]))
-    colnames(EFA_Train) <- c(colnames(predict(uls,noclassData)),notcorr)
-    EFA_Predicted <- as.data.frame(cbind(predict(uls,noclassDataTest),foldTwo[,notcorr]))
-    colnames(EFA_Predicted) <- c(colnames(predict(uls,noclassDataTest)),notcorr)
-    
-
-    topSigfeatOnep <- univariate_Wilcoxon(EFA_Train,outcome,limit=0,thr=rhoThreshold)
-    if (length(topSigfeatOnep)>topFeat)
+    uls <- try(fa(noclassData,nEFAFactors,rotate="varimax"))  #unweighted least squares is minres 
+    if (!inherits(uls, "try-error"))
     {
-      topSigfeatOnep <- topSigfeatOnep[1:topFeat]
-    }
+      EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),foldOne[,notcorr]))
+      colnames(EFA_Train) <- c(colnames(predict(uls,noclassData)),notcorr)
+      EFA_Predicted <- as.data.frame(cbind(predict(uls,noclassDataTest),foldTwo[,notcorr]))
+      colnames(EFA_Predicted) <- c(colnames(predict(uls,noclassDataTest)),notcorr)
+      
+  
+      topSigfeatOnep <- univariate_Wilcoxon(EFA_Train,outcome,limit=0,thr=rhoThreshold)
+      topSigfeatOne <- names(topSigfeatOnep)
+      topSigfeatTwo <- names(univariate_Wilcoxon(EFA_Predicted,outcome,limit=-1,thr=0.999))
+      selvarEFA <- c(selvarEFA,length(topSigfeatOnep))
+  
 
-    topSigfeatOne <- names(topSigfeatOnep)
+      botFoldFeat <- unique(c(topSigfeatOne,topSigfeatTwo))
+      
+      binOutcome <- foldOne[,outcome]
+      foldAUCOne <- apply(as.data.frame(EFA_Train[,botFoldFeat]),2,getAUC)
+      names(foldAUCOne) <- botFoldFeat
+  
+      binOutcome <- foldTwo[,outcome]
+      foldAUCTwo <- apply(as.data.frame(EFA_Predicted[,botFoldFeat]),2,getAUC)
+      names(foldAUCTwo) <- botFoldFeat
+      
+      topOneF <- topSigfeatOne
+  
+      if (length(topOneF)>topFeat)
+      {
+        topOneF <- topOneF[1:topFeat]
+      }
 
-    topSigfeatTwo <- names(univariate_Wilcoxon(EFA_Predicted,outcome,limit=-1,thr=0.999))
-
-    botFoldFeat <- unique(c(topSigfeatOne,topSigfeatTwo))
+      ChangeEFAAUCs <- c(ChangeEFAAUCs,
+                         foldAUCTwo[topOneF]- foldAUCOne[topOneF]
+                        )
+  
+      EFAAUCs <- c(EFAAUCs,foldAUCTwo[topOneF])
+      
+      if (topSigfeatOnep[1]<0.2)
+      {
+        overlapEFA <- c(overlapEFA,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+      }
+      else
+      {
+        overlapEFA <- c(overlapEFA,0)
+      }
+      
+      #################### Only Latent Analysis #########################
+      latentVar <- colnames(EFA_Train)[!(colnames(EFA_Train) %in% rawthecolnames)]
+      selvarEFA_LV <- c(selvarEFA_LV,sum(topSigfeatOne %in% latentVar))
+  
+      topSigfeatOne <- topSigfeatOne[topSigfeatOne %in% latentVar]
+      topSigfeatTwo <- topSigfeatTwo[topSigfeatTwo %in% latentVar]
+      
+      topOneLat <- topOneF[topOneF %in% latentVar]
+  
+      if (length(topOneLat)>0)
+      {
+        ChangeEFAAUCs_LV <- c(ChangeEFAAUCs_LV,
+                           foldAUCTwo[topOneLat] - foldAUCOne[topOneLat]
+                          )
     
-    binOutcome <- foldOne[,outcome]
-    foldAUCOne <- apply(as.data.frame(EFA_Train[,botFoldFeat]),2,getAUC)
-    names(foldAUCOne) <- botFoldFeat
-
-    binOutcome <- foldTwo[,outcome]
-    foldAUCTwo <- apply(as.data.frame(EFA_Predicted[,botFoldFeat]),2,getAUC)
-    names(foldAUCTwo) <- botFoldFeat
-
-    
-    ChangeEFAAUCs <- c(ChangeEFAAUCs,
-                       foldAUCTwo[topSigfeatOne]- foldAUCOne[topSigfeatOne]
-                      )
-
-    EFAAUCs <- c(EFAAUCs,foldAUCTwo[topSigfeatOne])
-    if (topSigfeatOnep[1]<0.2)
-    {
-      overlapEFA <- c(overlapEFA,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+        EFAAUCs_LV <- c(EFAAUCs_LV,foldAUCTwo[topOneLat])
+      }
+      
+      if ((topSigfeatOnep[1]<0.2) && (length(topSigfeatOne) > 0))
+      {
+        overlapEFA_LV <- c(overlapEFA_LV,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
+      }
+      else
+      {
+        overlapEFA_LV <- c(overlapEFA_LV,0)
+      }
     }
-    else
-    {
-      overlapEFA <- c(overlapEFA,0)
-    }
-    
-    #################### Only Latent Analysis #########################
-    latentVar <- colnames(EFA_Train)[!(colnames(EFA_Train) %in% varlist)]
-    topSigfeatOne <- topSigfeatOne[topSigfeatOne %in% latentVar]
-    topSigfeatTwo <- topSigfeatTwo[topSigfeatTwo %in% latentVar]
-
-    ChangeEFAAUCs_LV <- c(ChangeEFAAUCs_LV,
-                       foldAUCTwo[topSigfeatOne] - foldAUCOne[topSigfeatOne]
-                      )
-
-    EFAAUCs_LV <- c(EFAAUCs_LV,foldAUCTwo[topSigfeatOne])
-    if (topSigfeatOnep[1]<0.2)
-    {
-      overlapEFA_LV <- c(overlapEFA_LV,sum(topSigfeatOne %in% topSigfeatTwo)/length(topSigfeatOne))
-    }
-    else
-    {
-      overlapEFA_LV <- c(overlapEFA_LV,0)
-    }
-    
+      
 
     
 }
 
+RawAUCs <- RawAUCs[!is.na(RawAUCs)]
+IDeAAUCs <- IDeAAUCs[!is.na(IDeAAUCs)]
+IDeAAUCs_LV <- IDeAAUCs_LV[!is.na(IDeAAUCs_LV)]
+EFAAUCs <- EFAAUCs[!is.na(EFAAUCs)]
+EFAAUCs_LV <- EFAAUCs_LV[!is.na(EFAAUCs_LV)]
+
 
 ```
+### The number of discoveries
+
+```{r results = "asis"}
+
+pander::pander(summary(IDeALVsize),caption="Latent Variable Size")
+
+pander::pander(summary(corvar),caption="EFA Variable Size")
+
+pander::pander(as.matrix(c(Raw=mean(selvarRAW),
+                 IDeA=mean(selvarIDeA),
+                 IDeA_LV=mean(selvarIDeA_LV),
+                 EFA=mean(selvarEFA),
+                 EFA_LV=mean(selvarEFA_LV)
+               )),caption="Average Number of Selected Variables")
+
+```
+
 
 
 ### Violin of ROC AUC 
@@ -435,4 +499,5 @@ colnames(bpstats) <- bp$names
 pander::pander(bpstats)
 
 ```
+
 

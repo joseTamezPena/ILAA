@@ -826,10 +826,11 @@ colors=c("red","blue","green","darkblue","darkgreen","purple","orange","darkred"
 
 plot(rawDen,
      xlim=c(-1,1),
-     ylim=c(0,7.0),
+     ylim=c(0.001,7.0),
      col=colors[1],
      lty=1,
      lwd=4,
+     log="y",
      main="Test: Correlation Distribution",xlab="Spearman Correlation")
 
 lines(DeDen,col=colors[2],lty=2,lwd=4)
