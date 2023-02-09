@@ -51,6 +51,9 @@ print(table(DARWIN$class))
 
 DARWIN[,1:ncol(DARWIN)] <- sapply(DARWIN,as.numeric)
 
+signedlog <- function(x) { return (sign(x)*log(abs(1.0e12*x)+1.0))}
+whof <- !(colnames(DARWIN) %in% c("class"));
+DARWIN[,whof] <- signedlog(DARWIN[,whof])
 
 ```
 
