@@ -1,0 +1,3 @@
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6960825/
+
+Mohino-Herranz I, Gil-Pita R, Rosa-Zurera M, Seoane F. Activity Recognition Using Wearable Physiological Measurements: Selection of Features from a Comprehensive Literature Study. Sensors (Basel). 2019 Dec 13;19(24):0. doi: 10.3390/s19245524. PMID: 31847261; PMCID: PMC6960825.

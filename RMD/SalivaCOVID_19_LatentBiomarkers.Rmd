@@ -165,11 +165,6 @@ datasetframe.umap = umap(FRESAScale(SalivaIR_Avg[,featnames])$scaledData,n_compo
 plot(datasetframe.umap$layout,col=(SalivaIR_Avg$class+1),xlab="U1",ylab="U2",main="UMAP: Original",t='n')
 text(datasetframe.umap$layout,labels=lnames[1+SalivaIR_Avg$class],col=(SalivaIR_Avg$class+1))
 
-#colors = rainbow(length(unique(SalivaIR_Avg$class)))
-#names(colors) = unique(SalivaIR_Avg$class)
-#ecb = function(x,y){ plot(x,t='n'); text(x,labels=SalivaIR_Avg$class, col=colors[as.character(SalivaIR_Avg$class)]) }
-#tsne_iris = tsne(SalivaIR_Avg[,featnames], epoch_callback = ecb, perplexity=50)
-
 
 ```
 
@@ -241,15 +236,8 @@ par(op)
 featnames <- colnames(deIR)
 featnames <- featnames[featnames != "class"]
 datasetframe.umap = umap(FRESAScale(deIR[,featnames])$scaledData,n_components=2)
-#plot(datasetframe.umap$layout,col=(deIR$class+1),xlab="U1",ylab="U2",main="UMAP")
 plot(datasetframe.umap$layout,col=(deIR$class+1),xlab="U1",ylab="U2",main="UMAP: After Transformation",t='n')
 text(datasetframe.umap$layout,labels=lnames[1+deIR$class],col=(deIR$class+1))
-
-
-#colors = rainbow(length(unique(deIR$class)))
-#names(colors) = unique(deIR$class)
-#ecb = function(x,y){ plot(x,t='n'); text(x,labels=deIR$class, col=colors[as.character(deIR$class)]) }
-#tsne_iris = tsne(deIR[,featnames], epoch_callback = ecb, perplexity=50)
 
 ```
 
