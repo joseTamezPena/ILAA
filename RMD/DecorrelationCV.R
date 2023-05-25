@@ -66,7 +66,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
       testSet <- FRESAScale(testSet,method="OrderLogit",refMean=trainScale$refMean,refDisp=trainScale$refDisp)$scaledData
       trainScale <- NULL
     }
-    SelectedTrainFeatures[[lp]] <- names(filterMethod(trainSet,outcome,pvalue=0.05,limit=-1))
+    SelectedTrainFeatures[[lp]] <- names(filterMethod(trainSet,outcome,pvalue=0.2,limit=-1))
     SelectedTestFeatures[[lp]] <- names(filterMethod(testSet,outcome,pvalue=0.2,limit=-1))
     TDR[lp] <- sum(SelectedTrainFeatures[[lp]] %in% SelectedTestFeatures[[lp]])/length(SelectedTrainFeatures[[lp]])
     
@@ -82,7 +82,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
       cat(".")
       trainSet <- IDeA(trainSet,...)
       testSet <- predictDecorrelate(trainSet,testSet)
-      DeSelectedTrainFeatures[[lp]] <- names(filterMethod(trainSet,outcome,pvalue=0.05,limit=-1))
+      DeSelectedTrainFeatures[[lp]] <- names(filterMethod(trainSet,outcome,pvalue=0.2,limit=-1))
       DeSelectedTestFeatures[[lp]] <- names(filterMethod(testSet,outcome,pvalue=0.2,limit=-1))
       DeTDR[lp] <- sum(DeSelectedTrainFeatures[[lp]] %in% DeSelectedTestFeatures[[lp]])/length(DeSelectedTrainFeatures[[lp]])
       
