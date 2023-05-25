@@ -110,7 +110,7 @@ boxplot(cbind(RAW=cvDataFS$TDR,IDeA=cvDataFS$DeTDR),notch=TRUE,main="TDR")
 boxplot(cbind(RAW=cvDataFS$ROCAUC,IDeA=cvDataFS$DeROCAUC),notch=TRUE,main="ROC AUC")
 boxplot(cbind(RAW=cvDataFS$topROCAUC,IDeA=cvDataFS$DetopROCAUC),notch=TRUE,main="Top Feature: ROC AUC")
 boxplot(cbind(RAW=FSRaw,IDeA=FSDe),main="Number of Selected Features")
-boxplot(cbind(RAW=lassSFRaw,IDEA=lassSFDe),main="Number of Selected Features by LASSO Min")
+boxplot(cbind(RAW=lassSFRaw,IDeA=lassSFDe),main="Number of Selected Features by LASSO Min")
 boxplot(cbind(Filter=cvDataFS$DeFraction,LASSO=cvDataFS$DeFractionLasso),main="Fraction of Latent Variables")
 
 bpRaw <- predictionStats_binary(cvDataFS$medTestRaw,"Raw")

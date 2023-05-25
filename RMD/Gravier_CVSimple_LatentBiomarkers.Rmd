@@ -1,5 +1,5 @@
 ---
-title: "Decorrelation-Based Feature Discovery: Parkinsons"
+title: "Decorrelation-Based Feature Discovery: Gravier"
 author: "Jose Tamez"
 date: "2022-10-02"
 output:
@@ -58,62 +58,28 @@ source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
 
 ```
 
-## Material and Methods
 
-Data from the speech features 
 
 
 ## The Data
 
+
 ```{r}
+data('gravier', package = 'datamicroarray')
+table(gravier$y)
 
-pd_speech_features <- as.data.frame(read_excel("~/GitHub/FCA/Data/pd_speech_features.xlsx",sheet = "pd_speech_features", range = "A2:ACB758"))
+gravierset <- as.data.frame(cbind(class=1*(gravier$y=="poor"),gravier$x))
 
+gravier <- NULL
 
-
-
-```
-
-### The Average of the Three Repetitions
-
-Each subject had three repeated observations. Here I'll use the average of the three experiments per subject.
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
-rep1Parkison <- subset(pd_speech_features,RID==1)
-rownames(rep1Parkison) <- rep1Parkison$id
-rep1Parkison$id <- NULL
-rep1Parkison$RID <- NULL
-rep1Parkison[,1:ncol(rep1Parkison)] <- sapply(rep1Parkison,as.numeric)
-
-rep2Parkison <- subset(pd_speech_features,RID==2)
-rownames(rep2Parkison) <- rep2Parkison$id
-rep2Parkison$id <- NULL
-rep2Parkison$RID <- NULL
-rep2Parkison[,1:ncol(rep2Parkison)] <- sapply(rep2Parkison,as.numeric)
-
-rep3Parkison <- subset(pd_speech_features,RID==3)
-rownames(rep3Parkison) <- rep3Parkison$id
-rep3Parkison$id <- NULL
-rep3Parkison$RID <- NULL
-rep3Parkison[,1:ncol(rep3Parkison)] <- sapply(rep3Parkison,as.numeric)
-
-whof <- !(colnames(rep1Parkison) %in% c("gender","class"));
-avgParkison <- rep1Parkison;
-avgParkison[,whof] <- (rep1Parkison[,whof] + rep2Parkison[,whof] + rep3Parkison[,whof])/3
-
-
-signedlog <- function(x) { return (sign(x)*log(abs(1.0e12*x)+1.0))}
-whof <- !(colnames(avgParkison) %in% c("gender","class"));
-avgParkison[,whof] <- signedlog(avgParkison[,whof])
 
 
 ```
-
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-studyName <- "Parkinsons"
-dataframe <- avgParkison
+studyName <- "Gravier"
+dataframe <- gravierset
 outcome <- "class"
 
 
@@ -122,7 +88,7 @@ outcome <- "class"
 ### CV feature Selection
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
 
-cvDataFS <- CV_TDR(dataframe,outcome,loops=100,scale=TRUE)
+cvDataFS <- CV_TDR(dataframe,outcome,loops=10,scale=FALSE)
 
 ```
 

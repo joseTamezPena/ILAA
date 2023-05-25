@@ -66,36 +66,42 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
       testSet <- FRESAScale(testSet,method="OrderLogit",refMean=trainScale$refMean,refDisp=trainScale$refDisp)$scaledData
       trainScale <- NULL
     }
-    SelectedTrainFeatures[[lp]] <- names(filterMethod(trainSet,outcome,pvalue=0.2,limit=-1))
-    SelectedTestFeatures[[lp]] <- names(filterMethod(testSet,outcome,pvalue=0.2,limit=-1))
+    ml <- LASSO_MIN(formula(paste(outcome,"~ .")),trainSet,family="binomial")
+    SelectedLASSOFeatures[[lp]] <- ml$selectedfeatures
+    SelectedTrainFeatures[[lp]] <- unique(c(names(filterMethod(trainSet,outcome,pvalue=0.2,limit=-1)),SelectedLASSOFeatures[[lp]]))
+
+    
+    mlt <- LASSO_MIN(formula(paste(outcome,"~ .")),testSet,family="binomial")
+    SelectedTestFeatures[[lp]] <- unique(c(names(filterMethod(testSet,outcome,pvalue=0.2,limit=-1)),mlt$selectedfeatures))
     TDR[lp] <- sum(SelectedTrainFeatures[[lp]] %in% SelectedTestFeatures[[lp]])/length(SelectedTrainFeatures[[lp]])
     
     topROCAUC[lp] <- pROC::roc(testSet[,outcome],testSet[,SelectedTrainFeatures[[lp]][1]],auc=TRUE,quiet=TRUE)$auc
-    ml <- LASSO_MIN(formula(paste(outcome,"~ .")),trainSet,family="binomial")
     pred <- as.vector(predict(ml,testSet))
     rocRaw <- pROC::roc(testSet[,outcome],pred,auc=TRUE,quiet=TRUE)
     testPredict <- rbind(testPredict,cbind(rownames(testSet),testSet[,outcome],pred))
     ROCAUC[lp] <- rocRaw$auc
-    SelectedLASSOFeatures[[lp]] <- ml$selectedfeatures
     if (Decor)
     {
       cat(".")
       trainSet <- IDeA(trainSet,...)
       testSet <- predictDecorrelate(trainSet,testSet)
-      DeSelectedTrainFeatures[[lp]] <- names(filterMethod(trainSet,outcome,pvalue=0.2,limit=-1))
-      DeSelectedTestFeatures[[lp]] <- names(filterMethod(testSet,outcome,pvalue=0.2,limit=-1))
+      
+      ml <- LASSO_MIN(formula(paste(outcome,"~ .")),trainSet,family="binomial")
+      DeSelectedLASSOFeatures[[lp]] <- ml$selectedfeatures
+      DeSelectedTrainFeatures[[lp]] <- unique(c(names(filterMethod(trainSet,outcome,pvalue=0.2,limit=-1)),DeSelectedLASSOFeatures[[lp]]))
+      
+      mlt <- LASSO_MIN(formula(paste(outcome,"~ .")),testSet,family="binomial")
+      DeSelectedTestFeatures[[lp]] <- unique(c(names(filterMethod(testSet,outcome,pvalue=0.2,limit=-1)),mlt$selectedfeatures))
       DeTDR[lp] <- sum(DeSelectedTrainFeatures[[lp]] %in% DeSelectedTestFeatures[[lp]])/length(DeSelectedTrainFeatures[[lp]])
       
       DetopROCAUC[lp] <- pROC::roc(testSet[,outcome],testSet[,DeSelectedTrainFeatures[[lp]][1]],auc=TRUE,quiet=TRUE)$auc
       
-      ml <- LASSO_MIN(formula(paste(outcome,"~ .")),trainSet,family="binomial")
       pred <- as.vector(predict(ml,testSet))
       rocDe <- pROC::roc(testSet[,outcome],pred,auc=TRUE,quiet=TRUE)
       DeTestPredict <- rbind(DeTestPredict,cbind(rownames(testSet),testSet[,outcome],pred))
       
       DeROCAUC[lp] <- rocDe$auc
       rocTest[[lp]] <- roc.test(rocRaw,rocDe)$p.value
-      DeSelectedLASSOFeatures[[lp]] <- ml$selectedfeatures
       DeFraction[lp] <- sum(str_detect(DeSelectedTrainFeatures[[lp]],"La_"))/length(DeSelectedTrainFeatures[[lp]])
       if (length(DeSelectedLASSOFeatures[[lp]])>0)
         DeFractionLasso[lp] <- sum(str_detect(DeSelectedLASSOFeatures[[lp]],"La_"))/length(DeSelectedLASSOFeatures[[lp]])
