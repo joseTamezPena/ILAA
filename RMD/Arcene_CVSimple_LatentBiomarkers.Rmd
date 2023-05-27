@@ -1,0 +1,165 @@
+---
+title: "Decorrelation-Based Feature Discovery: ARCENE"
+author: "Jose Tamez"
+date: "2022-10-02"
+output:
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+
+```
+
+# Effect of UPSTM-Based Decorrelation on Feature Discovery
+
+
+
+### Loading the libraries
+
+```{r}
+library("FRESA.CAD")
+library(readxl)
+library(igraph)
+library(umap)
+library(tsne)
+library(entropy)
+
+op <- par(no.readonly = TRUE)
+pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
+
+```
+
+
+
+## The Data
+
+```{r}
+trainLabeled <- read.delim("~/GitHub/FCA/Data/trainSet.txt")
+validLabeled <- read.delim("~/GitHub/FCA/Data/arcene_valid.txt")
+wholeArceneSet <- rbind(trainLabeled,validLabeled)
+
+
+wholeArceneSet$Labels <-  1*(wholeArceneSet$Labels > 0)
+wholeArceneSet[,1:ncol(trainLabeled)] <- sapply(wholeArceneSet,as.double)
+
+
+```
+
+#### Standarize the names for the reporting
+
+```{r results = "asis"}
+studyName <- "Arcene"
+dataframe <- wholeArceneSet
+outcome <- "Labels"
+
+
+```
+
+### CV feature Selection
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+cvDataFS <- CV_TDR(dataframe,outcome,loops=30,scale=TRUE,thr=0.8)
+
+```
+
+### Report
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+lassSFRaw <- as.numeric(unlist(lapply(cvDataFS$SelectedLASSOFeatures,length)))
+lassSFDe <- as.numeric(unlist(lapply(cvDataFS$DeSelectedLASSOFeatures,length)))
+FSRaw <- as.numeric(unlist(lapply(cvDataFS$SelectedTrainFeatures,length)))
+FSDe <- as.numeric(unlist(lapply(cvDataFS$DeSelectedTrainFeatures,length)))
+boxplot(cbind(RAW=cvDataFS$TDR,IDeA=cvDataFS$DeTDR),notch=TRUE,main="TDR")
+boxplot(cbind(RAW=cvDataFS$ROCAUC,IDeA=cvDataFS$DeROCAUC),notch=TRUE,main="ROC AUC")
+boxplot(cbind(RAW=cvDataFS$topROCAUC,IDeA=cvDataFS$DetopROCAUC),notch=TRUE,main="Top Feature: ROC AUC")
+boxplot(cbind(RAW=FSRaw,IDeA=FSDe),main="Number of Selected Features")
+boxplot(cbind(RAW=lassSFRaw,IDeA=lassSFDe),main="Number of Selected Features by LASSO Min")
+boxplot(cbind(Filter=cvDataFS$DeFraction,LASSO=cvDataFS$DeFractionLasso),main="Fraction of Latent Variables")
+
+bpRaw <- predictionStats_binary(cvDataFS$medTestRaw,"Raw")
+bpDe <- predictionStats_binary(cvDataFS$DeMedTestRaw,"IDeA")
+
+
+pander::pander(apply(cvDataFS$datadim,2,mean),caption="Data Dimensions")
+
+```
+
+
+### Summary
+```{r results = "asis"}
+TDR_raw <- c(mean=mean(cvDataFS$TDR),sd=sd(cvDataFS$TDR))
+TDR_de <- c(mean=mean(cvDataFS$DeTDR),sd=sd(cvDataFS$DeTDR))
+ROCAUC_raw <- c(mean=mean(cvDataFS$ROCAUC),sd=sd(cvDataFS$ROCAUC))
+TOPROCAUC_raw <- c(mean=mean(cvDataFS$topROCAUC),sd=sd(cvDataFS$topROCAUC))
+ROCAUC_de <- c(mean=mean(cvDataFS$DeROCAUC),sd=sd(cvDataFS$DeROCAUC))
+TOPROCAUC_de <- c(mean=mean(cvDataFS$DetopROCAUC),sd=sd(cvDataFS$DetopROCAUC))
+SelectedFeaturesRaw <- c(mean=mean(FSRaw),sd=sd(FSRaw))
+SelectedFeaturesDe <- c(mean=mean(FSDe),sd=sd(FSDe))
+SelectedFeaturesLassoRaw <- c(mean=mean(lassSFRaw),sd=sd(lassSFRaw))
+SelectedFeaturesLassoDe <- c(mean=mean(lassSFDe),sd=sd(lassSFDe))
+FractionOfLatent <- c(mean=mean(cvDataFS$DeFraction),sd=sd(cvDataFS$DeFraction))
+FractionOfLassoLatent <- c(mean=mean(cvDataFS$DeFractionLasso),sd=sd(cvDataFS$DeFractionLasso))
+latVarSize <- c(mean=mean(cvDataFS$Avlen),sd=sd(cvDataFS$Avlen))
+NumLatVar <- c(mean=mean(cvDataFS$NumLatent),sd=sd(cvDataFS$NumLatent))
+NumLofCorrelated <- c(mean=mean(cvDataFS$totCorrelated),sd=sd(cvDataFS$totCorrelated))
+
+SummaryRaw <- rbind(TDR_raw,
+                 ROCAUC_raw,
+                 TOPROCAUC_raw,
+                 SelectedFeaturesRaw,
+                 SelectedFeaturesLassoRaw
+                 )
+                
+pander::pander(SummaryRaw)                 
+
+diffinROCACU <- cvDataFS$DeROCAUC-cvDataFS$ROCAUC
+DifFROCAUC <- c(mean=mean(diffinROCACU),sd=sd(diffinROCACU))
+diffinTOPROCACU <- cvDataFS$DetopROCAUC-cvDataFS$topROCAUC
+DifTopROCAUC <- c(mean=mean(diffinTOPROCACU),sd=sd(diffinTOPROCACU))
+SummaryDe <- rbind(TDR_de,
+                 ROCAUC_de,
+                 TOPROCAUC_de,
+                 SelectedFeaturesDe,
+                 SelectedFeaturesLassoDe,
+                 FractionOfLatent,
+                 FractionOfLassoLatent,
+                 DifFROCAUC,
+                 DifTopROCAUC,
+                 NumLatVar,
+                 latVarSize,
+                 NumLofCorrelated
+                 )
+
+pander::pander(SummaryDe)
+pander::pander(c(pvalue=pnorm(0, mean(diffinROCACU), sd(diffinROCACU))),caption="ROC Diff, p.value")
+pander::pander(summary(as.numeric(unlist(cvDataFS$rocTest))),caption="ROC p.values")
+
+pander::pander(c(pvalue=pnorm(0, mean(diffinTOPROCACU), sd(diffinTOPROCACU))),caption="TOP ROC Diff, p.value")
+
+pander::pander(roc.test(bpRaw$ROC.analysis$roc.predictor,bpDe$ROC.analysis$roc.predictor))
+
+
+```
+
+
+### Saving ALL
+
+```{r}
+save.image(paste("CV_analyiss",studyName,".RData",sep="_"))
+
+```
+

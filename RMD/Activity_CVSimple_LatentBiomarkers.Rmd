@@ -23,22 +23,6 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 
 # Effect of UPSTM-Based Decorrelation on Feature Discovery
 
-Here I showcase of to use BSWiMS feature selection/modeling function coupled with Goal Driven Sparse Transformation Matrix (UPSTM) as a pre-processing step to decorrelate highly correlated features. The aim(s) are:
-
-1.  To improve model performance by uncovering the hidden information between correlated features.
-
-2.  To simplify the interpretation of the machine learning models.
-
-This demo will use:
-
--   *FRESA.CAD::IDeA()*. For Decorrelation of Multidimensional data sets
-
-    -   *FRESA.CAD::getLatentCoefficients()*. For the extraction of the model of the newly discovered of decorrelated features.
-
-
--   *heatmap.2()*. For displaying the correlation matrix
-
-
 
 ### Loading the libraries
 
@@ -179,6 +163,7 @@ FractionOfLatent <- c(mean=mean(cvDataFS$DeFraction),sd=sd(cvDataFS$DeFraction))
 FractionOfLassoLatent <- c(mean=mean(cvDataFS$DeFractionLasso),sd=sd(cvDataFS$DeFractionLasso))
 latVarSize <- c(mean=mean(cvDataFS$Avlen),sd=sd(cvDataFS$Avlen))
 NumLatVar <- c(mean=mean(cvDataFS$NumLatent),sd=sd(cvDataFS$NumLatent))
+NumLofCorrelated <- c(mean=mean(cvDataFS$totCorrelated),sd=sd(cvDataFS$totCorrelated))
 
 SummaryRaw <- rbind(TDR_raw,
                  ROCAUC_raw,
@@ -203,7 +188,8 @@ SummaryDe <- rbind(TDR_de,
                  DifFROCAUC,
                  DifTopROCAUC,
                  NumLatVar,
-                 latVarSize
+                 latVarSize,
+                 NumLofCorrelated
                  )
 
 pander::pander(SummaryDe)

@@ -17,11 +17,22 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
   DeFractionLasso <- numeric(loops)
   Avlen <- numeric(loops)
   NumLatent <- numeric(loops)
+  totCorrelated <- numeric(loops)
   rocTest <- list()
   datadim <- NULL
   testPredict <- NULL
   DeTestPredict <- NULL
   outvalues <- unique(data[,outcome])
+  
+  ### Some global cleaning
+  sdiszero <- apply(data,2,var) > 1.0e-16
+  data <- data[,sdiszero]
+
+  varlist <- colnames(data)[colnames(data) != outcome]
+  tokeep <- c(as.character(correlated_Remove(data,varlist,thr=0.9999)),outcome)
+  data <- data[,tokeep]
+  
+  
   for (lp in c(1:loops))
   {
     cat("<")
@@ -44,19 +55,15 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
       sampleSecond <- sample(nrow(secondSet),nrow(secondSet)/2)
       trainSet <- rbind(firstSet[sampleFirst,],secondSet[sampleSecond,])
       testSet <- rbind(firstSet[-sampleFirst,],secondSet[-sampleSecond,])
+      firstSet <- NULL
+      secondSet <- NULL
     }
     
-    sdiszero <- apply(trainSet,2,var) > 1.0e-16
-    trainSet <- trainSet[,sdiszero]
-    testSet <- testSet[,sdiszero]
-    
-    varlist <- colnames(trainSet)[colnames(trainSet) != outcome]
-    tokeep <- c(as.character(correlated_Remove(trainSet,varlist,thr=0.9999)),outcome)
-    trainSet <- trainSet[,tokeep]
-    testSet <- testSet[,tokeep]
-    dtrain <- table(trainSet[,outcome])
-    dtest <- table(testSet[,outcome])
-    datadim <- rbind(datadim,c(trainRows=nrow(trainSet),testRows=nrow(testSet),dataColums=ncol(trainSet),dtrain,dtest))
+    datadim <- rbind(datadim,c(trainRows=nrow(trainSet),
+                               testRows=nrow(testSet),
+                               dataColums=ncol(trainSet),
+                               table(trainSet[,outcome]),
+                               table(testSet[,outcome])))
     
     
     if (scale)
@@ -82,9 +89,12 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
     ROCAUC[lp] <- rocRaw$auc
     if (Decor)
     {
-      cat(".")
+      cat("(")
       trainSet <- IDeA(trainSet,...)
+      totCorrelated[lp] <- sqrt(attr(trainSet,"totCorrelated"))
+
       testSet <- predictDecorrelate(trainSet,testSet)
+      cat(")")
       
       ml <- LASSO_MIN(formula(paste(outcome,"~ .")),trainSet,family="binomial")
       DeSelectedLASSOFeatures[[lp]] <- ml$selectedfeatures
@@ -143,7 +153,8 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
                       testPredict=testPredict,
                       DeTestPredict=DeTestPredict,
                       Avlen=Avlen,
-                      NumLatent=NumLatent
+                      NumLatent=NumLatent,
+                      totCorrelated=totCorrelated
                       )
   return (FDRAnalysis)
 }

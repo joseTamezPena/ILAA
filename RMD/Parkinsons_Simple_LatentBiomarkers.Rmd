@@ -1,7 +1,7 @@
 ---
-title: "Decorrelation-Based Feature Discovery: Parkinsons"
+title: "Decorrelation-Based Feature Discovery: Parkinsons-Whole"
 author: "Jose Tamez"
-date: "2022-10-02"
+date: "`r Sys.Date()`"
 output:
   html_document: 
     toc: yes
@@ -22,22 +22,6 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 ```
 
 # Effect of UPSTM-Based Decorrelation on Feature Discovery
-
-Here I showcase of to use BSWiMS feature selection/modeling function coupled with Goal Driven Sparse Transformation Matrix (UPSTM) as a pre-processing step to decorrelate highly correlated features. The aim(s) are:
-
-1.  To improve model performance by uncovering the hidden information between correlated features.
-
-2.  To simplify the interpretation of the machine learning models.
-
-This demo will use:
-
--   *FRESA.CAD::IDeA()*. For Decorrelation of Multidimensional data sets
-
-    -   *FRESA.CAD::getLatentCoefficients()*. For the extraction of the model of the newly discovered of decorrelated features.
-
-
--   *heatmap.2()*. For displaying the correlation matrix
-
 
 
 ### Loading the libraries
@@ -60,6 +44,7 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 ## Material and Methods
 
 Data from the speech features 
+
 
 
 ## The Data
@@ -100,10 +85,6 @@ whof <- !(colnames(rep1Parkison) %in% c("gender","class"));
 avgParkison <- rep1Parkison;
 avgParkison[,whof] <- (rep1Parkison[,whof] + rep2Parkison[,whof] + rep3Parkison[,whof])/3
 
-## I apply the log transform to the data
-##avgParkison[,whof] <- signedlog(avgParkison[,whof])
-#avgParkison[,whof] <- FRESAScale(avgParkison[,whof],method="OrderLogit")$scaledData
-#pander::pander(table(avgParkison$class))
 
 signedlog <- function(x) { return (sign(x)*log(abs(1.0e12*x)+1.0))}
 whof <- !(colnames(avgParkison) %in% c("gender","class"));
@@ -115,41 +96,11 @@ avgParkison[,whof] <- signedlog(avgParkison[,whof])
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
+studyName <- "Parkinsons"
 dataframe <- avgParkison
 outcome <- "class"
 
-trainFraction <- 0.5
-rhoThreshold <- 0.8
-TopVariables <- 5
-aucTHR <- 0.75
-
-set.seed(5)
-trainSample <- sample(nrow(dataframe),nrow(dataframe)*trainFraction)
-
-trainDataFrame <- dataframe[trainSample,]
-testDataFrame <- dataframe[-trainSample,]
-
-tb <- table(dataframe[,outcome])
-classes <- c("Neg","Pos")
-names(classes) <- names(tb)
-
-
-
-varlist <- colnames(trainDataFrame)
-varlist <- varlist[varlist != "class"]
-
-tokeep <- c(as.character(correlated_Remove(trainDataFrame,varlist,thr=0.9999)),"class")
-trainDataFrame <- trainDataFrame[,tokeep]
-testDataFrame <- testDataFrame[,tokeep]
-
-trainScale <- FRESAScale(trainDataFrame,method="OrderLogit")
-trainDataFrame <- trainScale$scaledData
-table(trainDataFrame$class)
-
-testDataFrame <- FRESAScale(testDataFrame,method="OrderLogit",refMean=trainScale$refMean,refDisp=trainScale$refDisp)$scaledData
-table(testDataFrame$class)
-
-
+TopVariables <- 10
 ```
 
 ### Data specs
@@ -157,28 +108,37 @@ table(testDataFrame$class)
 ```{r results = "asis"}
 pander::pander(c(rows=nrow(dataframe),col=ncol(dataframe)-1))
 pander::pander(table(dataframe[,outcome]))
-pander::pander(table(trainDataFrame[,outcome]))
-pander::pander(table(testDataFrame[,outcome]))
 
-varlist <- colnames(trainDataFrame)
+varlist <- colnames(dataframe)
 varlist <- varlist[varlist != outcome]
 
 ```
 
+### Scaling the data
+```{r}
+  ### Some global cleaning
+  sdiszero <- apply(dataframe,2,sd) > 1.0e-16
+  dataframe <- dataframe[,sdiszero]
 
+  varlist <- colnames(dataframe)[colnames(dataframe) != outcome]
+  tokeep <- c(as.character(correlated_Remove(dataframe,varlist,thr=0.9999)),outcome)
+  dataframe <- dataframe[,tokeep]
 
+  varlist <- colnames(dataframe)
+  varlist <- varlist[varlist != outcome]
+
+dataframe <- FRESAScale(dataframe,method="OrderLogit")$scaledData
+
+```
 
 
 ## The heatmap of the data
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-hmdf <- testDataFrame;
-hmdf$class <- as.numeric(as.factor(testDataFrame$class))
 
-
-hm <- heatMaps(data=hmdf,
-               Outcome="class",
+hm <- heatMaps(data=dataframe,
+               Outcome=outcome,
                Scale=TRUE,
                hCluster = "row",
                xlab="Feature",
@@ -190,26 +150,16 @@ par(op)
 
 ```
 
-### The UMAP
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-raincolors <- rainbow(length(classes))
-names(raincolors) <- classes
-datasetframe.umap = umap(scale(trainDataFrame[,varlist]),n_components=2)
-plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: Original",t='n')
-text(datasetframe.umap$layout,labels=trainDataFrame$class,col=raincolors[trainDataFrame$class+1])
 
 
-```
+#### Correlation Matrix of the Data
 
-
-#### Correlation Matrix of the Decorrelated Test Data
-
-The heat map of the testing set.
+The heat map of the data
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 par(cex=0.6,cex.main=0.85,cex.axis=0.7)
-cormat <- cor(testDataFrame[,varlist],method="pearson")
+cormat <- cor(dataframe[,varlist],method="pearson")
 cormat[is.na(cormat)] <- 0
 diag(cormat) <- 0
 gplots::heatmap.2(abs(cormat),
@@ -226,63 +176,20 @@ gplots::heatmap.2(abs(cormat),
 
 ```
 
+
 ## The decorrelation
 
 ```{r}
-trainDecor <- IDeA(trainDataFrame,thr=rhoThreshold,verbose=TRUE)
-testDecor <- predictDecorrelate(trainDecor,testDataFrame)
-varlistc <- colnames(testDecor)[colnames(testDecor) != outcome]
+DEdataframe <- IDeA(dataframe)
+varlistc <- colnames(DEdataframe)[colnames(DEdataframe) != outcome]
 
-pander::pander(sum(apply(testDataFrame[,varlist],2,var)))
-pander::pander(sum(apply(testDecor[,varlistc],2,var)))
-pander::pander(entropy(discretize(unlist(testDataFrame[,varlist]), 256)))
-pander::pander(entropy(discretize(unlist(testDecor[,varlistc]), 256)))
-
-cormat <- cor(testDecor[,varlistc],method="pearson")
-cormat[is.na(cormat)] <- 0
-diag(cormat) <- 0
-
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  main = "Correlation after IDeA",
-                  cexRow = 0.15,
-                  cexCol = 0.15,
-                  key.title=NA,
-                  key.xlab="Pearson Correlation",
-                  xlab="Feature", ylab="Feature")
-
-par(op)
+pander::pander(sum(apply(dataframe[,varlist],2,var)))
+pander::pander(sum(apply(DEdataframe[,varlistc],2,var)))
+pander::pander(entropy(discretize(unlist(dataframe[,varlist]), 256)))
+pander::pander(entropy(discretize(unlist(DEdataframe[,varlistc]), 256)))
 
 ```
 
-## The heatmap of the decorrelated data
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-hmdf <- testDecor;
-hmdf$class <- as.numeric(as.factor(testDecor$class))
-
-hm <- heatMaps(data=hmdf,
-               Outcome="class",
-               Scale=TRUE,
-               hCluster = "row",
-               cexRow = 0.15,
-               cexCol = 0.15,
-               xlab="Feature",
-               ylab="Sample")
-par(op)
-
-```
-
-### The decorralted UMAP
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-
-datasetframe.umap = umap(scale(trainDecor[,varlistc]),n_components=2)
-plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: After IDeA",t='n')
-text(datasetframe.umap$layout,labels=trainDecor$class,col=raincolors[trainDecor$class+1])
-
-```
 
 
 ### The decorrelation matrix
@@ -291,7 +198,7 @@ text(datasetframe.umap$layout,labels=trainDecor$class,col=raincolors[trainDecor$
 
 par(cex=0.6,cex.main=0.85,cex.axis=0.7)
 
-UPSTM <- attr(trainDecor,"UPSTM")
+UPSTM <- attr(DEdataframe,"UPSTM")
 
 gplots::heatmap.2(1.0*(abs(UPSTM)>0),
                   trace = "none",
@@ -308,65 +215,94 @@ par(op)
 
 ```
 
+
+
+## The heatmap of the decorrelated data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+hm <- heatMaps(data=DEdataframe,
+               Outcome=outcome,
+               Scale=TRUE,
+               hCluster = "row",
+               cexRow = 0.15,
+               cexCol = 0.15,
+               xlab="Feature",
+               ylab="Sample")
+par(op)
+
+```
+
+
+
+## The correlation matrix after decorrelation
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+cormat <- cor(DEdataframe[,varlistc],method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0
+print(max(abs(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  main = "Correlation after IDeA",
+                  cexRow = 0.15,
+                  cexCol = 0.15,
+                  key.title=NA,
+                  key.xlab="Pearson Correlation",
+                  xlab="Feature", ylab="Feature")
+
+par(op)
+
+```
+
+## U-MAP Visualization of features
+
+
+### The UMAP based on LASSO on Raw Data
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+classes <- unique(dataframe[,outcome])
+raincolors <- rainbow(length(classes))
+names(raincolors) <- classes
+datasetframe.umap = umap(scale(dataframe[,varlist]),n_components=2)
+plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: Original",t='n')
+text(datasetframe.umap$layout,labels=dataframe[,outcome],col=raincolors[dataframe[,outcome]+1])
+
+```
+
+
+### The decorralted UMAP
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+datasetframe.umap = umap(scale(DEdataframe[,varlistc]),n_components=2)
+plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: After IDeA",t='n')
+text(datasetframe.umap$layout,labels=DEdataframe[,outcome],col=raincolors[DEdataframe[,outcome]+1])
+
+```
+
+## Univariate Analysis
+
 ### Univariate
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 5.0}
 
 
-btrain <- trainDataFrame
-btrain$class <- 1.0*(btrain$class == names(classes[1]))
-univarTrain <- uniRankVar(varlist,
-	           "class~1",
-	           "class",
-	           btrain,
+univarRAW <- uniRankVar(varlist,
+	           paste(outcome,"~1"),
+	           outcome,
+	           dataframe,
 	           rankingTest="AUC")
 
-btest <- testDataFrame
-btest$class <- 1.0*(btest$class == names(classes[1]))
-univarTest <- uniRankVar(varlist,
-	           "class~1",
-	           "class",
-	           btest,
-	           rankingTest="AUC")
-
-rawadjTrainpvalues <- names(univariate_Wilcoxon(trainDataFrame,outcome,pvalue=0.05))
-minROCAUCRaw <- min(univarTrain$orderframe[rawadjTrainpvalues,"ROCAUC"])
-rawadjTestpvalues <- univarTest$orderframe$Name[univarTest$orderframe$ROCAUC >= minROCAUCRaw]
-pander::pander(c(train=length(rawadjTrainpvalues)))
-pander::pander(c(test=length(rawadjTestpvalues)))
-TDR_Raw <- sum(rawadjTestpvalues %in% rawadjTrainpvalues)/length(rawadjTrainpvalues)
-pander::pander(c(TDR=jaccard))
 
 
-DeadTestpvalues <- univariate_Wilcoxon(testDecor,outcome,pvalue=0.05)
-
-dtrain <- trainDecor
-dtrain$class <- 1.0*(dtrain$class == names(classes[1]))
-univarDeTrain <- uniRankVar(varlistc,
-	           "class~1",
-	           "class",
-	           dtrain,
+univarDe <- uniRankVar(varlistc,
+	           paste(outcome,"~1"),
+	           outcome,
+	           DEdataframe,
 	           rankingTest="AUC",
 	           )
-
-dtest <- testDecor
-dtest$class <- 1.0*(dtest$class == names(classes[1]))
-univarDeTest <- uniRankVar(varlistc,
-	           "class~1",
-	           "class",
-	           dtest,
-	           rankingTest="AUC",
-	           )
-
-
-rawadjTestpvalues <- names(univariate_Wilcoxon(trainDecor,outcome,pvalue=0.05))
-minROCAUCDe <- min(univarDeTrain$orderframe[rawadjTestpvalues,"ROCAUC"])
-deadjTestpvalues <- univarDeTest$orderframe$Name[univarDeTest$orderframe$ROCAUC >= minROCAUCDe]
-
-pander::pander(c(train=length(deadjTrainpvalues)))
-pander::pander(c(test=length(deadjTestpvalues)))
-TDR_DE <- sum(deadjTestpvalues %in% deadjTrainpvalues)/length(deadjTrainpvalues)
-pander::pander(c(TDR=TDR_DE))
 
 
 ```
@@ -380,22 +316,22 @@ univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","control
 
 ##topfive
 topvar <- c(1:length(varlist)) <= TopVariables
-pander::pander(univarTest$orderframe[topvar,univariate_columns])
-
-
-pwilvalue <- univarDeTest$orderframe$FRes.p
-valroc <- univarDeTest$orderframe$ROCAUC > aucTHR & topvar
+pander::pander(univarRAW$orderframe[topvar,univariate_columns])
 
 
 
-finalTable <- univarDeTest$orderframe[valroc,univariate_columns]
+finalTable <- univarDe$orderframe[topvar,univariate_columns]
+pander::pander(univarDe$orderframe[topvar,univariate_columns])
 
-dc <- getLatentCoefficients(trainDecor)
-fscores <- attr(trainDecor,"fscore")
+dc <- getLatentCoefficients(DEdataframe)
+fscores <- attr(DEdataframe,"fscore")
 
 theFormulas <- dc[rownames(finalTable)]
 deFromula <- character(length(theFormulas))
 names(deFromula) <- rownames(finalTable)
+
+pander::pander(c(mean=mean(sapply(dc,length)),total=length(dc),fraction=length(dc)/(ncol(dataframe)-1)))
+
 
 dx <- names(deFromula)[1]
 for (dx in names(deFromula))
@@ -422,39 +358,15 @@ for (dx in names(deFromula))
 }
 orgnamez <- rownames(finalTable)
 orgnamez <- str_remove_all(orgnamez,"La_")
+finalTable$RAWAUC <- univarRAW$orderframe[orgnamez,"ROCAUC"]
 finalTable$DecorFormula <- deFromula[rownames(finalTable)]
 finalTable$fscores <- fscores[rownames(finalTable)]
-finalTable$Qvalue <- DeadTestpvalues[rownames(finalTable)]
-  
-pander::pander(finalTable)
+
+Final_Columns <- c("DecorFormula","caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","RAWAUC","fscores")
+
+
+pander::pander(finalTable[,Final_Columns])
 
 ```
 
-### ML Lasso
-
-```{r  results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 5.0}
-mlLasso <- LASSO_1SE(class~.,trainDataFrame,family="binomial")
-predRaw <- predict(mlLasso,testDataFrame)
-perfRaw <- predictionStats_binary(cbind(testDataFrame$class,predRaw),"Lasso RAW")
-pander::pander(univarTest$orderframe[mlLasso$selectedfeatures,univariate_columns])
-
-
-mlLassoDe <- LASSO_1SE(class~.,trainDecor,family="binomial")
-predDe <- predict(mlLassoDe,testDecor)
-perfDe <- predictionStats_binary(cbind(testDecor$class,predDe),"Lasso IDeA")
-pander::pander(univarDeTest$orderframe[mlLassoDe$selectedfeatures,univariate_columns])
-
-pander::pander(roc.test(perfRaw$ROC.analysis$roc.predictor,perfDe$ROC.analysis$roc.predictor))
-
-```
-
-### Summary
-```{r results = "asis"}
-selectedRaw <- length(rawadjTrainpvalues)
-selectedDe <- length(deadjTrainpvalues)
-sumPerf <- rbind(c(selectedRaw,TDR_Raw,minROCAUCRaw),c(selectedDe,TDR_DE,minROCAUCDe))
-colnames(sumPerf) <- c("Selected","TDR","ROCAUC")
-rownames(sumPerf) <- c("Raw","Decorrelated")
-pander::pander(sumPerf)
-```
 

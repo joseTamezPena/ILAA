@@ -190,7 +190,13 @@ gplots::heatmap.2(abs(cormat),
                   key.xlab="Spearman Correlation",
                   xlab="Feature", ylab="Feature")
 
+
+par(op)
+```
+
 ## The decorrelation
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 deIR <- IDeA(SalivaIR_Avg,thr=0.80,verbose = TRUE)
 #deIR <- IDeA(SalivaIR_Avg,thr=0.80,relaxed=FALSE,verbose = TRUE)
 
@@ -212,9 +218,10 @@ gplots::heatmap.2(abs(cormat),
                   key.title=NA,
                   key.xlab="Spearman Correlation",
                   xlab="Feature", ylab="Feature")
-
 par(op)
+
 ```
+
 
 ## The heatmap of the decorrelated data
 
