@@ -1,0 +1,1457 @@
+---
+title: "PCA EFA: ACTIVITY"
+author: "Jose Tamez"
+date: "`r Sys.Date()`"
+output: 
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+```
+
+# DARWIN Univariate
+
+### Loading the libraries
+
+```{r}
+library("FRESA.CAD")
+library(psych)
+library(whitening)
+library("vioplot")
+
+library(readxl)
+op <- par(no.readonly = TRUE)
+pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+
+```
+
+
+
+## The Data
+
+```{r}
+Activitydata <- read.csv("~/GitHub/LatentBiomarkers/Data/ActivityData/data.txt", header=FALSE, stringsAsFactors=TRUE)
+featNames <- read.table("~/GitHub/LatentBiomarkers/Data/ActivityData/Featurelabels.txt", quote="\"", comment.char="")
+featNames <- as.character(t(featNames))
+featNames <- str_replace_all(featNames,"\\(abs\\)","_A_")
+featNames[duplicated(featNames)] <- paste(featNames[duplicated(featNames)],"D",sep="_")
+
+rep_ID <- numeric(nrow(Activitydata))
+ctr <- 1
+for (ind in c(1:(nrow(Activitydata)-1)))
+{
+  rep_ID[ind] <- ctr
+  if (Activitydata$V1[ind] != Activitydata$V1[ind+1]) ctr <- 0;
+  ctr <- ctr + 1
+}
+rownames(Activitydata) <- paste(Activitydata$V1,rep_ID,sep="_")
+colnames(Activitydata) <- c("ID",featNames,"class")
+Activitydata$rep <- rep_ID
+  
+table(Activitydata$ID)
+table(Activitydata$class)
+
+Activitydata$class <- 1*(Activitydata$class != Activitydata$class[1])
+table(Activitydata$class)
+
+```
+
+
+#### Standarize the names for the reporting
+
+```{r results = "asis"}
+dataframe <- Activitydata[,c(featNames,"class")]
+outcome <- "class"
+
+trainFraction <- 0.5
+rhoThreshold <- 0.6
+TopVariables <- 5
+aucTHR <- 0.55
+
+set.seed(5)
+trainSample <- sample(nrow(dataframe),nrow(dataframe)*trainFraction)
+
+trainDataFrame <- Activitydata[trainSample,]
+testDataFrame <- Activitydata[-trainSample,]
+
+```
+
+
+### Data specs
+
+```{r results = "asis"}
+pander::pander(c(rows=nrow(dataframe),col=ncol(dataframe)-1))
+pander::pander(table(dataframe[,outcome]))
+pander::pander(table(trainDataFrame[,outcome]))
+pander::pander(table(testDataFrame[,outcome]))
+
+varlist <- colnames(dataframe)
+varlist <- varlist[varlist != outcome]
+
+```
+
+
+## Univariate
+
+```{r results = "asis"}
+
+univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","IDI","ROCAUC","cStatCorr")
+univar <- uniRankVar(varlist,
+	           paste(outcome,"~1"),
+	           outcome,
+	           trainDataFrame,
+              rankingTest = "CStat")
+
+
+#univar$orderframe[1:5,univariate_columns]
+univarTest <- uniRankVar(varlist,
+	           paste(outcome,"~1"),
+	           outcome,
+	           trainDataFrame,
+	           testData=testDataFrame,
+              rankingTest = "CStat")
+
+univar$orderframe$BACC <- (univar$orderframe$Sensitivity + univar$orderframe$Specificity)/2.0
+univarTest$orderframe$BACC <- (univarTest$orderframe$Sensitivity + univarTest$orderframe$Specificity)/2.0
+
+#pROC::roc(trainDataFrame$class,trainDataFrame[,univar$orderframe$Name[1]],direction=">",plot=TRUE,auc=TRUE,quiet = TRUE)
+
+```
+
+## Decorrelation with IDeA Blind
+
+```{r results = "asis"}
+DEdataframe <- IDeA(trainDataFrame,thr=rhoThreshold)
+predTestDe <- predictDecorrelate(DEdataframe,testDataFrame)
+
+ltvar <- getLatentCoefficients(DEdataframe);
+pander::pander(head(ltvar))
+pander::pander(c(Avlen=mean(sapply(ltvar,length))))
+pander::pander(c(Latent=length(ltvar)))
+
+
+varlistDe <-  colnames(DEdataframe)[colnames(DEdataframe) != outcome];
+univarDe <- uniRankVar(varlistDe,
+              paste(outcome,"~1"),
+	            outcome,
+              DEdataframe,
+              rankingTest = "CStat")
+
+univarDeTest <- uniRankVar(varlistDe,
+              paste(outcome,"~1"),
+	            outcome,
+              DEdataframe,
+              testData=predTestDe,
+              rankingTest = "CStat")
+
+univarDe$orderframe$BACC <- (univarDe$orderframe$Sensitivity + univarDe$orderframe$Specificity)/2.0
+univarDeTest$orderframe$BACC <- (univarDeTest$orderframe$Sensitivity + univarDeTest$orderframe$Specificity)/2.0
+
+#univarDe$orderframe[1:5,univariate_columns]
+#univarDeTest$orderframe[1:5,univariate_columns]
+
+#pROC::roc(DEdataframe$class,DEdataframe[,univarDe$orderframe$Name[1]],direction=">",plot=TRUE,auc=TRUE,quiet = TRUE)
+
+```
+
+## Decorrelation with IDeA Blind/Spearman
+
+```{r results = "asis"}
+DEdataframeSpear <- IDeA(trainDataFrame,thr=rhoThreshold,method="spearman")
+predTestDeSpear <- predictDecorrelate(DEdataframeSpear,testDataFrame)
+
+ltvar <- getLatentCoefficients(DEdataframeSpear);
+pander::pander(head(ltvar))
+pander::pander(c(Avlen=mean(sapply(ltvar,length))))
+pander::pander(c(Latent=length(ltvar)))
+
+
+varlistDeSpear <-  colnames(DEdataframeSpear)[colnames(DEdataframeSpear) != outcome];
+univarDeSpear <- uniRankVar(varlistDeSpear,
+              paste(outcome,"~1"),
+	            outcome,
+              DEdataframeSpear,
+              rankingTest = "CStat")
+
+univarDeSpearTest <- uniRankVar(varlistDeSpear,
+              paste(outcome,"~1"),
+	            outcome,
+              DEdataframeSpear,
+              testData=predTestDeSpear,
+              rankingTest = "CStat")
+
+univarDeSpear$orderframe$BACC <- (univarDeSpear$orderframe$Sensitivity + univarDeSpear$orderframe$Specificity)/2.0
+univarDeSpearTest$orderframe$BACC <- (univarDeSpearTest$orderframe$Sensitivity + univarDeSpearTest$orderframe$Specificity)/2.0
+
+```
+
+## Decorrelation with IDeA Driven
+
+```{r results = "asis"}
+
+DriDEdataframe <- IDeA(trainDataFrame,Outcome=outcome,thr=rhoThreshold)
+predTestDri <- predictDecorrelate(DriDEdataframe,testDataFrame)
+
+
+ltvar <- getLatentCoefficients(DriDEdataframe);
+pander::pander(head(ltvar))
+pander::pander(c(Avlen=mean(sapply(ltvar,length))))
+pander::pander(c(Latent=length(ltvar)))
+
+
+varlistDe <-  colnames(DriDEdataframe)[colnames(DriDEdataframe) != outcome];
+univarDeDri <- uniRankVar(varlistDe,
+              paste(outcome,"~1"),
+	            outcome,
+              DriDEdataframe,
+              rankingTest = "CStat")
+
+univarDeDriTest <- uniRankVar(varlistDe,
+              paste(outcome,"~1"),
+	            outcome,
+              DriDEdataframe,
+              testData=predTestDri,
+              rankingTest = "CStat")
+
+univarDeDri$orderframe$BACC <- (univarDeDri$orderframe$Sensitivity + univarDeDri$orderframe$Specificity)/2.0
+univarDeDriTest$orderframe$BACC <- (univarDeDriTest$orderframe$Sensitivity + univarDeDriTest$orderframe$Specificity)/2.0
+
+```
+
+## Decorrelation with IDeA Driven and Spearman
+
+```{r results = "asis"}
+
+DriDEdataframeSpear <- IDeA(trainDataFrame,Outcome=outcome,thr=rhoThreshold,method="spearman")
+predTestDriSpear <- predictDecorrelate(DriDEdataframeSpear,testDataFrame)
+
+
+ltvar <- getLatentCoefficients(DriDEdataframeSpear);
+pander::pander(head(ltvar))
+pander::pander(c(Avlen=mean(sapply(ltvar,length))))
+pander::pander(c(Latent=length(ltvar)))
+
+
+varlistDeSpear <-  colnames(DriDEdataframeSpear)[colnames(DriDEdataframeSpear) != outcome];
+univarDeDriSpear <- uniRankVar(varlistDeSpear,
+              paste(outcome,"~1"),
+	            outcome,
+              DriDEdataframeSpear,
+              rankingTest = "CStat")
+
+univarDeDriSpearTest <- uniRankVar(varlistDeSpear,
+              paste(outcome,"~1"),
+	            outcome,
+              DriDEdataframeSpear,
+              testData=predTestDriSpear,
+              rankingTest = "CStat")
+
+univarDeDriSpear$orderframe$BACC <- (univarDeDriSpear$orderframe$Sensitivity + univarDeDriSpear$orderframe$Specificity)/2.0
+univarDeDriSpearTest$orderframe$BACC <- (univarDeDriSpearTest$orderframe$Sensitivity + univarDeDriSpearTest$orderframe$Specificity)/2.0
+
+```
+
+### Get continous correlated features
+```{r}
+iscontinous <- sapply(apply(trainDataFrame,2,unique),length) > 5 ## Only variables with enough samples
+
+noclassData <- trainDataFrame[,iscontinous]
+cmat <- cor(noclassData);
+diag(cmat) <- 0;
+maxcor <- apply(cmat>rhoThreshold,2,sum);
+topcor <- names(maxcor[maxcor > 0]) ## Only correlated features will be PCA
+pander::pander(c(Ncor=length(topcor)))
+cmat <- NULL
+
+notcorr <- colnames(trainDataFrame)[!(colnames(trainDataFrame) %in% topcor)]
+noclassData <- noclassData[,topcor]
+noclassTestData <- testDataFrame[,topcor]
+
+
+
+```
+
+## PCA Analysis
+
+```{r results = "asis"}
+
+### PCA 
+
+pc <- principal(noclassData,4*TopVariables,rotate="varimax")   #principal components
+pander::pander(t(pc$loadings[1:TopVariables,1:TopVariables]))
+PCA_Train <- as.data.frame(cbind(predict(pc,noclassData),trainDataFrame[,notcorr]))
+colnames(PCA_Train) <- c(colnames(predict(pc,noclassData)),notcorr)
+
+PCA_Predicted <- as.data.frame(cbind(predict(pc,noclassTestData),testDataFrame[,notcorr]))
+colnames(PCA_Predicted) <- c(colnames(predict(pc,noclassTestData)),notcorr)
+
+iscontinous <- colnames(PCA_Predicted)[sapply(apply(PCA_Predicted,2,unique),length) > 5] ## Only variables with enough samples
+varlistPCA <-  iscontinous;
+
+univarPCA <- uniRankVar(varlistPCA,
+              paste(outcome,"~1"),
+	            outcome,
+              PCA_Train,
+              rankingTest = "CStat")
+
+univarPCATest <- uniRankVar(varlistPCA,
+              paste(outcome,"~1"),
+	            outcome,
+              PCA_Train,
+              testData=PCA_Predicted,
+              rankingTest = "CStat")
+
+univarPCA$orderframe$BACC <- (univarPCA$orderframe$Sensitivity + univarPCA$orderframe$Specificity)/2.0
+univarPCATest$orderframe$BACC <- (univarPCATest$orderframe$Sensitivity + univarPCATest$orderframe$Specificity)/2.0
+
+```
+
+## EFA
+```{r results = "asis"}
+
+uls <- fa(noclassData,4*TopVariables,rotate="varimax")  #unweighted least squares is minres 
+pander::pander(t(uls$weights[1:TopVariables,1:TopVariables])) 
+EFA_Train <- as.data.frame(cbind(predict(uls,noclassData),trainDataFrame[,notcorr]))
+colnames(EFA_Train) <- c(colnames(predict(uls,noclassData)),notcorr)
+EFA_Predicted <- as.data.frame(cbind(predict(uls,noclassTestData),testDataFrame[,notcorr]))
+colnames(EFA_Predicted) <- c(colnames(predict(uls,noclassTestData)),notcorr)
+
+iscontinous <- colnames(EFA_Predicted)[sapply(apply(EFA_Predicted,2,unique),length) > 5] ## Only variables with enough 
+varlistEFA <-  iscontinous
+univarEFA <- uniRankVar(varlistEFA,
+              paste(outcome,"~1"),
+	            outcome,
+              EFA_Train,
+              rankingTest = "CStat")
+
+univarEFATest <- uniRankVar(varlistEFA,
+              paste(outcome,"~1"),
+	            outcome,
+              EFA_Train,
+              testData=EFA_Predicted,
+              rankingTest = "CStat")
+
+univarEFA$orderframe$BACC <- (univarEFA$orderframe$Sensitivity + univarEFA$orderframe$Specificity)/2.0
+univarEFATest$orderframe$BACC <- (univarEFATest$orderframe$Sensitivity + univarEFATest$orderframe$Specificity)/2.0
+
+
+```
+
+
+## White
+```{r results = "asis"}
+WhiteMat = whiteningMatrix(cov(noclassData), method="PCA")
+sum(is.na(WhiteMat))
+tokeep <- apply(is.na(WhiteMat),1,sum) == 0
+WhiteMat <- WhiteMat[tokeep,]
+sum(is.na(WhiteMat))
+sum(apply(abs(WhiteMat),1,sum) > 1.0e6)
+tokeep <- apply(abs(WhiteMat),1,sum) < 1.0e6
+WhiteMat <- WhiteMat[tokeep,]
+sum(apply(abs(WhiteMat),1,sum) > 1.0e6)
+
+pander::pander(c(ncol=ncol(WhiteMat),nrow=nrow(WhiteMat)))
+
+pander::pander(WhiteMat[1:TopVariables,1:TopVariables]) 
+PCAWhite_Train <- as.data.frame(cbind(tcrossprod(as.matrix(noclassData), WhiteMat),trainDataFrame[,notcorr]))
+colnames(PCAWhite_Train) <- c(colnames(tcrossprod(as.matrix(noclassData), WhiteMat)),notcorr)
+
+sum(is.na(PCAWhite_Train))
+
+
+
+PCAWhitePredicted <- as.data.frame(cbind(tcrossprod(as.matrix(noclassTestData), WhiteMat),testDataFrame[,notcorr]))
+colnames(PCAWhitePredicted) <- c(colnames(tcrossprod(as.matrix(noclassTestData), WhiteMat)),notcorr)
+
+sum(is.na(PCAWhitePredicted))
+
+iscontinous <- colnames(PCAWhitePredicted)[sapply(apply(PCAWhitePredicted,2,unique),length) > 5] ## Only variables with enough 
+varlistWhite <-  iscontinous
+
+univarWhite <- uniRankVar(varlistWhite,
+              paste(outcome,"~1"),
+	            outcome,
+              PCAWhite_Train,
+              rankingTest = "CStat")
+
+
+univarWhiteTest <- uniRankVar(varlistWhite,
+              paste(outcome,"~1"),
+	            outcome,
+              PCAWhite_Train,
+              testData=PCAWhitePredicted,
+              rankingTest = "CStat")
+
+univarWhite$orderframe$BACC <- (univarWhite$orderframe$Sensitivity + univarWhite$orderframe$Specificity)/2.0
+univarWhiteTest$orderframe$BACC <- (univarWhiteTest$orderframe$Sensitivity + univarWhiteTest$orderframe$Specificity)/2.0
+
+
+```
+
+
+## Correlation Matrices
+
+### RAW
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
+par(cex=1.0,cex.main=0.8)
+breaks <- c(0:5)/5.0;
+
+cormat <- cor(testDataFrame,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+pander::pander(max(abs(cormat)))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(Raw_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Raw Correlation",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature"
+                  )
+
+#hist(cormat,freq=FALSE,
+#     density=NULL,
+#     xlim=c(-1,1),
+#     ylim=c(0,4.0),
+#     main="Raw Correlation",xlab="Spearman Correlation")
+
+rawDen <- density(cormat,from=-1,to=1)
+par(op)
+```
+
+### IDeA Blind
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
+par(cex=1.0,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(DEdataframe,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+#pander::pander(colnames(cormat)[apply(abs(cormat),2,max)>rhoThreshold])
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(predTestDe,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after IDeA",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+#hist(cormat,freq=FALSE,
+#     density=NULL,
+#     xlim=c(-1,1),
+#     ylim=c(0,4.0),
+#     main="Correlation after IDeA",xlab="Spearman Correlation")
+
+DeDen <- density(cormat,from=-1,to=1)
+
+
+par(op)
+
+```
+
+### IDeA Blind/Spearman
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
+par(cex=1.0,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(DEdataframeSpear,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+#pander::pander(colnames(cormat)[apply(abs(cormat),2,max)>rhoThreshold])
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(predTestDeSpear,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after IDeA:Spearman",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+#hist(cormat,freq=FALSE,
+#     density=NULL,
+#     xlim=c(-1,1),
+#     ylim=c(0,4.0),
+#     main="Correlation after IDeA",xlab="Spearman Correlation")
+
+DeSpearDen <- density(cormat,from=-1,to=1)
+
+par(op)
+
+
+```
+
+### IDeA Driven
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
+par(cex=1.0,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(DriDEdataframe,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+#pander::pander(colnames(cormat)[apply(abs(cormat),2,max)>rhoThreshold])
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(DriDEdataframe,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(IDeA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after Driven-IDeA",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+#hist(cormat,freq=FALSE,
+#     density=NULL,
+#     xlim=c(-1,1),
+#     ylim=c(0,4.0),
+#     main="Correlation after Driven-IDeA",xlab="Spearman Correlation")
+
+DeDrivDen <- density(cormat,from=-1,to=1)
+par(op)
+
+
+```
+
+### IDeA Spearman
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
+par(cex=1.0,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(DriDEdataframeSpear,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+#pander::pander(colnames(cormat)[apply(abs(cormat),2,max)>rhoThreshold])
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(IDeAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+
+cormat <- cor(predTestDriSpear,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(IDeAS_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation: Driven/Spearman",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+#hist(cormat,freq=FALSE,
+#     density=NULL,
+#     xlim=c(-1,1),
+#     ylim=c(0,4.0),
+#     main="Correlation after IDeA with Spearman",xlab="Spearman Correlation")
+
+DeDrivSpearDen <- density(cormat,from=-1,to=1)
+par(op)
+
+```
+
+### PCA
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
+par(cex=1.0,cex.main=0.8)
+
+
+
+## Train Correlation
+
+cormat <- cor(PCA_Train,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(PCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(PCA_Predicted,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(PCA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after PCA",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+
+#hist(cormat,freq=FALSE,
+#     density=NULL,
+#     xlim=c(-1,1),
+#     ylim=c(0,4.0),
+#     main="Correlation after PCA",xlab="Spearman Correlation")
+
+PCADen <- density(cormat,from=-1,to=1)
+
+par(op)
+
+```
+### EFA
+
+```{r  results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
+par(cex=1.0,cex.main=0.8)
+
+## Train Correlation
+
+cormat <- cor(EFA_Train,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(EFA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(EFA_Predicted,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(EFA_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after EFA",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+
+#hist(cormat,freq=FALSE,
+#     density=NULL,
+#     xlim=c(-1,1),
+#     ylim=c(0,4.0),
+#     main="Correlation after EFA",xlab="Spearman Correlation")
+
+EFADen <- density(cormat,from=-1,to=1)
+par(op)
+
+```
+
+### PCA Whitening
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 6}
+
+
+## Train Correlation
+
+cormat <- cor(PCAWhite_Train,method="pearson")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Train=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(PCAWhite_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+## Test Correlation
+cormat <- cor(PCAWhitePredicted,method="spearman")
+cormat[is.na(cormat)] <- 0
+diag(cormat) <- 0;
+
+pander::pander(c(Test=max(abs(cormat))))
+pander::pander(quantile(abs(cormat),probs=c(0.9,0.95,0.975,0.99,0.999)))
+pander::pander(c(PCAWhite_fraction=sum(abs(cormat)>rhoThreshold)/ncol(cormat)/ncol(cormat)))
+
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  breaks = breaks,
+                  main = "Correlation after PCAWhite",
+                  cexRow = 0.25,
+                  cexCol = 0.25,
+                  srtCol=35,
+                  srtRow=75,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+
+#hist(cormat,freq=FALSE,
+#     density=NULL,
+#     xlim=c(-1,1),
+#     ylim=c(0,4.0),
+#     main="Correlation after PCAWhite",xlab="Spearman Correlation")
+
+WhiteDen <- density(cormat,from=-1,to=1)
+par(op)
+
+```
+
+## The Density Plot
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(cex=0.7)
+colors=c("red","blue","green","darkblue","darkgreen","purple","orange","darkred");
+
+plot(rawDen,
+     xlim=c(-1,1),
+     ylim=c(0.001,7.0),
+     col=colors[1],
+     lty=1,
+     lwd=4,
+     log="y",
+     main="Test: Correlation Distribution",xlab="Spearman Correlation")
+
+lines(DeDen,col=colors[2],lty=2,lwd=4)
+lines(DeSpearDen,col=colors[3],lty=3,lwd=4)
+lines(DeDrivDen,col=colors[4],lty=4,lwd=2)
+lines(DeDrivSpearDen,col=colors[5],lty=5,lwd=2)
+
+lines(PCADen,col=colors[6],lty=6,lwd=1)
+lines(EFADen,col=colors[7],lty=7,lwd=1)
+lines(WhiteDen,col=colors[8],lty=8,lwd=1)
+
+names=c("Raw","IDeA:P","IDeA:S","DIDeA:P","DIDeA:S","PCA","EFA","White:PCA")
+#colors=c("red","blue","green","blue","green","purple","purple","gray");
+lines=c(1,2,3,4,5,6,7,8)
+lwds=c(4,4,4,2,2,1,1,1)
+
+legend("topleft",names,col=colors,lty=lines,lwd=lwds,cex=0.50)
+par(op)
+
+```
+
+
+
+### Differences between train and test ROC AUC
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+AUCResults <- list();
+diffAUC <- list();
+thenames <- rownames(univar$orderframe)[(rownames(univar$orderframe) %in% colnames(testDataFrame))]
+rawAUC <- univar$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[rawAUC >= aucTHR]
+rawAUC <- univar$orderframe[thenames,"ROCAUC"]
+rawAUCTest <- univarTest$orderframe[thenames,"ROCAUC"]
+AUCResults$RAW <- rawAUCTest
+diffAUC$RAW <-  rawAUCTest-rawAUC
+plot(rawAUC,rawAUCTest-rawAUC,
+     xlab="TRAIN ROC AUC",
+     ylab="Test:AUC-Train:AUC",
+     xlim=c(0.5,1.0),
+     ylim=c(-0.25,0.25),
+     pch=1,
+     col=colors[1],
+     main="ROC AUC Difference Between Test and Train")
+
+thenames <- rownames(univarDe$orderframe)[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+IDeAP <- univarDe$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[IDeAP >= aucTHR]
+IDeAP <- univarDe$orderframe[thenames,"ROCAUC"]
+IDeAPTest <- univarDeTest$orderframe[thenames,"ROCAUC"]
+AUCResults$IDeAP <- IDeAP
+AUCResults$IDeAP_T <- IDeAPTest
+diffAUC$IDeAP <-  IDeAPTest-IDeAP
+
+points(IDeAP,IDeAPTest-IDeAP,pch=2,col=colors[2])
+
+thenames <- rownames(univarDeSpear$orderframe)[!(rownames(univarDeSpear$orderframe) %in% colnames(testDataFrame))]
+IDeAS <- univarDeSpear$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[IDeAS >= aucTHR]
+IDeAS <- univarDeSpear$orderframe[thenames,"ROCAUC"]
+IDeASTest <- univarDeSpearTest$orderframe[thenames,"ROCAUC"]
+AUCResults$IDeAS <- IDeAS
+AUCResults$IDeAS_T <- IDeASTest
+diffAUC$IDeAS <-  IDeASTest-IDeAS
+
+points(IDeAS,IDeASTest-IDeAS,pch=3,col=colors[3])
+
+thenames <- rownames(univarDeDri$orderframe)[!(rownames(univarDeDri$orderframe) %in% colnames(testDataFrame))]
+DIDeAP <- univarDeDri$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[DIDeAP >= aucTHR]
+DIDeAP <- univarDeDri$orderframe[thenames,"ROCAUC"]
+DIDeAPTest <- univarDeDriTest$orderframe[thenames,"ROCAUC"]
+AUCResults$DIDeAP <- DIDeAP
+AUCResults$DIDeAP_T <- DIDeAPTest
+diffAUC$DIDeAP <-  DIDeAPTest-DIDeAP
+
+points(DIDeAP,DIDeAPTest-DIDeAP,pch=4,col=colors[4])
+
+thenames <- rownames(univarDeDriSpear$orderframe)[!(rownames(univarDeDriSpear$orderframe) %in% colnames(testDataFrame))]
+DIDeAS <- univarDeDriSpear$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[DIDeAS >= aucTHR]
+DIDeAS <- univarDeDriSpear$orderframe[thenames,"ROCAUC"]
+DIDeASTest <- univarDeDriSpearTest$orderframe[thenames,"ROCAUC"]
+AUCResults$DIDeAS <- DIDeAS
+AUCResults$DIDeAS_T <- DIDeASTest
+diffAUC$DIDeAS <-  DIDeASTest-DIDeAS
+
+points(DIDeAS,DIDeASTest-DIDeAS,pch=5,col=colors[5])
+
+thenames <- rownames(univarPCA$orderframe)[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
+PCA <- univarPCA$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[PCA >= aucTHR]
+PCA <- univarPCA$orderframe[thenames,"ROCAUC"]
+PCATest <- univarPCATest$orderframe[thenames,"ROCAUC"]
+AUCResults$PCA <- PCA
+AUCResults$PCA_T <- PCATest
+diffAUC$PCA <-  PCATest-PCA
+
+points(PCA,PCATest-PCA,pch=6,col=colors[6])
+
+thenames <- rownames(univarEFA$orderframe)[!(rownames(univarEFA$orderframe) %in% colnames(testDataFrame))]
+EFA <- univarEFA$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[EFA >= aucTHR]
+EFA <- univarEFA$orderframe[thenames,"ROCAUC"]
+
+EFATest <- univarEFATest$orderframe[thenames,"ROCAUC"]
+AUCResults$EFA <- EFA
+AUCResults$EFA_T <- EFATest
+diffAUC$EFA <-  EFATest-EFA
+
+points(EFA,EFATest-EFA,pch=7,col=colors[7])
+
+thenames <- rownames(univarWhite$orderframe)[!(rownames(univarWhite$orderframe) %in% colnames(testDataFrame))]
+WPCA <- univarWhite$orderframe[thenames,"ROCAUC"]
+thenames <- thenames[WPCA >= aucTHR]
+WPCA <- univarWhite$orderframe[thenames,"ROCAUC"]
+WPCATest <- univarWhiteTest$orderframe[thenames,"ROCAUC"]
+AUCResults$WPCA <- WPCA
+AUCResults$WPCA_T <- WPCATest
+diffAUC$WPCA <-  WPCATest-WPCA
+
+
+points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
+
+
+names=c("Raw","IDeA:P","IDeA:S","DIDeA:P","DIDeA:S","PCA","EFA","White:PCA")
+pchs=c(1,2,3,4,5,6,7,8)
+
+legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
+par(op)
+
+
+
+```
+
+### Violin of differences
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+vioplot(diffAUC,
+        ylim=c(-0.25,0.25),
+        ylab="Test-Train",
+        main="Test-Train Paired ROC AUC Difference",
+        col=colors,
+        cex.axis=0.6,
+        las=2
+)
+stripchart(diffAUC, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffAUC),lapply(diffAUC,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+
+### Distribution of ROC AUC in latent Variables
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+colors2 <- length(AUCResults)
+colors2[1] <- colors[1];
+colors2[2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+colors2[1+2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+vioplot(AUCResults,
+        ylim=c(0.3,1.0),
+        ylab="ROC AUC",
+        main="ROC AUC of Latent Variables",
+        col=colors2,
+        cex.axis=0.6,
+        las=2
+)
+abline(h=0.5,col="black")
+stripchart(AUCResults, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(AUCResults),lapply(AUCResults,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+
+### Differences between train and test Balanced Accuracy
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+BACCTHR <- aucTHR
+BACCResults <- list();
+diffBACC <- list();
+thenames <- rownames(univar$orderframe)[(rownames(univar$orderframe) %in% colnames(testDataFrame))]
+rawBACC <- univar$orderframe[thenames,"BACC"]
+thenames <- thenames[rawBACC >= BACCTHR]
+rawBACC <- univar$orderframe[thenames,"BACC"]
+rawBACCTest <- univarTest$orderframe[thenames,"BACC"]
+BACCResults$RAW <- rawBACCTest
+diffBACC$RAW <-  rawBACCTest-rawBACC
+plot(rawBACC,rawBACCTest-rawBACC,
+     xlab="TRAIN Balanced Acc",
+     ylab="Test:BACC-Train:BACC",
+     xlim=c(0.5,1.0),
+     ylim=c(-0.25,0.25),
+     pch=1,
+     col=colors[1],
+     main="Balanced Acc Difference Between Test and Train")
+
+thenames <- rownames(univarDe$orderframe)[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+IDeAP <- univarDe$orderframe[thenames,"BACC"]
+thenames <- thenames[IDeAP >= BACCTHR]
+IDeAP <- univarDe$orderframe[thenames,"BACC"]
+IDeAPTest <- univarDeTest$orderframe[thenames,"BACC"]
+BACCResults$IDeAP <- IDeAP
+BACCResults$IDeAP_T <- IDeAPTest
+diffBACC$IDeAP <-  IDeAPTest-IDeAP
+
+points(IDeAP,IDeAPTest-IDeAP,pch=2,col=colors[2])
+
+thenames <- rownames(univarDeSpear$orderframe)[!(rownames(univarDeSpear$orderframe) %in% colnames(testDataFrame))]
+IDeAS <- univarDeSpear$orderframe[thenames,"BACC"]
+thenames <- thenames[IDeAS >= BACCTHR]
+IDeAS <- univarDeSpear$orderframe[thenames,"BACC"]
+IDeASTest <- univarDeSpearTest$orderframe[thenames,"BACC"]
+BACCResults$IDeAS <- IDeAS
+BACCResults$IDeAS_T <- IDeASTest
+diffBACC$IDeAS <-  IDeASTest-IDeAS
+
+points(IDeAS,IDeASTest-IDeAS,pch=3,col=colors[3])
+
+thenames <- rownames(univarDeDri$orderframe)[!(rownames(univarDeDri$orderframe) %in% colnames(testDataFrame))]
+DIDeAP <- univarDeDri$orderframe[thenames,"BACC"]
+thenames <- thenames[DIDeAP >= BACCTHR]
+DIDeAP <- univarDeDri$orderframe[thenames,"BACC"]
+DIDeAPTest <- univarDeDriTest$orderframe[thenames,"BACC"]
+BACCResults$DIDeAP <- DIDeAP
+BACCResults$DIDeAP_T <- DIDeAPTest
+diffBACC$DIDeAP <-  DIDeAPTest-DIDeAP
+
+points(DIDeAP,DIDeAPTest-DIDeAP,pch=4,col=colors[4])
+
+thenames <- rownames(univarDeDriSpear$orderframe)[!(rownames(univarDeDriSpear$orderframe) %in% colnames(testDataFrame))]
+DIDeAS <- univarDeDriSpear$orderframe[thenames,"BACC"]
+thenames <- thenames[DIDeAS >= BACCTHR]
+DIDeAS <- univarDeDriSpear$orderframe[thenames,"BACC"]
+DIDeASTest <- univarDeDriSpearTest$orderframe[thenames,"BACC"]
+BACCResults$DIDeAS <- DIDeAS
+BACCResults$DIDeAS_T <- DIDeASTest
+diffBACC$DIDeAS <-  DIDeASTest-DIDeAS
+
+points(DIDeAS,DIDeASTest-DIDeAS,pch=5,col=colors[5])
+
+thenames <- rownames(univarPCA$orderframe)[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
+PCA <- univarPCA$orderframe[thenames,"BACC"]
+thenames <- thenames[PCA >= BACCTHR]
+PCA <- univarPCA$orderframe[thenames,"BACC"]
+PCATest <- univarPCATest$orderframe[thenames,"BACC"]
+BACCResults$PCA <- PCA
+BACCResults$PCA_T <- PCATest
+diffBACC$PCA <-  PCATest-PCA
+
+points(PCA,PCATest-PCA,pch=6,col=colors[6])
+
+thenames <- rownames(univarEFA$orderframe)[!(rownames(univarEFA$orderframe) %in% colnames(testDataFrame))]
+EFA <- univarEFA$orderframe[thenames,"BACC"]
+thenames <- thenames[EFA >= BACCTHR]
+EFA <- univarEFA$orderframe[thenames,"BACC"]
+
+EFATest <- univarEFATest$orderframe[thenames,"BACC"]
+BACCResults$EFA <- EFA
+BACCResults$EFA_T <- EFATest
+diffBACC$EFA <-  EFATest-EFA
+
+points(EFA,EFATest-EFA,pch=7,col=colors[7])
+
+thenames <- rownames(univarWhite$orderframe)[!(rownames(univarWhite$orderframe) %in% colnames(testDataFrame))]
+WPCA <- univarWhite$orderframe[thenames,"BACC"]
+thenames <- thenames[WPCA >= BACCTHR]
+WPCA <- univarWhite$orderframe[thenames,"BACC"]
+WPCATest <- univarWhiteTest$orderframe[thenames,"BACC"]
+BACCResults$WPCA <- WPCA
+BACCResults$WPCA_T <- WPCATest
+diffBACC$WPCA <-  WPCATest-WPCA
+
+
+points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
+
+
+names=c("Raw","IDeA:P","IDeA:S","DIDeA:P","DIDeA:S","PCA","EFA","White:PCA")
+pchs=c(1,2,3,4,5,6,7,8)
+
+legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
+par(op)
+
+
+
+```
+
+### Violin of differences
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+vioplot(diffBACC,
+        ylim=c(-0.25,0.25),
+        ylab="Test-Train",
+        main="Test-Train Paired Balanced Acc Difference",
+        col=colors,
+        cex.axis=0.6,
+        las=2
+)
+stripchart(diffBACC, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffBACC),lapply(diffBACC,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+
+### Distribution of Balanced Acc in latent Variables
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+colors2 <- length(BACCResults)
+colors2[1] <- colors[1];
+colors2[2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+colors2[1+2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+vioplot(BACCResults,
+        ylim=c(0.3,1.0),
+        ylab="Balanced Acc",
+        main="Balanced Acc of Latent Variables",
+        col=colors2,
+        cex.axis=0.6,
+        las=2
+)
+abline(h=0.5,col="black")
+stripchart(BACCResults, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(BACCResults),lapply(BACCResults,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+### Differences between train and test IDI
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+testIDI <- list();
+diffIDI <- list();
+rawIDI <- univar$orderframe$IDI
+rawIDITest <- univarTest$orderframe$IDI
+testIDI$RAW <- rawIDITest
+diffIDI$RAW <-  rawIDITest-rawIDI
+plot(rawIDI,rawIDITest-rawIDI,
+     xlab="TRAIN Test IDI",
+     ylab="Test:IDI-Train:IDI",
+     xlim=c(0,0.5),
+     ylim=c(-0.2,0.2),
+     pch=1,
+     col=colors[1],
+     main="Predict IDI Difference Between Test and Train")
+
+IDeAP <- univarDe$orderframe$IDI[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+IDeAPTest <-univarDeTest$orderframe$IDI[!(rownames(univarDe$orderframe) %in% colnames(testDataFrame))]
+testIDI$IDeAP <- IDeAP
+testIDI$IDeAP_T <- IDeAPTest
+diffIDI$IDeAP <-  IDeAPTest-IDeAP
+
+points(IDeAP,IDeAPTest-IDeAP,pch=2,col=colors[2])
+
+IDeAS <- univarDeSpear$orderframe$IDI[!(rownames(univarDeSpearTest$orderframe) %in% colnames(testDataFrame))]
+IDeASTest <- univarDeSpearTest$orderframe$IDI[!(rownames(univarDeSpearTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$IDeAS <- IDeAS
+testIDI$IDeAS_T <- IDeASTest
+diffIDI$IDeAS <-  IDeASTest-IDeAS
+
+points(IDeAS,IDeASTest-IDeAS,pch=3,col=colors[3])
+
+DIDeAP <- univarDeDri$orderframe$IDI[!(rownames(univarDeDriTest$orderframe) %in% colnames(testDataFrame))]
+DIDeAPTest <- univarDeDriTest$orderframe$IDI[!(rownames(univarDeDriTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$DIDeAP <- DIDeAP
+testIDI$DIDeAP_T <- DIDeAPTest
+diffIDI$DIDeAP <-  DIDeAPTest-DIDeAP
+
+points(DIDeAP,DIDeAPTest-DIDeAP,pch=4,col=colors[4])
+
+DIDeAS <- univarDeDriSpear$orderframe$IDI[!(rownames(univarDeDriSpearTest$orderframe) %in% colnames(testDataFrame))]
+DIDeASTest <- univarDeDriSpearTest$orderframe$IDI[!(rownames(univarDeDriSpearTest$orderframe) %in% colnames(testDataFrame))]
+testIDI$DIDeAS <- DIDeAS
+testIDI$DIDeAS_T <- DIDeASTest
+diffIDI$DIDeAS <-  DIDeASTest-DIDeAS
+
+points(DIDeAS,DIDeASTest-DIDeAS,pch=5,col=colors[5])
+
+PCA <- univarPCA$orderframe$IDI[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
+PCATest <- univarPCATest$orderframe$IDI[!(rownames(univarPCA$orderframe) %in% colnames(testDataFrame))]
+testIDI$PCA <- PCA
+testIDI$PCA_T <- PCATest
+diffIDI$PCA <-  PCATest-PCA
+
+points(PCA,PCATest-PCA,pch=6,col=colors[6])
+
+EFA <- univarEFA$orderframe$IDI[!(rownames(univarEFA$orderframe) %in% colnames(testDataFrame))]
+EFATest <- univarEFATest$orderframe$IDI[!(rownames(univarEFA$orderframe) %in% colnames(testDataFrame))]
+testIDI$EFA <- EFA
+testIDI$EFA_T <- EFATest
+diffIDI$EFA <-  EFATest-EFA
+
+points(EFA,EFATest-EFA,pch=7,col=colors[7])
+
+WPCA <- univarWhite$orderframe$IDI[!(rownames(univarWhite$orderframe) %in% colnames(testDataFrame))]
+WPCATest <- univarWhiteTest$orderframe$IDI[!(rownames(univarWhite$orderframe) %in% colnames(testDataFrame))]
+testIDI$WPCA <- WPCA
+testIDI$WPCA_T <- WPCATest
+diffIDI$WPCA <-  WPCATest-WPCA
+
+
+points(WPCA,WPCATest-WPCA,pch=8,col=colors[8])
+
+
+names=c("Raw","IDeA:P","IDeA:S","DIDeA:P","DIDeA:S","PCA","EFA","White:PCA")
+pchs=c(1,2,3,4,5,6,7,8)
+
+legend("bottomright",names,col=colors,pch=pchs,cex=0.50)
+par(op)
+
+
+
+```
+
+### Violin of differences
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+vioplot(diffIDI,
+        ylim=c(-0.2,0.2),
+        ylab="Test-Train",
+        main="Test-Train Paired Predict IDI Difference",
+        col=colors,
+        cex.axis=0.6,
+        las=2
+)
+stripchart(diffIDI, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(diffIDI),lapply(diffIDI,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+
+### Distribution of Predict IDI in latent Variables
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 5}
+par(op)
+par(mfrow=c(1,1),cex=0.7)
+
+colors2 <- length(testIDI)
+colors2[1] <- colors[1];
+colors2[2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+colors2[1+2*(1:(length(colors)-1))] <- colors[2:length(colors)]
+vioplot(testIDI,
+        ylim=c(0.0,0.5),
+        ylab="Predict IDI",
+        main="Predict IDI of Latent Variables",
+        col=colors2,
+        cex.axis=0.6,
+        las=2
+)
+stripchart(testIDI, method = "jitter", col = "gray",
+           vertical = TRUE, pch = 1, add = TRUE,cex=0.35)
+points(1:length(testIDI),lapply(testIDI,mean), pch = 18, col = "yellow", cex = 2.25)
+par(op)
+
+
+
+```
+
+
+### The tables
+
+```{r results = "asis"}
+
+pander::pander(univarTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeSpearTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeDriTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarDeDriSpearTest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarPCATest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarEFATest$orderframe[1:TopVariables,univariate_columns])
+pander::pander(univarWhiteTest$orderframe[1:TopVariables,univariate_columns])
+
+topUni <- univar$orderframe$Name[1:TopVariables]
+topDe <- univarDe$orderframe$Name[1:TopVariables]
+topDeSpear <- univarDeSpear$orderframe$Name[1:TopVariables]
+topDeDri <- univarDeDri$orderframe$Name[1:TopVariables]
+topDeDriSpear <- univarDeDriSpear$orderframe$Name[1:TopVariables]
+topPCA <- univarPCA$orderframe$Name[1:TopVariables]
+topEFA <- univarEFA$orderframe$Name[1:TopVariables]
+topPCAWhite <- univarWhite$orderframe$Name[1:TopVariables]
+```
+
+### Model of top variables
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 8}
+par(mfrow=c(1,2),cex=0.6)
+
+lmRAW <- glm(paste(outcome,"~."),
+             trainDataFrame[,c(outcome,topUni)],
+             family="binomial")
+prRaw <- predictionStats_binary(cbind(testDataFrame[,outcome],predict(lmRAW,testDataFrame)),"Top Raw",cex=0.75)
+
+lmDe <- glm(paste(outcome,"~."),
+            DEdataframe[,c(outcome,topDe)],
+            family="binomial")
+prDe <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDe,predTestDe)),"Top IDeA:P",cex=0.75)
+
+lmDeSpear <- glm(paste(outcome,"~."),
+            DEdataframeSpear[,c(outcome,topDeSpear)],
+            family="binomial")
+prSpear <- predictionStats_binary(cbind(predTestDeSpear[,outcome],predict(lmDeSpear,predTestDeSpear)),"Top IDeA:S",cex=0.75)
+
+lmDri <- glm(paste(outcome,"~."),
+            DriDEdataframe[,c(outcome,topDeDri)],
+            family="binomial")
+prDri <- predictionStats_binary(cbind(predTestDe[,outcome],predict(lmDri,predTestDri)),"Top DIDeA:P",cex=0.75)
+
+lmDriSpear <- glm(paste(outcome,"~."),
+            DriDEdataframeSpear[,c(outcome,topDeDriSpear)],
+            family="binomial")
+prDriSpear <- predictionStats_binary(cbind(predTestDriSpear[,outcome],predict(lmDriSpear,predTestDriSpear)),"Top DIDeA:S",cex=0.7)
+
+
+lmPCA <- glm(paste(outcome,"~."),
+            PCA_Train[,c(outcome,topPCA)],
+            family="binomial")
+prPCA <- predictionStats_binary(cbind(PCA_Predicted[,outcome],predict(lmPCA,PCA_Predicted)),"Top PCA",cex=0.75)
+
+
+lmEFA <- glm(paste(outcome,"~."),
+            EFA_Train[,c(outcome,topEFA)],
+            family="binomial")
+prEFA <- predictionStats_binary(cbind(EFA_Predicted[,outcome],predict(lmEFA,EFA_Predicted)),"Top EFA",cex=0.75)
+
+
+lmPCAW <- glm(paste(outcome,"~."),
+            PCAWhite_Train[,c(outcome,topPCAWhite)],
+            family="binomial")
+prWPCA <- predictionStats_binary(cbind(PCAWhitePredicted[,outcome],predict(lmPCAW,PCAWhitePredicted)),"Top White:PCA",cex=0.75)
+par(op)
+
+```
+
+### The Performance Tables and Plots
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4, fig.width= 6}
+
+par(cex=0.6)
+
+ aucs <- prRaw$aucs
+  aucs <- rbind(aucs,prDe$aucs)
+  aucs <- rbind(aucs,prSpear$aucs)
+  aucs <- rbind(aucs,prDri$aucs)
+  aucs <- rbind(aucs,prDriSpear$aucs)
+  aucs <- rbind(aucs,prPCA$aucs)
+  aucs <- rbind(aucs,prEFA$aucs)
+  aucs <- rbind(aucs,prWPCA$aucs)
+
+  
+  rownames(aucs) <- c("RAW",
+                        "IDeA:P",
+                        "IDeA:S",
+                        "DIDeA:P",
+                        "DIDeA:S",
+                        "PCA",
+                        "EFA",
+                        "WPCA"
+                        )
+  
+  pander::pander(aucs)
+  
+  bpAUC <- barPlotCiError(as.matrix(aucs),
+                          metricname = "ROC AUC",
+                          thesets = "Test AUC",
+                          themethod = rownames(aucs),
+                          main = "ROC AUC",
+                          offsets = c(0.5,1),
+                          scoreDirection = ">",
+                          ho=0.5,
+                          args.legend = list(bg = "white",x="bottomleft",inset=c(0.0,0),cex=0.5),
+                          col = terrain.colors(nrow(aucs))
+                          )
+
+  
+ berror <- prRaw$berror
+  berror <- rbind(berror,prDe$berror)
+  berror <- rbind(berror,prSpear$berror)
+  berror <- rbind(berror,prDri$berror)
+  berror <- rbind(berror,prDriSpear$berror)
+  berror <- rbind(berror,prPCA$berror)
+  berror <- rbind(berror,prEFA$berror)
+  berror <- rbind(berror,prWPCA$berror)
+
+
+  rownames(berror) <- rownames(aucs)
+  pander::pander(berror)
+
+  bpBER <- barPlotCiError(as.matrix(berror),
+                          metricname = "Balanced Error Rate",
+                          thesets = "Test BER",
+                          themethod = rownames(aucs),
+                          main = "Balanced Error Rate",
+                          offsets = c(0.5,1),
+                          scoreDirection = "<",
+                          ho=0.5,
+                          args.legend = list(bg = "white",x="topleft",inset=c(0.0,0),cex=0.5),
+                          col = terrain.colors(nrow(aucs))
+                          )
+  par(op)
+
+```
+

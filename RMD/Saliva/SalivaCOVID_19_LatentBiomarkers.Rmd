@@ -1,0 +1,527 @@
+---
+title: "Decorrelation-Based Feature Discovery: IR COVID_19"
+author: "Jose Tamez"
+date: "2022-10-02"
+output:
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+
+```
+
+# Effect of UPSTM-Based Decorrelation on Feature Discovery
+
+Here I showcase of to use BSWiMS feature selection/modeling function coupled with Goal Driven Sparse Transformation Matrix (UPSTM) as a pre-processing step to decorrelate highly correlated features. The aim(s) are:
+
+1.  To improve model performance by uncovering the hidden information between correlated features.
+
+2.  To simplify the interpretation of the machine learning models.
+
+This demo will use:
+
+-   *FRESA.CAD::IDeA()*. For Decorrelation of Multidimensional data sets
+
+    -   *FRESA.CAD::getLatentCoefficients()*. For the extraction of the model of the newly discovered of decorrelated features.
+
+-   *FRESA.CAD::randomCV()* For the cross-validation of the Machine Learning models
+
+-   *FRESA.CAD::BSWiMS.model()*. For the generation of bootstrapped logistic models
+
+    -   *FRESA.CAD::summary()*. For the summary description of the BSWiMS model
+
+-   *FRESA.CAD::predictionStats_binary()*. For describing the performance of the model
+
+-   *heatmap.2()*. For displaying the correlation matrix
+
+-   *igraph::graph_from_adjacency_matrix()*. For the display of the network of BSWiMS formulas
+
+
+### Loading the libraries
+
+```{r}
+library("FRESA.CAD")
+library(readxl)
+library(igraph)
+library(umap)
+library(tsne)
+library(entropy)
+
+op <- par(no.readonly = TRUE)
+pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+
+```
+
+## Material and Methods
+
+### Signed Log Transform
+
+The function will be used to transform all the continuous features of the data
+
+```{r}
+signedlog <- function(x) { return (sign(x)*log(abs(x)+1.0e-12))}
+
+```
+
+## Data: The COVID_19 Data-Set
+
+The data to process is described in:
+
+<https://zenodo.org/record/4156647#.Y1bSF3bMKUk>
+
+
+IR Saliva Testing Dataset
+
+
+10.5281/zenodo.4156647
+<https://doi.org/10.5281/zenodo.4156647>
+
+
+I added a column to the data identifying the repeated experiments.
+
+```{r}
+
+SalivaIR <- as.data.frame(read_excel("~/GitHub/FCA/Data/SalivaThermal_Source_Data_2.xlsx"))
+
+
+SalivaIR_set1 <- subset(SalivaIR,RepID==1)
+rownames(SalivaIR_set1) <- SalivaIR_set1$ID
+SalivaIR_set1$RepID <- NULL
+SalivaIR_set1$ID <- NULL
+SalivaIR_set1$Ct <- NULL
+
+SalivaIR_set2 <- subset(SalivaIR,RepID==2)
+rownames(SalivaIR_set2) <- SalivaIR_set2$ID
+SalivaIR_set2$RepID <- NULL
+SalivaIR_set2$ID <- NULL
+SalivaIR_set2$Ct <- NULL
+
+SalivaIR_set3 <- subset(SalivaIR,RepID==3)
+rownames(SalivaIR_set3) <- SalivaIR_set3$ID
+SalivaIR_set3$RepID <- NULL
+SalivaIR_set3$ID <- NULL
+SalivaIR_set3$Ct <- NULL
+
+SalivaIR_Avg <- (SalivaIR_set1 + SalivaIR_set2 + SalivaIR_set3)/3
+
+SalivaIR_d1 <- SalivaIR_Avg[,-1] - SalivaIR_Avg[,c(1:ncol(SalivaIR_Avg)-1)]
+#SalivaIR_d1[,ncol(SalivaIR_d1)] <- 0
+#plot(apply(SalivaIR_d1,2,mean))
+SalivaIR_d2 <-  -SalivaIR_d1[,c(1:ncol(SalivaIR_d1)-1)] + SalivaIR_d1[,-1]
+#SalivaIR_d2[,ncol(SalivaIR_d2)] <- 0
+#plot(apply(SalivaIR_d2,2,mean))
+colnames(SalivaIR_d2) <- paste("DD",colnames(SalivaIR_d2),sep="_")
+colnames(SalivaIR_d1) <- paste("D",colnames(SalivaIR_d1),sep="_")
+
+colnames(SalivaIR_Avg) <- paste("V",colnames(SalivaIR_Avg),sep="_")
+
+#SalivaIR_Avg <- cbind(SalivaIR_Avg,SalivaIR_d1,SalivaIR_d2)
+#SalivaIR_Avg <- cbind(SalivaIR_Avg,SalivaIR_d1,SalivaIR_d2)
+#SalivaIR_Avg <- SalivaIR_d2
+SalivaIR_Avg$class <- 1*(str_detect(rownames(SalivaIR_Avg),"P"))
+##The fraction of samples in the training set
+pander::pander(c(row=nrow(SalivaIR_Avg),col=ncol(SalivaIR_Avg)))
+
+pander::pander(table(SalivaIR_Avg$class))
+trainFraction=0.90
+
+SalivaIR_d2$class <- 1*(str_detect(rownames(SalivaIR_d2),"P"))
+
+```
+
+## The heatmap of the data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+hm <- heatMaps(data=SalivaIR_Avg,
+               Outcome="class",
+               Scale=TRUE,
+               hCluster = "row",
+               xlab=expression("Wavenumber (cm)"^"-1"),
+               ylab="Sample")
+par(op)
+
+```
+
+### The UMAP
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+lnames <- c("Neg","Pos")
+featnames <- colnames(SalivaIR_Avg)
+featnames <- featnames[featnames != "class"]
+datasetframe.umap = umap(FRESAScale(SalivaIR_Avg[,featnames])$scaledData,n_components=2)
+plot(datasetframe.umap$layout,col=(SalivaIR_Avg$class+1),xlab="U1",ylab="U2",main="UMAP: Original",t='n')
+text(datasetframe.umap$layout,labels=lnames[1+SalivaIR_Avg$class],col=(SalivaIR_Avg$class+1))
+
+
+```
+
+
+#### Correlation Matrix of the Decorrelated Test Data
+
+The heat map of the testing set.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+cormat <- cor(SalivaIR_Avg[,colnames(SalivaIR_Avg) != "class"],method="spearman")
+cormat[is.na(cormat)] <- 0
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+#                  scale = "row",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  main = "COVID-19: Infrared Signal Correlation",
+                  cexRow = 0.35,
+                  cexCol = 0.35,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+
+
+par(op)
+```
+
+## The decorrelation
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+deIR <- IDeA(SalivaIR_Avg,thr=0.80,verbose = TRUE)
+#deIR <- IDeA(SalivaIR_Avg,thr=0.80,relaxed=FALSE,verbose = TRUE)
+
+pander::pander(sum(apply(SalivaIR_Avg,2,var)))
+pander::pander(sum(apply(deIR,2,var)))
+pander::pander(entropy(discretize(unlist(SalivaIR_Avg[,colnames(SalivaIR_Avg) != "class"]), 256)))
+pander::pander(entropy(discretize(unlist(deIR[,colnames(deIR) != "class"]), 256)))
+
+cormat <- cor(deIR[,colnames(deIR) != "class"],method="spearman")
+cormat[is.na(cormat)] <- 0
+gplots::heatmap.2(abs(cormat),
+                  trace = "none",
+#                  scale = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  main = "COVID-19 Correlation after UPSTM",
+                  cexRow = 0.35,
+                  cexCol = 0.35,
+                  key.title=NA,
+                  key.xlab="Spearman Correlation",
+                  xlab="Feature", ylab="Feature")
+par(op)
+
+```
+
+
+## The heatmap of the decorrelated data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+#hm <- heatMaps(data=deIR,Outcome="class",Scale=TRUE,hCluster = "col")
+hm <- heatMaps(data=deIR,
+               Outcome="class",
+               Scale=TRUE,
+               hCluster = "row",
+               xlab=expression("Wavenumber (cm)"^"-1"),
+               ylab="Sample")
+par(op)
+
+```
+
+### The decorralted UMAP
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+featnames <- colnames(deIR)
+featnames <- featnames[featnames != "class"]
+datasetframe.umap = umap(FRESAScale(deIR[,featnames])$scaledData,n_components=2)
+plot(datasetframe.umap$layout,col=(deIR$class+1),xlab="U1",ylab="U2",main="UMAP: After Transformation",t='n')
+text(datasetframe.umap$layout,labels=lnames[1+deIR$class],col=(deIR$class+1))
+
+```
+
+
+### The decorrelation matrix
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+
+UPSTM <- attr(deIR,"UPSTM")
+fscores <- attr(deIR,"fscore")
+fscores <- fscores[order(-fscores)]
+#fscores[fscores>0]
+
+gplots::heatmap.2(log(abs(1000*UPSTM)+1),
+                  trace = "none",
+#                  scale = "none",
+                  mar = c(5,5),
+                  col=rev(heat.colors(5)),
+                  main = "COVID-19 Decorrelation matrix",
+                  cexRow = 0.35,
+                  cexCol = 0.35,
+                  key.title=NA,
+                  key.xlab="Log(|1000*Beta|+1)",
+                  xlab="Output Feature", ylab="Input Feature")
+
+par(op)
+
+```
+
+### Plots
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 5.0}
+par(mfrow=c(2,1),cex=0.8,cex.axis=0.7,cex.main=0.8)
+
+varlist <- colnames(SalivaIR_Avg)[!(colnames(SalivaIR_Avg) %in% "class")]
+#varlist <- cbind(varlist,varlist)
+#class(varlist)
+
+univar <- uniRankVar(varlist,
+	           "class~1",
+	           "class",
+	           SalivaIR_Avg,
+	           categorizationType = "Raw",
+	           type = "LOGIT",
+	           rankingTest = "AUC",
+	            uniType = "Binary")
+
+cases <- subset(SalivaIR_Avg,class==1)
+cases$class <- NULL
+controls <- subset(SalivaIR_Avg,class==0)
+controls$class <- NULL
+colnames(cases) <- str_remove_all(colnames(cases),"V_")
+bpcases <- boxplot(cases,
+                   boxwex=1.25,
+                   outline = FALSE,
+                   col="red",
+                   las=2,
+                   cex.axis=0.5,
+                   ylab="Absorbance (a.u.)",
+                   xlab=expression("Wavenumber (cm)"^"-1"))
+#bpcontrols <- boxplot(controls,col="blue",outline = FALSE,boxwex=0.25,las=2,add = TRUE,cex.axis=0.5)
+lines(apply(controls,2,mean),col="blue",lwd=3)
+title("Absorbance")
+legend("topright",legend=c("Cases", "Controls"),
+       col=c("red", "blue"), lty=1:1,lwd=c(1,3), cex=0.6)
+
+effectSize <- (apply(cases,2,mean)-apply(controls,2,mean))/apply(SalivaIR_Avg[,str_detect(colnames(SalivaIR_Avg),"V_")],2,sd)
+wavenumber=as.numeric(str_remove_all(names(effectSize),"V_"))
+
+aucvalue <- univar$orderframe$ROCAUC
+
+
+wavenumber=as.numeric(str_remove_all(rownames(univar$orderframe),"V_"))
+aucvalueRaw <- aucvalue[order(wavenumber)]
+wavenumberRaw <- wavenumber[order(wavenumber)]
+bpdiff <- plot(wavenumberRaw,aucvalueRaw,las=2,cex.axis=0.5,type="l",
+                                  ylab="ROC AUC",
+                    xlim = c(1300,800),
+                    ylim = c(0.5,1.0),
+                   xlab=expression("Wavenumber (cm)"^"-1"))
+title("Difference in Absorbance")
+
+
+
+varlist <- colnames(deIR)[!(colnames(deIR) %in% "class")]
+#varlist <- cbind(varlist,varlist)
+
+univarDe <- uniRankVar(varlist,
+	           "class~1",
+	           "class",
+	           deIR,
+	           categorizationType = "Raw",
+	           type = "LOGIT",
+	           rankingTest = "AUC",
+	            uniType = "Binary")
+
+
+decorfeat <- colnames(deIR)[str_detect(colnames(deIR),"La_")]
+parentfeat <- str_remove_all(decorfeat,"La_")
+reldecor <- deIR[,decorfeat]
+reldecor$class <- SalivaIR_Avg$class
+cases <- subset(reldecor,class==1)
+cases <- cases[,str_detect(colnames(cases),"La_")]
+colnames(cases) <- str_remove_all(colnames(cases),"La_V_")
+controls <- subset(reldecor,class==0)
+controls <- controls[,str_detect(colnames(controls),"La_")]
+colnames(controls) <- str_remove_all(colnames(controls),"La_V_")
+bpcases <- boxplot(cases,
+                   boxwex=2.0,
+                   outline = FALSE,
+                   col="red",
+                   las=2,
+                   cex.axis=0.5,
+                   ylim=c(-0.075,0.075),
+                   ylab="Absorbance (a.u.)",
+                   xlab=expression("Wavenumber (cm)"^"-1"))
+
+#bpcontrols <- boxplot(controls,col="blue",ylim=c(-0.075,0.075),outline = FALSE,boxwex=1.25,las=2,add = TRUE,cex.axis=0.5)
+lines(apply(controls,2,mean),col="blue",lwd=2)
+#lines(controls,col="blue",ylim=c(-0.075,0.075))
+title("Decorrelated Absorbance")
+legend("topright",legend=c("Cases", "Controls"),
+        fill=c("red", "blue"),
+       cex=0.6)
+
+
+
+
+
+effectSize <- (apply(cases,2,median)-apply(controls,2,median))/apply(reldecor[,str_detect(colnames(reldecor),"La_")],2,IQR)
+wavenumber=as.numeric(str_remove_all(names(effectSize),"La_V_"))
+
+aucvalue <- univarDe$orderframe$ROCAUC
+depcvalue <- univarDe$orderframe$WilcoxRes.p
+
+names(aucvalue) <- rownames(univarDe$orderframe)
+#plot(aucvalue[names(fscores)],fscores)
+
+
+wavenumber=str_remove_all(rownames(univarDe$orderframe),"La_V_")
+#wavenumber=str_remove_all(wavenumber,"Ba_V_")
+wavenumber=as.numeric(str_remove_all(wavenumber,"V_"))
+aucvalueDe <- aucvalue[order(wavenumber)]
+depcvalue <- depcvalue[order(wavenumber)]
+wavenumberDe <- wavenumber[order(wavenumber)]
+
+bpdiff <- plot(x=wavenumberDe,y=aucvalueDe,las=2,cex.axis=0.5,type="l",
+                                   xlim = c(1300,800),
+                                  ylab="ROCAUC",
+                   ylim = c(0.5,1.0),
+                   xlab=expression("Wavenumber (cm)"^"-1"))
+title("Difference in Decorrelated Absorbance")
+
+
+
+
+
+par(op)
+
+```
+
+### Comparing Univariate ROC AUC
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 6.0}
+par(cex=0.8)
+varlist <- colnames(SalivaIR_d2)[!(colnames(SalivaIR_d2) %in% "class")]
+#varlist <- cbind(varlist,varlist)
+pthr <- 0.10/(ncol(SalivaIR)-1)
+
+univarD2 <- uniRankVar(varlist,
+	           "class~1",
+	           "class",
+	           SalivaIR_d2,
+	           categorizationType = "Raw",
+	           type = "LOGIT",
+	           rankingTest = "AUC",
+	            uniType = "Binary")
+
+aucvalue <- univarD2$orderframe$ROCAUC
+names(aucvalue) <- rownames(univarD2$orderframe)
+pwilvalue <- univarD2$orderframe$FRes.p
+
+
+wavenumber=as.numeric(str_remove_all(rownames(univarD2$orderframe),"DD_"))
+aucvalueDD <- aucvalue[order(wavenumber)]
+wavenumberDD <- wavenumber[order(wavenumber)]
+pwilvalue <- pwilvalue[order(wavenumber)]
+
+
+bpdiff <- plot(x=wavenumberRaw,y=aucvalueRaw,
+               las=2,
+               cex.axis=0.5,
+               type="l",
+               lwd=3,
+                xlim=c(1300,800),
+                ylim=c(0.5,1.0),
+               ylab="ROC AUC",
+               xlab=expression("Wavenumber (cm)"^"-1"))
+title("Feature Association with COVID-19")
+
+valroc <- pwilvalue < pthr
+points(wavenumberDD[valroc],aucvalueDD[valroc],col="blue",lwd=3)
+
+#bpdiff <- plot
+valroc <- depcvalue < pthr
+
+dc <- getLatentCoefficients(deIR)
+for (dename in names(dc))
+{
+  wave <- as.numeric(str_remove(dename,"La_V_"))
+  if (wave %in% wavenumberDe[valroc])
+  {
+    for (asfeat in names(dc[[dename]]))
+    {
+      points(x=as.numeric(str_remove_all(asfeat,"V_")),
+               y=univarDe$orderframe[dename,"ROCAUC"],col="pink",pch=10)
+    }
+  }
+}
+
+points(x=wavenumberDe[valroc],
+               y=aucvalueDe[valroc],col="red",pch=4,lwd=2)
+
+legend("topleft",legend=c("raw", "2nd Deriv","La: Parent","La: Other"),
+       col=c("black", "blue","red","pink"), lty=c(1,0,0,0),lwd=c(3,3,2,1),pch=c(-1,1,4,10), cex=0.8)
+
+```
+
+
+### Final Table 
+
+```{r results = "asis"}
+
+univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","ZGLM","FRes.p")
+
+pwilvalue <- univarDe$orderframe$FRes.p
+valroc <- pwilvalue < pthr
+
+finalTable <- univarDe$orderframe[valroc,univariate_columns]
+
+theFormulas <- dc[rownames(finalTable)]
+deFromula <- character(length(theFormulas))
+names(deFromula) <- rownames(finalTable)
+
+dx <- names(deFromula)[1]
+for (dx in names(deFromula))
+{
+  coef <- theFormulas[[dx]]
+  cname <- names(theFormulas[[dx]])
+  names(cname) <- cname
+  for (cf in names(coef))
+  {
+    if (cf != dx)
+    {
+      if (coef[cf]>0)
+      {
+        deFromula[dx] <- paste(deFromula[dx],
+                               sprintf("+ %5.3f*%s",coef[cf],cname[cf]))
+      }
+      else
+      {
+        deFromula[dx] <- paste(deFromula[dx],
+                               sprintf("%5.3f*%s",coef[cf],cname[cf]))
+      }
+    }
+  }
+}
+orgnamez <- rownames(finalTable)
+#orgnamez <- str_remove_all(orgnamez,"Ba_")
+orgnamez <- str_remove_all(orgnamez,"La_")
+finalTable$DecorFormula <- deFromula[rownames(finalTable)]
+finalTable$fscores <- fscores[rownames(finalTable)]
+
+pander::pander(finalTable)
+
+```
+
+
