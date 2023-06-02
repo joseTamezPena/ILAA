@@ -1,0 +1,14 @@
+FID,Name
+1,survival
+2,still_alive
+3,age_at_heart_attack
+4,pericardial_effusion
+5,fractional_shortening
+6,epss
+7,lvdd
+8,wall_motion_score
+9,wall_motion_index
+10,mult
+11,name
+12,group
+13,alive_at_1

@@ -68,6 +68,8 @@ wholeArceneSet[,1:ncol(trainLabeled)] <- sapply(wholeArceneSet,as.double)
 studyName <- "ARCENE"
 dataframe <- wholeArceneSet
 outcome <- "Labels"
+thro <- 0.8
+cexheat = 0.10
 
 TopVariables <- 10
 ```

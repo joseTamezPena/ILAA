@@ -116,6 +116,10 @@ dataframe <- ActivitydataAvg
 outcome <- "class"
 
 TopVariables <- 10
+thro <- 0.80
+cexheat = 0.15
+
+
 ```
 
 

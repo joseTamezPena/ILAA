@@ -1,5 +1,5 @@
 ---
-title: "Decorrelation-Based Feature Discovery: DARWIN-Whole"
+title: "Decorrelation-Based Feature Discovery: GI-Whole"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
@@ -79,6 +79,10 @@ dataframe <- dataGI
 outcome <- "class"
 
 TopVariables <- 10
+
+thro <- 0.80
+cexheat = 0.15
+
 ```
 
 ## Generaring the report

@@ -1,0 +1,156 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+### Libraries
+```{r}
+library(psych)
+library(whitening)
+library("vioplot")
+source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
+
+```
+
+
+### CV feature Selection
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+cvDataFS <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=needScaling,thr=thro)
+
+
+```
+
+### Report
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+lassSFRaw <- as.numeric(unlist(lapply(cvDataFS$SelectedLASSOFeatures,length)))
+lassSFDe <- as.numeric(unlist(lapply(cvDataFS$DeSelectedLASSOFeatures,length)))
+FSRaw <- as.numeric(unlist(lapply(cvDataFS$SelectedTrainFeatures,length)))
+FSDe <- as.numeric(unlist(lapply(cvDataFS$DeSelectedTrainFeatures,length)))
+FSPCA <- as.numeric(unlist(lapply(cvDataFS$PCASelectedTrainFeatures,length)))
+FSEFA <- as.numeric(unlist(lapply(cvDataFS$EFASelectedTrainFeatures,length)))
+
+
+FSDe <- FSDe + 0.1*runif(length(FSDe))
+
+vioplot(cbind(RAW=cvDataFS$TDR,IDeA=cvDataFS$DeTDR,PCA=cvDataFS$PCATDR,EFA=cvDataFS$EFATDR),
+        ylab="TDR",
+        xlab="Method",
+        main="Train-Test Discovery Rate",
+)
+
+
+vioplot(cbind(RAW=cvDataFS$ROCAUC,IDeA=cvDataFS$DeROCAUC,PCA=cvDataFS$PCAROCAUC,EFA=cvDataFS$EFAROCAUC),
+        ylab="ROC AUC",
+        xlab="Method",
+        main="Test: ROC AUC (LASSO)",
+)
+
+vioplot(cbind(RAW=cvDataFS$topROCAUC,IDeA=cvDataFS$DetopROCAUC,PCA=cvDataFS$PCAtopROCAUC,EFA=cvDataFS$EFAtopROCAUC),
+        ylab="ROC AUC",
+        xlab="Method",
+        main="Test: ROC AUC (Top Feature)",
+)
+
+vioplot(cbind(RAW=FSRaw,IDeA=FSDe,PCA=FSPCA,EFA=FSEFA),
+        ylab="Selected Features",
+        xlab="Method",
+        main="Number of Selected Features",
+)
+
+
+bpRaw <- predictionStats_binary(cvDataFS$medTestRaw,"Raw")
+bpDe <- predictionStats_binary(cvDataFS$DeMedTestRaw,"IDeA")
+bpPCA <- predictionStats_binary(cvDataFS$PCAMedTestRaw,"PCA")
+bpEFA <- predictionStats_binary(cvDataFS$EFAMedTestRaw,"EFA")
+
+
+pander::pander(apply(cvDataFS$datadim,2,mean),caption="Data Dimensions")
+
+```
+
+
+### Summary
+```{r results = "asis"}
+TDR_raw <- c(mean=mean(cvDataFS$TDR),sd=sd(cvDataFS$TDR))
+TDR_de <- c(mean=mean(cvDataFS$DeTDR),sd=sd(cvDataFS$DeTDR))
+ROCAUC_raw <- c(mean=mean(cvDataFS$ROCAUC),sd=sd(cvDataFS$ROCAUC))
+TOPROCAUC_raw <- c(mean=mean(cvDataFS$topROCAUC),sd=sd(cvDataFS$topROCAUC))
+ROCAUC_de <- c(mean=mean(cvDataFS$DeROCAUC),sd=sd(cvDataFS$DeROCAUC))
+TOPROCAUC_de <- c(mean=mean(cvDataFS$DetopROCAUC),sd=sd(cvDataFS$DetopROCAUC))
+SelectedFeaturesRaw <- c(mean=mean(FSRaw),sd=sd(FSRaw))
+SelectedFeaturesDe <- c(mean=mean(FSDe),sd=sd(FSDe))
+SelectedFeaturesLassoRaw <- c(mean=mean(lassSFRaw),sd=sd(lassSFRaw))
+SelectedFeaturesLassoDe <- c(mean=mean(lassSFDe),sd=sd(lassSFDe))
+FractionOfLatent <- c(mean=mean(cvDataFS$DeFraction),sd=sd(cvDataFS$DeFraction))
+FractionOfLassoLatent <- c(mean=mean(cvDataFS$DeFractionLasso),sd=sd(cvDataFS$DeFractionLasso))
+latVarSize <- c(mean=mean(cvDataFS$Avlen),sd=sd(cvDataFS$Avlen))
+NumLatVar <- c(mean=mean(cvDataFS$NumLatent),sd=sd(cvDataFS$NumLatent))
+NumLofCorrelated <- c(mean=mean(cvDataFS$totCorrelated),sd=sd(cvDataFS$totCorrelated))
+
+SummaryRaw <- rbind(TDR=TDR_raw,
+                    AUC=ROCAUC_raw,
+                    TOPAUC=TOPROCAUC_raw,
+                    UFS=SelectedFeaturesRaw,
+                    LFS=SelectedFeaturesLassoRaw
+)
+
+pander::pander(SummaryRaw)                 
+
+SummaryPCA <- rbind(TDR=c(mean=mean(cvDataFS$PCATDR),sd=sd(cvDataFS$PCATDR)),
+                    AUC=c(mean=mean(cvDataFS$PCAROCAUC),sd=sd(cvDataFS$PCAROCAUC)),
+                    TOPAUC=c(mean=mean(cvDataFS$PCAtopROCAUC),sd=sd(cvDataFS$PCAtopROCAUC)),
+                    UFS=c(mean=mean(FSPCA),sd=sd(FSPCA))
+)
+pander::pander(SummaryPCA)                 
+
+SummaryFCA <- rbind(TDR=c(mean=mean(cvDataFS$EFATDR),sd=sd(cvDataFS$EFATDR)),
+                    AUC=c(mean=mean(cvDataFS$EFAROCAUC),sd=sd(cvDataFS$EFAROCAUC)),
+                    TOPAUC=c(mean=mean(cvDataFS$EFAtopROCAUC),sd=sd(cvDataFS$EFAtopROCAUC)),
+                    UFS=c(mean=mean(FSEFA),sd=sd(FSEFA))
+)
+
+
+pander::pander(SummaryFCA)                 
+
+diffinROCACU <- cvDataFS$DeROCAUC-cvDataFS$ROCAUC
+DifFROCAUC <- c(mean=mean(diffinROCACU),sd=sd(diffinROCACU))
+diffinTOPROCACU <- cvDataFS$DetopROCAUC-cvDataFS$topROCAUC
+DifTopROCAUC <- c(mean=mean(diffinTOPROCACU),sd=sd(diffinTOPROCACU))
+SummaryDe <- rbind(TDR_de,
+                   ROCAUC_de,
+                   TOPROCAUC_de,
+                   SelectedFeaturesDe,
+                   SelectedFeaturesLassoDe,
+                   FractionOfLatent,
+                   FractionOfLassoLatent,
+                   DifFROCAUC,
+                   DifTopROCAUC,
+                   NumLatVar,
+                   latVarSize,
+                   NumLofCorrelated
+)
+
+pander::pander(SummaryDe)
+pander::pander(c(pvalue=pnorm(0, mean(diffinROCACU), sd(diffinROCACU))),caption="ROC Diff, p.value")
+pander::pander(summary(as.numeric(unlist(cvDataFS$rocTest))),caption="ROC p.values")
+
+pander::pander(c(pvalue=pnorm(0, mean(diffinTOPROCACU), sd(diffinTOPROCACU))),caption="TOP ROC Diff, p.value")
+
+pander::pander(rbind(RAW=bpRaw$aucs,IDeA=bpDe$aucs,PCA=bpPCA$aucs,EFA=bpEFA$aucs))
+
+pander::pander(roc.test(bpRaw$ROC.analysis$roc.predictor,bpDe$ROC.analysis$roc.predictor))
+pander::pander(roc.test(bpPCA$ROC.analysis$roc.predictor,bpDe$ROC.analysis$roc.predictor))
+pander::pander(roc.test(bpEFA$ROC.analysis$roc.predictor,bpDe$ROC.analysis$roc.predictor))
+
+
+```
+
+### Saving ALL
+
+```{r}
+save.image(paste("CV_analyiss",studyName,".RData",sep="_"))
+
+```

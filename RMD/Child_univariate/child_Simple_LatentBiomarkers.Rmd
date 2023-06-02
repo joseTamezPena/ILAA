@@ -1,3 +1,8 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
 ### Libraries
 Some libraries
 ```{r}
@@ -57,8 +62,10 @@ if (!largeSet)
                  hCluster = "row",
                  xlab="Feature",
                  ylab="Sample",
-                 cexCol=0.15,
-                 cexRow=0.25
+                 srtCol=45,
+                 srtRow=45,
+                 cexCol=cexheat,
+                 cexRow=cexheat
                  )
   par(op)
 }
@@ -86,12 +93,15 @@ if (!largeSet)
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
                     main = "Original Correlation",
-                    cexRow = 0.15,
-                    cexCol = 0.15,
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
                     key.title=NA,
                     key.xlab="Pearson Correlation",
                     xlab="Feature", ylab="Feature")
   diag(cormat) <- 0
+  print(max(abs(cormat)))
 }
 
 ```
@@ -100,7 +110,8 @@ if (!largeSet)
 ## The decorrelation
 
 ```{r}
-DEdataframe <- IDeA(dataframe,verbose=TRUE)
+
+DEdataframe <- IDeA(dataframe,verbose=TRUE,thr=thro)
 varlistc <- colnames(DEdataframe)[colnames(DEdataframe) != outcome]
 
 pander::pander(sum(apply(dataframe[,varlist],2,var)))
@@ -128,8 +139,10 @@ if (!largeSet)
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
                     main = "Decorrelation matrix",
-                    cexRow = 0.15,
-                    cexCol = 0.15,
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                   srtCol=45,
+                   srtRow=45,
                     key.title=NA,
                     key.xlab="|Beta|>0",
                     xlab="Output Feature", ylab="Input Feature")
@@ -151,8 +164,10 @@ if (!largeSet)
                  Outcome=outcome,
                  Scale=TRUE,
                  hCluster = "row",
-                 cexRow = 0.15,
-                 cexCol = 0.15,
+                 cexRow = cexheat,
+                 cexCol = cexheat,
+                 srtCol=45,
+                 srtRow=45,
                  xlab="Feature",
                  ylab="Sample")
   par(op)
@@ -169,20 +184,22 @@ if (!largeSet)
 
   cormat <- cor(DEdataframe[,varlistc],method="pearson")
   cormat[is.na(cormat)] <- 0
-  diag(cormat) <- 0
   
   gplots::heatmap.2(abs(cormat),
                     trace = "none",
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
                     main = "Correlation after IDeA",
-                    cexRow = 0.15,
-                    cexCol = 0.15,
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
                     key.title=NA,
                     key.xlab="Pearson Correlation",
                     xlab="Feature", ylab="Feature")
   
   par(op)
+  diag(cormat) <- 0
   print(max(abs(cormat)))
 }
 
@@ -217,7 +234,7 @@ text(datasetframe.umap$layout,labels=DEdataframe[,outcome],col=raincolors[DEdata
 
 ### Univariate
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 5.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 6.0}
 
 
 univarRAW <- uniRankVar(varlist,
@@ -254,16 +271,27 @@ topLAvar <- univarDe$orderframe$Name[str_detect(univarDe$orderframe$Name,"La_")]
 topLAvar <- unique(c(univarDe$orderframe$Name[topvar],topLAvar[1:as.integer(TopVariables/2)]))
 finalTable <- univarDe$orderframe[topLAvar,univariate_columns]
 
+theLaVar <- rownames(finalTable)[str_detect(rownames(finalTable),"La_")]
+
 pander::pander(univarDe$orderframe[topLAvar,univariate_columns])
 
 dc <- getLatentCoefficients(DEdataframe)
 fscores <- attr(DEdataframe,"fscore")
+
+theSigDc <- dc[theLaVar]
+names(theSigDc) <- NULL
+theSigDc <- unique(names(unlist(theSigDc)))
+
 
 theFormulas <- dc[rownames(finalTable)]
 deFromula <- character(length(theFormulas))
 names(deFromula) <- rownames(finalTable)
 
 pander::pander(c(mean=mean(sapply(dc,length)),total=length(dc),fraction=length(dc)/(ncol(dataframe)-1)))
+
+
+allSigvars <- names(dc)
+
 
 
 dx <- names(deFromula)[1]
@@ -289,6 +317,10 @@ for (dx in names(deFromula))
     }
   }
 }
+
+finalTable <- rbind(finalTable,univarRAW$orderframe[theSigDc[!(theSigDc %in% rownames(finalTable))],univariate_columns])
+
+
 orgnamez <- rownames(finalTable)
 orgnamez <- str_remove_all(orgnamez,"La_")
 finalTable$RAWAUC <- univarRAW$orderframe[orgnamez,"ROCAUC"]
@@ -297,7 +329,7 @@ finalTable$fscores <- fscores[rownames(finalTable)]
 
 Final_Columns <- c("DecorFormula","caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","RAWAUC","fscores")
 
-
+finalTable <- finalTable[order(-finalTable$ROCAUC),]
 pander::pander(finalTable[,Final_Columns])
 
 ```
