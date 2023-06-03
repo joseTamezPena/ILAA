@@ -86,8 +86,7 @@ needScaling <- TRUE
 nLoops <- 100
 
 IDSample <- FALSE
-thro <- 0.9
-IOutcome <- outcome
+thro <- 0.8
 
 ```
 ## CV Analysis and report
