@@ -1,5 +1,5 @@
 ---
-title: "Decorrelation-Based Feature Discovery: Seeds"
+title: "Decorrelation-Based Feature Discovery: Glaucoma"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
@@ -34,6 +34,8 @@ library(igraph)
 library(umap)
 library(tsne)
 library(entropy)
+library(TH.data)
+
 
 op <- par(no.readonly = TRUE)
 pander::panderOptions('digits', 3)
@@ -43,32 +45,29 @@ source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
 
 ```
 
-## Material and Methods
-
-Data Source 
-https://archive.ics.uci.edu/ml/datasets/seeds
 
 
-M. Charytanowicz, J. Niewczas, P. Kulczycki, P.A. Kowalski, S. Lukasik, S. Zak, 'A Complete Gradient Clustering Algorithm for Features Analysis of X-ray Images', in: Information Technologies in Biomedicine, Ewa Pietka, Jacek Kawa (eds.), Springer-Verlag, Berlin-Heidelberg, 2010, pp. 15-24.
+All variables are derived from a laser scanning image of the eye background taken by the Heidelberg Retina Tomograph. Most of the variables describe either the area or volume in certain parts of the papilla and are measured in four sectors (temporal, superior, nasal and inferior) as well as for the whole papilla (global). The global measurement is, roughly, the sum of the measurements taken in the four sector.
+
+The observations in both groups are matched by age and sex to prevent any bias.
+
+Source
+Torsten Hothorn and Berthold Lausen (2003), Double-Bagging: Combining classifiers by bootstrap aggregation. Pattern Recognition, 36(6), 1303–1309.
+
 
 
 ## The Data
 
-```{r}
-seeds <- read.delim("~/GitHub/LatentBiomarkers/Data/seeds_dataset.txt", header=FALSE)
 
-featnames <- c("area",
-               "perimeter",
-               "compactness",
-               "length_of_kernel",
-               "width_of_kernel",
-               "asymmetry_coeff",
-               "length_ker_groove",
-               "class"
-)
-colnames(seeds) <- featnames
-seeds$class <- 1*(seeds$class == 1)
-pander::pander(table(seeds$class))
+GlaucomaM {TH.data}
+
+```{r}
+
+data("GlaucomaM")
+
+pander::pander(table(GlaucomaM$Class))
+
+GlaucomaM$Class <- 1*(GlaucomaM$Class=="glaucoma")
 
 ```
 
@@ -76,14 +75,18 @@ pander::pander(table(seeds$class))
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-studyName <- "Seeds"
-dataframe <- seeds
-outcome <- "class"
+studyName <- "Glaucoma"
+dataframe <- GlaucomaM
+outcome <- "Class"
+
+
+
 nLoops <- 100
 
 needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.8
+IOutcome <- outcome
 
 ```
 ## CV Analysis and report

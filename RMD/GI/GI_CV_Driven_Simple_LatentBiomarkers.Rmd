@@ -1,5 +1,5 @@
 ---
-title: "Decorrelation-Based Feature Discovery: Seeds"
+title: "Decorrelation-Based Feature Discovery: GI"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
@@ -43,51 +43,49 @@ source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
 
 ```
 
-## Material and Methods
-
-Data Source 
-https://archive.ics.uci.edu/ml/datasets/seeds
-
-
-M. Charytanowicz, J. Niewczas, P. Kulczycki, P.A. Kowalski, S. Lukasik, S. Zak, 'A Complete Gradient Clustering Algorithm for Features Analysis of X-ray Images', in: Information Technologies in Biomedicine, Ewa Pietka, Jacek Kawa (eds.), Springer-Verlag, Berlin-Heidelberg, 2010, pp. 15-24.
 
 
 ## The Data
 
-```{r}
-seeds <- read.delim("~/GitHub/LatentBiomarkers/Data/seeds_dataset.txt", header=FALSE)
 
-featnames <- c("area",
-               "perimeter",
-               "compactness",
-               "length_of_kernel",
-               "width_of_kernel",
-               "asymmetry_coeff",
-               "length_ker_groove",
-               "class"
-)
-colnames(seeds) <- featnames
-seeds$class <- 1*(seeds$class == 1)
-pander::pander(table(seeds$class))
+```{r}
+
+dataGI <- as.data.frame(read_excel("~/GitHub/LatentBiomarkers/Data/GI/data.xlsx", sheet = "Sheet1"))
+dataGI$ID <- NULL
+
+table(dataGI$V2)
+dataSet1 <- subset(dataGI,V2==1)
+class <- dataSet1$V1
+dataSet1$V1 <- NULL
+dataSet1$V2 <- NULL
+colnames(dataSet1) <- paste(colnames(dataSet1),"WL",sep="_")
+dataSet2 <- subset(dataGI,V2==2)
+dataSet2$V1 <- NULL
+dataSet2$V2 <- NULL
+colnames(dataSet2) <- paste(colnames(dataSet2),"NBI",sep="_")
+dataGI <- cbind(dataSet1,dataSet2)
+dataGI$class <- 1*(class > 1)
+table(dataGI$class)
 
 ```
-
-
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-studyName <- "Seeds"
-dataframe <- seeds
+studyName <- "GI_DRIVEN"
+dataframe <- dataGI
 outcome <- "class"
+
 nLoops <- 100
 
 needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.8
+IOutcome <- outcome
 
 ```
 ## CV Analysis and report
 
 ```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/CV_analysis.Rmd")}
 ```
+
 

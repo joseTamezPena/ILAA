@@ -76,7 +76,7 @@ pander::pander(table(seeds$class))
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-studyName <- "Seeds"
+studyName <- "Seeds_driven"
 dataframe <- seeds
 outcome <- "class"
 nLoops <- 100
@@ -84,6 +84,7 @@ nLoops <- 100
 needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.8
+IOutcome <- outcome
 
 ```
 ## CV Analysis and report

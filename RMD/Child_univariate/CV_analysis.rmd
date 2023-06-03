@@ -17,7 +17,13 @@ source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
 ### CV feature Selection
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
 
-cvDataFS <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=needScaling,thr=thro)
+if (exists("IOutcome"))
+{
+  cvDataFS <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=needScaling,thr=thro,Outcome=IOutcome)
+} else
+{
+  cvDataFS <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=needScaling,thr=thro)
+}
 
 
 ```

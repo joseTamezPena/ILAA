@@ -1,5 +1,5 @@
 ---
-title: "Decorrelation-Based Feature Discovery: Seeds"
+title: "Decorrelation-Based Feature Discovery: Gravier"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
@@ -43,51 +43,42 @@ source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
 
 ```
 
-## Material and Methods
-
-Data Source 
-https://archive.ics.uci.edu/ml/datasets/seeds
-
-
-M. Charytanowicz, J. Niewczas, P. Kulczycki, P.A. Kowalski, S. Lukasik, S. Zak, 'A Complete Gradient Clustering Algorithm for Features Analysis of X-ray Images', in: Information Technologies in Biomedicine, Ewa Pietka, Jacek Kawa (eds.), Springer-Verlag, Berlin-Heidelberg, 2010, pp. 15-24.
 
 
 ## The Data
 
-```{r}
-seeds <- read.delim("~/GitHub/LatentBiomarkers/Data/seeds_dataset.txt", header=FALSE)
 
-featnames <- c("area",
-               "perimeter",
-               "compactness",
-               "length_of_kernel",
-               "width_of_kernel",
-               "asymmetry_coeff",
-               "length_ker_groove",
-               "class"
-)
-colnames(seeds) <- featnames
-seeds$class <- 1*(seeds$class == 1)
-pander::pander(table(seeds$class))
+```{r}
+data('gravier', package = 'datamicroarray')
+table(gravier$y)
+
+gravierset <- as.data.frame(cbind(class=1*(gravier$y=="poor"),gravier$x))
+
+gravier <- NULL
+
+
 
 ```
-
 
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-studyName <- "Seeds"
-dataframe <- seeds
+studyName <- "Gravier_Driven"
+dataframe <- gravierset
 outcome <- "class"
+
+
 nLoops <- 100
 
-needScaling <- TRUE
+needScaling <- FALSE
 IDSample <- FALSE
 thro <- 0.8
+IOutcome <- outcome
 
 ```
 ## CV Analysis and report
 
 ```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/CV_analysis.Rmd")}
 ```
+
 

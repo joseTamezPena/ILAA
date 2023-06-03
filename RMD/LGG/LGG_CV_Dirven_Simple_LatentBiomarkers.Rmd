@@ -78,7 +78,7 @@ pander::pander(table(LGG_Data$Mutacion))
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-studyName <- "LGG"
+studyName <- "LGG_Driven"
 dataframe <- LGG_Data
 outcome <- "Mutacion"
 
@@ -86,7 +86,7 @@ needScaling <- TRUE
 nLoops <- 100
 
 IDSample <- FALSE
-thro <- 0.9
+thro <- 0.8
 IOutcome <- outcome
 
 ```
