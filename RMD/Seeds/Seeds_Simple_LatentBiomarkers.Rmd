@@ -81,7 +81,7 @@ pander::pander(table(seeds$class))
 ## Comparing IDeA vs PCA vs EFA
 
 ### Getting the top correlated variables
-```{r results = "asis" ,warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+```{r results = "asis" ,warning = FALSE, dpi=300, fig.height= 8, fig.width= 11}
 plot(seeds[,colnames(seeds)!="class"],col=seeds$class,cex=0.65,cex.lab=0.5,cex.axis=0.75,cex.sub=0.5,cex.main=0.75)
 rawCor <- cor(seeds[,colnames(seeds)!="class"])
 
@@ -111,7 +111,7 @@ plot(seeds[,names(whotoMax)],main="Top Correlated variables")
 
 ### IDeA
 
-```{r results = "asis" ,warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+```{r results = "asis" ,warning = FALSE, dpi=300, fig.height= 8, fig.width= 11}
 IDeASeeds <- IDeA(seeds)
 plot(IDeASeeds[,colnames(IDeASeeds)!="class"],col=seeds$class,cex=0.65,cex.lab=0.5,cex.axis=0.75,cex.sub=0.5,cex.main=0.75)
 pander::pander(attr(IDeASeeds,"UPSTM"))
@@ -148,7 +148,7 @@ plot(IDeASeeds[,c("area","La_perimeter")],main="IDeA: Top Raw Correlated variabl
 
 ### PCA
 
-```{r results = "asis" ,warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+```{r results = "asis" ,warning = FALSE, dpi=300, fig.height= 8, fig.width= 11}
 featuresnames <- colnames(seeds)[colnames(seeds) != "class"]
 pc <- prcomp(seeds[,featuresnames],center = TRUE,tol=0.01)   #principal components
 PCAseed <- as.data.frame(cbind(predict(pc,seeds[,featuresnames]),class=seeds$class))
@@ -180,7 +180,7 @@ PCACor <- cor(PCAseed[,colnames(PCAseed)!="class"])
 ### EFA
 
 
-```{r results = "asis" ,warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+```{r results = "asis" ,warning = FALSE, dpi=300, fig.height= 8, fig.width= 11}
 featuresnames <- colnames(seeds)[colnames(seeds) != "class"]
 uls <- fa(seeds[,featuresnames],length(featuresnames)-1,rotate="varimax",warnings=FALSE)  # EFA analysis
 EFAseed <- as.data.frame(cbind(predict(uls,seeds[,featuresnames]),class=seeds$class))
@@ -210,7 +210,7 @@ EFACor <- cor(EFAseed[,colnames(EFAseed)!="class"])
 
 ## Effect on CAR modeling
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 8, fig.width= 11}
 par(op)
 par(xpd = TRUE)
 seeds$class <- factor(seeds$class)
@@ -253,7 +253,7 @@ par(op)
 
 ## Effect on logisitc modeling
 
-```{r results = "asis", warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 8, fig.width= 11}
 seeds$class <- 1*(seeds$class == 1)
 IDeASeeds$class <- seeds$class
 PCAseed$class <- seeds$class

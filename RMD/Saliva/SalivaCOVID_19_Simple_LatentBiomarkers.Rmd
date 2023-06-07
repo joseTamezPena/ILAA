@@ -1,7 +1,7 @@
 ---
 title: "Decorrelation-Based Feature Discovery: IR COVID_19"
 author: "Jose Tamez"
-date: "2022-10-02"
+date: "`r Sys.Date()`"
 output:
   html_document: 
     toc: yes
@@ -119,206 +119,23 @@ SalivaIR_d2$class <- 1*(str_detect(rownames(SalivaIR_d2),"P"))
 
 ```
 
-## The heatmap of the data
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-
-hm <- heatMaps(data=SalivaIR_Avg,
-               Outcome="class",
-               Scale=TRUE,
-               hCluster = "row",
-               xlab=expression("Wavenumber (cm)"^"-1"),
-               ylab="Sample")
-par(op)
-
-```
-
-### The UMAP
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-lnames <- c("Neg","Pos")
-featnames <- colnames(SalivaIR_Avg)
-featnames <- featnames[featnames != "class"]
-datasetframe.umap = umap(FRESAScale(SalivaIR_Avg[,featnames])$scaledData,n_components=2)
-plot(datasetframe.umap$layout,col=(SalivaIR_Avg$class+1),xlab="U1",ylab="U2",main="UMAP: Original",t='n')
-text(datasetframe.umap$layout,labels=lnames[1+SalivaIR_Avg$class],col=(SalivaIR_Avg$class+1))
-
-
-```
-
-
-#### Correlation Matrix of the Decorrelated Test Data
-
-The heat map of the testing set.
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-
-par(cex=0.6,cex.main=0.85,cex.axis=0.7)
-cormat <- cor(SalivaIR_Avg[,colnames(SalivaIR_Avg) != "class"],method="pearson")
-cormat[is.na(cormat)] <- 0
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-#                  scale = "row",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  main = "COVID-19: Infrared Signal Correlation",
-                  cexRow = 0.35,
-                  cexCol = 0.35,
-                  key.title=NA,
-                  key.xlab="Pearson Correlation",
-                  xlab="Feature", ylab="Feature")
-
-## The decorrelation
-deIR <- IDeA(SalivaIR_Avg)
-
-pander::pander(sum(apply(SalivaIR_Avg,2,var)))
-pander::pander(sum(apply(deIR,2,var)))
-pander::pander(entropy(discretize(unlist(SalivaIR_Avg[,colnames(SalivaIR_Avg) != "class"]), 256)))
-pander::pander(entropy(discretize(unlist(deIR[,colnames(deIR) != "class"]), 256)))
-
-cormat <- cor(deIR[,colnames(deIR) != "class"],method="pearson")
-cormat[is.na(cormat)] <- 0
-gplots::heatmap.2(abs(cormat),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  main = "COVID-19 Correlation after UPSTM",
-                  cexRow = 0.35,
-                  cexCol = 0.35,
-                  key.title=NA,
-                  key.xlab="Pearson Correlation",
-                  xlab="Feature", ylab="Feature")
-
-par(op)
-```
-
-
-
-## The heatmap of the decorrelated data
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-
-hm <- heatMaps(data=deIR,
-               Outcome="class",
-               Scale=TRUE,
-               hCluster = "row",
-               xlab=expression("Wavenumber (cm)"^"-1"),
-               ylab="Sample")
-par(op)
-
-```
-
-### The decorralted UMAP
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-featnames <- colnames(deIR)
-featnames <- featnames[featnames != "class"]
-datasetframe.umap = umap(FRESAScale(deIR[,featnames])$scaledData,n_components=2)
-plot(datasetframe.umap$layout,col=(deIR$class+1),xlab="U1",ylab="U2",main="UMAP: After Transformation",t='n')
-text(datasetframe.umap$layout,labels=lnames[1+deIR$class],col=(deIR$class+1))
-
-```
-
-
-### The decorrelation matrix
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-
-par(cex=0.6,cex.main=0.85,cex.axis=0.7)
-
-UPSTM <- attr(deIR,"UPSTM")
-
-gplots::heatmap.2(log(abs(1000*UPSTM)+1),
-                  trace = "none",
-                  mar = c(5,5),
-                  col=rev(heat.colors(5)),
-                  main = "COVID-19 Decorrelation matrix",
-                  cexRow = 0.35,
-                  cexCol = 0.35,
-                  key.title=NA,
-                  key.xlab="Log(|1000*Beta|+1)",
-                  xlab="Output Feature", ylab="Input Feature")
-
-par(op)
-
-```
-
-### Univariate
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 5.0}
-
-varlist <- colnames(SalivaIR_Avg)[!(colnames(SalivaIR_Avg) %in% "class")]
-
-univar <- uniRankVar(varlist,
-	           "class~1",
-	           "class",
-	           SalivaIR_Avg)
-
-
-
-varlist <- colnames(deIR)[!(colnames(deIR) %in% "class")]
-
-univarDe <- uniRankVar(varlist,
-	           "class~1",
-	           "class",
-	           deIR)
-
-
-
-```
-
-
-### Final Table 
+#### Standarize the names for the reporting
 
 ```{r results = "asis"}
+studyName <- "IRSaliva"
+dataframe <- SalivaIR_Avg
+outcome <- "class"
 
-univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","FRes.p")
+TopVariables <- 10
 
-##topfive
-pander::pander(univar$orderframe[c(1:5),univariate_columns])
+thro <- 0.80
+cexheat = 0.15
 
-
-pwilvalue <- univarDe$orderframe$FRes.p
-valroc <- pwilvalue < 0.001
-
-
-finalTable <- univarDe$orderframe[valroc,univariate_columns]
-
-dc <- getLatentCoefficients(deIR)
-fscores <- attr(deIR,"fscore")
-
-theFormulas <- dc[rownames(finalTable)]
-deFromula <- character(length(theFormulas))
-names(deFromula) <- rownames(finalTable)
-
-dx <- names(deFromula)[1]
-for (dx in names(deFromula))
-{
-  coef <- theFormulas[[dx]]
-  cname <- names(theFormulas[[dx]])
-  names(cname) <- cname
-  for (cf in names(coef))
-  {
-    if (cf != dx)
-    {
-      if (coef[cf]>0)
-      {
-        deFromula[dx] <- paste(deFromula[dx],
-                               sprintf("+ %5.3f*%s",coef[cf],cname[cf]))
-      }
-      else
-      {
-        deFromula[dx] <- paste(deFromula[dx],
-                               sprintf("%5.3f*%s",coef[cf],cname[cf]))
-      }
-    }
-  }
-}
-orgnamez <- rownames(finalTable)
-orgnamez <- str_remove_all(orgnamez,"La_")
-finalTable$DecorFormula <- deFromula[rownames(finalTable)]
-finalTable$fscores <- fscores[rownames(finalTable)]
-
-pander::pander(finalTable)
 
 ```
 
+## Generaring the report
 
+```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/child_Simple_LatentBiomarkers.Rmd")}
+```
