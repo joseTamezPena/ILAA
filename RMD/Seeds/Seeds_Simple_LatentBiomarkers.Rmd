@@ -112,7 +112,9 @@ plot(seeds[,names(whotoMax)],main="Top Correlated variables")
 ### IDeA
 
 ```{r results = "asis" ,warning = FALSE, dpi=300, fig.height= 8, fig.width= 11}
-IDeASeeds <- IDeA(seeds)
+thro <- 0.80
+
+IDeASeeds <- IDeA(seeds,thr=thro)
 plot(IDeASeeds[,colnames(IDeASeeds)!="class"],col=seeds$class,cex=0.65,cex.lab=0.5,cex.axis=0.75,cex.sub=0.5,cex.main=0.75)
 pander::pander(attr(IDeASeeds,"UPSTM"))
 pander::pander(getLatentCoefficients(IDeASeeds))
@@ -142,7 +144,6 @@ getMaxcor <- apply(IDeACor,2,max)
 topCorrelated <- getMaxcor[which.max(getMaxcor)]
 whotoMax <- getMaxcor[getMaxcor == topCorrelated]
 plot(IDeASeeds[,names(whotoMax)],main="IDeA: Top Correlated variables")
-plot(IDeASeeds[,c("area","La_perimeter")],main="IDeA: Top Raw Correlated variables")
 
 ```
 
@@ -287,7 +288,7 @@ par(op)
 studyName <- "Seeds"
 dataframe <- seeds
 outcome <- "class"
-thro <- 0.80
+#thro <- 0.80
 TopVariables <- 5
 cexheat = 0.45
 ```

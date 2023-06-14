@@ -197,6 +197,7 @@ par(op)
 ## The decorrelation
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
 deIR <- IDeA(SalivaIR_Avg,thr=0.80,verbose = TRUE)
 #deIR <- IDeA(SalivaIR_Avg,thr=0.80,relaxed=FALSE,verbose = TRUE)
 
@@ -524,4 +525,84 @@ pander::pander(finalTable)
 
 ```
 
+### Train Test sets
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 6.0}
+set.seed(30)
+caseSet <- subset(SalivaIR_Avg,class==1)
+controlSet <- subset(SalivaIR_Avg,class==0)
+trainCasesamples <- sample(nrow(caseSet),nrow(caseSet)/2) 
+trainContolsamples <- sample(nrow(controlSet),nrow(controlSet)/2)
+trainSet <- rbind(caseSet[trainCasesamples,],controlSet[trainContolsamples,])
+testSet <- rbind(caseSet[-trainCasesamples,],controlSet[-trainContolsamples,])
+
+hm <- heatMaps(data=trainSet,
+               Outcome="class",
+               Scale=TRUE,
+               hCluster = "row",
+               xlab=expression("Wavenumber (cm)"^"-1"),
+               ylab="Sample")
+par(op)
+
+hm <- heatMaps(data=testSet,
+               Outcome="class",
+               Scale=TRUE,
+               hCluster = "row",
+               xlab=expression("Wavenumber (cm)"^"-1"),
+               ylab="Sample")
+par(op)
+
+
+```
+
+## Correlations and plots
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 6.0}
+deIR <- IDeA(trainSet,thr=0.80,verbose = TRUE)
+preIR <- predictDecorrelate(deIR,testSet)
+
+
+hm <- heatMaps(data=deIR,
+               Outcome="class",
+               Scale=TRUE,
+               hCluster = "row",
+               xlab=expression("Wavenumber (cm)"^"-1"),
+               ylab="Sample")
+par(op)
+
+hm <- heatMaps(data=preIR,
+               Outcome="class",
+               Scale=TRUE,
+               hCluster = "row",
+               xlab=expression("Wavenumber (cm)"^"-1"),
+               ylab="Sample")
+par(op)
+```
+
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 6.0}
+
+topFeatures <- univariate_BinEnsemble(deIR,Outcome="class")
+wavetop <- names(topFeatures)
+wavetop <- str_remove_all(wavetop,"La_")
+wavetop <- as.numeric(str_remove_all(wavetop,"V_"))
+values <- as.numeric(topFeatures)
+plot(wavetop,-log10(values),col="red",
+     xlim=c(800,1400),
+     ylim=c(1.0,2.5),
+     ylab="-log(p)",
+     xlab=expression("Wavenumber (cm)"^"-1"),
+     main="Train Discovery")
+
+topFeatures <- univariate_BinEnsemble(preIR,Outcome="class")
+wavetop <- names(topFeatures)
+wavetop <- str_remove_all(wavetop,"La_")
+wavetop <- as.numeric(str_remove_all(wavetop,"V_"))
+values <- as.numeric(topFeatures)
+plot(wavetop,-log10(values),col="red",
+     xlim=c(800,1400),
+     ylim=c(1.0,2.5),
+     ylab="-log(p)",
+     xlab=expression("Wavenumber (cm)"^"-1"),
+     main="Test Discovery")
+
+```
 

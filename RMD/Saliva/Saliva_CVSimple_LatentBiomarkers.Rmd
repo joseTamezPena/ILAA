@@ -104,6 +104,8 @@ dataframe <- SalivaIR_Avg
 outcome <- "class"
 nLoops <- 100
 needScaling <- FALSE
+IDSample <- FALSE
+thro <- 0.8
 
 ```
 ## CV Analysis and report
