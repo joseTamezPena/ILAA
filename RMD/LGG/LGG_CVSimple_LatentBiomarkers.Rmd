@@ -83,10 +83,11 @@ dataframe <- LGG_Data
 outcome <- "Mutacion"
 
 needScaling <- TRUE
-nLoops <- 100
+nLoops <- 10
 
 IDSample <- FALSE
-thro <- 0.8
+thro <- 0.6
+cmethod="spearman"
 
 ```
 ## CV Analysis and report

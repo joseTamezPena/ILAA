@@ -86,8 +86,10 @@ nLoops <- 100
 needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.8
+#cmethod="fast"
 
 ```
+
 ## CV Analysis and report
 
 ```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/CV_analysis.Rmd")}

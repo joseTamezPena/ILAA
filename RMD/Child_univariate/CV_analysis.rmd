@@ -21,6 +21,10 @@ if (exists("IOutcome"))
 {
   cvDataFS <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=needScaling,thr=thro,Outcome=IOutcome)
 } else
+if (exists("cmethod"))
+{
+  cvDataFS <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=needScaling,thr=thro,method=cmethod)
+} else
 {
   cvDataFS <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=needScaling,thr=thro)
 }
