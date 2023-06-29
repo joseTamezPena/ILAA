@@ -1,4 +1,4 @@
-CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,filterMethod=univariate_Wilcoxon,...)
+CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,filterMethod=univariate_Wilcoxon,DecorPCAEFA=TRUE,...)
 {
   SelectedTrainFeatures <- list()
   SelectedTestFeatures <- list()
@@ -138,79 +138,84 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
       Avlen[lp] <- mean(sapply(ltvar,length))
       NumLatent[lp] <- length(ltvar)
 
-      
- ### Preparation for PCA and FCA
-      cat("|")
-      iscontinous <- sapply(apply(trainSet,2,unique),length) > 5 ## Only variables with enough samples
-      ndf <- nrow(trainSet)-2
-      tvalue <- qt(1.0 - 0.001,ndf)
-      rcrit <- tvalue/sqrt(ndf + tvalue^2)
-      cmat <- abs(cor(trainSet[,iscontinous]));
-      diag(cmat) <- 0;
-      maxcor <- apply((cmat > rcrit),2,sum);
-      isCorrContinous <- names(maxcor[maxcor > 1])
-      idNotInCorCon <- colnames(trainSet)[!(colnames(trainSet) %in% isCorrContinous)]
-      cat(round(rcrit,2),",",length(isCorrContinous))
-      
- ### PCA Decorrelation
-      pc <- prcomp(trainSet[,isCorrContinous],center = FALSE,tol=0.01)   #principal components
-      PCApred <- predict(pc,trainSet[,isCorrContinous])
-      PCA_Train <- as.data.frame(cbind(PCApred,trainSet[,idNotInCorCon]))
-      colnames(PCA_Train) <- c(colnames(PCApred),idNotInCorCon) 
-      PCApred <- predict(pc,testSet[,isCorrContinous])
-      PCA_Test <- as.data.frame(cbind(PCApred,testSet[,idNotInCorCon]))
-      colnames(PCA_Test) <- c(colnames(PCApred),idNotInCorCon) 
-      ml <- LASSO_MIN(formula(paste(outcome,"~ .")),PCA_Train,family="binomial")
-      pred <- as.vector(predict(ml,PCA_Test))
-      rocPCA <- pROC::roc(PCA_Test[,outcome],pred,auc=TRUE,quiet=TRUE)
-      
-      PCAROCAUC[lp] <- rocPCA$auc
-      PCATestPredict <- rbind(PCATestPredict,cbind(rownames(PCA_Test),PCA_Test[,outcome],pred))
-      PCASelectedTrainFeatures[[lp]] <- unique(c(names(filterMethod(PCA_Train,outcome,pvalue=0.2,limit=-1)),ml$selectedfeatures))
-      mlt <- LASSO_MIN(formula(paste(outcome,"~ .")),PCA_Test,family="binomial")
-      PCASelectedTestFeatures[[lp]] <- unique(c(names(filterMethod(PCA_Test,outcome,pvalue=0.2,limit=-1)),mlt$selectedfeatures))
-      PCATDR[lp] <- sum(PCASelectedTrainFeatures[[lp]] %in% PCASelectedTestFeatures[[lp]])/length(PCASelectedTrainFeatures[[lp]])
-      
-      PCAtopROCAUC[lp] <- pROC::roc(PCA_Test[,outcome],PCA_Test[,PCASelectedTrainFeatures[[lp]][1]],auc=TRUE,quiet=TRUE)$auc
-      
-      cat("|")
-      
- ### EFA Decorrelation
-      cat("[")
-      if (length(isCorrContinous)<1000)
+      if (DecorPCAEFA)
       {
-        topred <- min(length(isCorrContinous),nrow(trainSet),(ncol(PCA_Train)-1))
-        uls <- try(fa(trainSet[,isCorrContinous],topred,rotate="varimax",warnings=FALSE))  # EFA analysis
-        if (!inherits(uls,"try-error"))
-        {
-          EFApred <- predict(uls,trainSet[,isCorrContinous])
-          EFA_Train <- as.data.frame(cbind(EFApred,trainSet[,idNotInCorCon]))
-          colnames(EFA_Train) <- c(colnames(EFApred),idNotInCorCon) 
-          EFApred <- predict(uls,testSet[,isCorrContinous])
-          EFA_Test <- as.data.frame(cbind(EFApred,testSet[,idNotInCorCon]))
-          colnames(EFA_Test) <- c(colnames(EFApred),idNotInCorCon) 
-          ml <- LASSO_MIN(formula(paste(outcome,"~ .")),EFA_Train,family="binomial")
-          pred <- as.vector(predict(ml,EFA_Test))
-#          print(table(EFA_Test[,outcome]))
-          rocEFA <- pROC::roc(EFA_Test[,outcome],pred,auc=TRUE,quiet=TRUE)
           
-          EFAROCAUC[lp] <- rocEFA$auc
-          EFATestPredict <- rbind(EFATestPredict,cbind(rownames(EFA_Test),EFA_Test[,outcome],pred))
-          EFASelectedTrainFeatures[[lp]] <- unique(c(names(filterMethod(EFA_Train,outcome,pvalue=0.2,limit=-1)),ml$selectedfeatures))
-          mlt <- LASSO_MIN(formula(paste(outcome,"~ .")),EFA_Test,family="binomial")
-          EFASelectedTestFeatures[[lp]] <- unique(c(names(filterMethod(EFA_Test,outcome,pvalue=0.2,limit=-1)),mlt$selectedfeatures))
-          EFATDR[lp] <- sum(EFASelectedTrainFeatures[[lp]] %in% EFASelectedTestFeatures[[lp]])/length(EFASelectedTrainFeatures[[lp]])
-    
-          EFAtopROCAUC[lp] <- pROC::roc(EFA_Test[,outcome],EFA_Test[,EFASelectedTrainFeatures[[lp]][1]],auc=TRUE,quiet=TRUE)$auc
-        }
-        else
+   ### Preparation for PCA and FCA
+        cat("|")
+        iscontinous <- sapply(apply(trainSet,2,unique),length) > 5 ## Only variables with enough samples
+        ndf <- nrow(trainSet)-2
+        tvalue <- qt(1.0 - 0.001,ndf)
+        rcrit <- tvalue/sqrt(ndf + tvalue^2)
+        cmat <- abs(cor(trainSet[,iscontinous]));
+        diag(cmat) <- 0;
+        maxcor <- apply((cmat > rcrit),2,sum);
+        isCorrContinous <- names(maxcor[maxcor > 1])
+        idNotInCorCon <- colnames(trainSet)[!(colnames(trainSet) %in% isCorrContinous)]
+        cat(round(rcrit,2),",",length(isCorrContinous))
+        
+   ### PCA Decorrelation
+        pc <- prcomp(trainSet[,isCorrContinous],center = FALSE,tol=0.01)   #principal components
+        PCApred <- predict(pc,trainSet[,isCorrContinous])
+        PCA_Train <- as.data.frame(cbind(PCApred,trainSet[,idNotInCorCon]))
+        colnames(PCA_Train) <- c(colnames(PCApred),idNotInCorCon) 
+        PCApred <- predict(pc,testSet[,isCorrContinous])
+        PCA_Test <- as.data.frame(cbind(PCApred,testSet[,idNotInCorCon]))
+        colnames(PCA_Test) <- c(colnames(PCApred),idNotInCorCon) 
+        ml <- LASSO_MIN(formula(paste(outcome,"~ .")),PCA_Train,family="binomial")
+        pred <- as.vector(predict(ml,PCA_Test))
+        rocPCA <- pROC::roc(PCA_Test[,outcome],pred,auc=TRUE,quiet=TRUE)
+        
+        PCAROCAUC[lp] <- rocPCA$auc
+        PCATestPredict <- rbind(PCATestPredict,cbind(rownames(PCA_Test),PCA_Test[,outcome],pred))
+        PCASelectedTrainFeatures[[lp]] <- unique(c(names(filterMethod(PCA_Train,outcome,pvalue=0.2,limit=-1)),ml$selectedfeatures))
+        mlt <- LASSO_MIN(formula(paste(outcome,"~ .")),PCA_Test,family="binomial")
+        PCASelectedTestFeatures[[lp]] <- unique(c(names(filterMethod(PCA_Test,outcome,pvalue=0.2,limit=-1)),mlt$selectedfeatures))
+        PCATDR[lp] <- sum(PCASelectedTrainFeatures[[lp]] %in% PCASelectedTestFeatures[[lp]])/length(PCASelectedTrainFeatures[[lp]])
+        
+        PCAtopROCAUC[lp] <- pROC::roc(PCA_Test[,outcome],PCA_Test[,PCASelectedTrainFeatures[[lp]][1]],auc=TRUE,quiet=TRUE)$auc
+        
+        cat("|")
+        
+   ### EFA Decorrelation
+        cat("[")
+        if (length(isCorrContinous)<1000)
         {
-          EFAROCAUC[lp] <- 0.5
-          EFAtopROCAUC[lp] <- 0.5
-          EFATDR[lp] <- 0;
-          EFATestPredict <- rbind(EFATestPredict,cbind(rownames(EFA_Test),EFA_Test[,outcome],rep(-1,nrow(EFA_Test))))
-          EFASelectedTrainFeatures[[lp]] <- ""
-          EFASelectedTestFeatures[[lp]] <- ""
+          topred <- min(length(isCorrContinous),nrow(trainSet),(ncol(PCA_Train)-1))
+          uls <- try(fa(trainSet[,isCorrContinous],topred,rotate="varimax",warnings=FALSE))  # EFA analysis
+          if (!inherits(uls,"try-error"))
+          {
+            EFApred <- predict(uls,trainSet[,isCorrContinous])
+            EFA_Train <- as.data.frame(cbind(EFApred,trainSet[,idNotInCorCon]))
+            colnames(EFA_Train) <- c(colnames(EFApred),idNotInCorCon) 
+            EFApred <- predict(uls,testSet[,isCorrContinous])
+            EFA_Test <- as.data.frame(cbind(EFApred,testSet[,idNotInCorCon]))
+            colnames(EFA_Test) <- c(colnames(EFApred),idNotInCorCon) 
+            ml <- LASSO_MIN(formula(paste(outcome,"~ .")),EFA_Train,family="binomial")
+            pred <- as.vector(predict(ml,EFA_Test))
+            pred[is.na(pred)] <- 0
+            pred[is.infinite(pred)] <- 0
+            print(table(EFA_Test[,outcome]))
+            rocEFA <- pROC::roc(EFA_Test[,outcome],pred,auc=TRUE,quiet=TRUE)
+            
+            EFAROCAUC[lp] <- rocEFA$auc
+            EFATestPredict <- rbind(EFATestPredict,cbind(rownames(EFA_Test),EFA_Test[,outcome],pred))
+            EFASelectedTrainFeatures[[lp]] <- unique(c(names(filterMethod(EFA_Train,outcome,pvalue=0.2,limit=-1)),ml$selectedfeatures))
+            mlt <- LASSO_MIN(formula(paste(outcome,"~ .")),EFA_Test,family="binomial")
+            EFASelectedTestFeatures[[lp]] <- unique(c(names(filterMethod(EFA_Test,outcome,pvalue=0.2,limit=-1)),mlt$selectedfeatures))
+            EFATDR[lp] <- sum(EFASelectedTrainFeatures[[lp]] %in% EFASelectedTestFeatures[[lp]])/length(EFASelectedTrainFeatures[[lp]])
+      
+            EFAtopROCAUC[lp] <- pROC::roc(EFA_Test[,outcome],EFA_Test[,EFASelectedTrainFeatures[[lp]][1]],auc=TRUE,quiet=TRUE)$auc
+          }
+          else
+          {
+            EFAROCAUC[lp] <- 0.5
+            EFAtopROCAUC[lp] <- 0.5
+            EFATDR[lp] <- 0;
+            EFATestPredict <- rbind(EFATestPredict,cbind(rownames(EFA_Test),EFA_Test[,outcome],rep(-1,nrow(EFA_Test))))
+            EFASelectedTrainFeatures[[lp]] <- ""
+            EFASelectedTestFeatures[[lp]] <- ""
+          }
         }
       }
       
@@ -227,25 +232,32 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
   medTestclass <- boxplot(as.numeric(DeTestPredict[,2])~DeTestPredict[,1],plot=FALSE)
   DeMedTestRaw <- cbind(medTestclass$stats[3,],DeMedTestRaw$stats[3,]) 
   
-  PCAMedTestRaw <- boxplot(as.numeric(PCATestPredict[,3])~PCATestPredict[,1],plot=FALSE)
-  PCAmedTestclass <- boxplot(as.numeric(PCATestPredict[,2])~PCATestPredict[,1],plot=FALSE)
-  PCAMedTestRaw <- cbind(PCAmedTestclass$stats[3,],PCAMedTestRaw$stats[3,]) 
+  PCAMedTestRaw <- NULL
+  PCAmedTestclass <- NULL
+  EFAMedTestRaw <- NULL
+  EFAmedTestclass <- NULL
+  if (DecorPCAEFA)
+  {
+    PCAMedTestRaw <- boxplot(as.numeric(PCATestPredict[,3])~PCATestPredict[,1],plot=FALSE)
+    PCAmedTestclass <- boxplot(as.numeric(PCATestPredict[,2])~PCATestPredict[,1],plot=FALSE)
+    PCAMedTestRaw <- cbind(PCAmedTestclass$stats[3,],PCAMedTestRaw$stats[3,]) 
 
-  if (length(isCorrContinous)<1000)
-  {
-    EFAMedTestRaw <- boxplot(as.numeric(EFATestPredict[,3])~EFATestPredict[,1],plot=FALSE)
-    EFAmedTestclass <- boxplot(as.numeric(EFATestPredict[,2])~EFATestPredict[,1],plot=FALSE)
-    EFAMedTestRaw <- cbind(EFAmedTestclass$stats[3,],EFAMedTestRaw$stats[3,]) 
-  }
-  else ## Fake numbers
-  {
-    EFATestPredict <- PCATestPredict
-    EFAMedTestRaw <- PCAMedTestRaw
-    EFAROCAUC <- PCAROCAUC
-    EFASelectedTrainFeatures <- PCASelectedTrainFeatures
-    EFASelectedTestFeatures <- PCASelectedTestFeatures
-    EFATDR <- PCATDR
-    EFAtopROCAUC <- PCAtopROCAUC
+    if (length(isCorrContinous)<1000)
+    {
+      EFAMedTestRaw <- boxplot(as.numeric(EFATestPredict[,3])~EFATestPredict[,1],plot=FALSE)
+      EFAmedTestclass <- boxplot(as.numeric(EFATestPredict[,2])~EFATestPredict[,1],plot=FALSE)
+      EFAMedTestRaw <- cbind(EFAmedTestclass$stats[3,],EFAMedTestRaw$stats[3,]) 
+    }
+    else ## Fake numbers
+    {
+      EFATestPredict <- PCATestPredict
+      EFAMedTestRaw <- PCAMedTestRaw
+      EFAROCAUC <- PCAROCAUC
+      EFASelectedTrainFeatures <- PCASelectedTrainFeatures
+      EFASelectedTestFeatures <- PCASelectedTestFeatures
+      EFATDR <- PCATDR
+      EFAtopROCAUC <- PCAtopROCAUC
+    }
   }
   
   FDRAnalysis <- list(SelectedTrainFeatures=SelectedTrainFeatures,

@@ -23,7 +23,7 @@ pander::pander(table(dataframe[,outcome]))
 varlist <- colnames(dataframe)
 varlist <- varlist[varlist != outcome]
 
-largeSet <- length(varlist) > 1000
+largeSet <- length(varlist) > 1500
 ```
 
 ### Scaling the data

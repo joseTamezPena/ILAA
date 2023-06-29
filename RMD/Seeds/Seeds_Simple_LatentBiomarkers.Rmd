@@ -119,6 +119,11 @@ plot(IDeASeeds[,colnames(IDeASeeds)!="class"],col=seeds$class,cex=0.65,cex.lab=0
 pander::pander(attr(IDeASeeds,"UPSTM"))
 pander::pander(getLatentCoefficients(IDeASeeds))
 
+#disRaw <- as.matrix(dist(seeds))
+#disIDeA <- as.matrix(dist(IDeASeeds))
+#head(disRaw)
+#head(disIDeA)
+
 
 IDeACor <- cor(IDeASeeds[,colnames(IDeASeeds)!="class"])
 
@@ -261,20 +266,27 @@ PCAseed$class <- seeds$class
 EFAseed$class <- seeds$class
 rawmodel <- glm(class~.,seeds,family="binomial")
 pander::pander(summary(rawmodel))
+sm <- summary(rawmodel)
+pander::pander(sm$aic)
 plot(rawmodel)
 
 IDeAmodel <- glm(class~.,IDeASeeds,family="binomial")
 pander::pander(summary(IDeAmodel))
+sm <- summary(IDeAmodel)
+pander::pander(sm$aic)
 plot(IDeAmodel)
 
 
 PCAmodel <- glm(class~.,PCAseed,family="binomial")
 pander::pander(summary(PCAmodel))
+sm <- summary(PCAmodel)
+pander::pander(sm$aic)
 plot(PCAmodel)
-
 
 EFAmodel <- glm(class~.,EFAseed,family="binomial")
 pander::pander(summary(EFAmodel))
+sm <- summary(EFAmodel)
+pander::pander(sm$aic)
 plot(EFAmodel)
 
 par(op)
