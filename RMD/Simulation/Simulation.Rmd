@@ -46,143 +46,44 @@ op <- par(no.readonly = TRUE)
 pander::panderOptions('digits', 3)
 pander::panderOptions('table.split.table', 400)
 pander::panderOptions('keep.trailing.zeros',TRUE)
+source("~/GitHub/LatentBiomarkers/SimulatedDataFunctions.R")
 
 ```
 
+### Simulation parameters
+
+```{r}
+NUmberofSimulations = 100
+
+## Simulation parameters
+NumOfObs  <- 1000
+NumOfCorFeatures <- 40
+randomToCorrelRatio <- 1
+pOfnoZero <- 0.10
+
+## IDeA parameters
+thr <- 0.50
+method <- "fast"
+type <- "LM"
+
+```
 
 
 
 ## The Data
 
 ```{r}
-NRandom <- 30
-NObser <- 1000
-FacRand <- 2
-randdata <- matrix(0,nrow=NObser,ncol=NRandom)
 
-for (i in 1:(NRandom/2))
-{
-  randdata[,i*2-1] <- rnorm(NObser)
-  randdata[,i*2] <- 3*(runif(NObser,0,1) - 0.5)
-}
-
-print(summary(randdata))
-```
-
-
-## Create a sparse transformation
-
-```{r}
-rotmat <- matrix(0,nrow=NRandom,ncol=NRandom);
-pupdate <- 0.10
-for (i in 1:NRandom)
-{
-  if (i < NRandom/2)
-  {
-    for (j in 1:(NRandom/2))
-    {
-        if (runif(1) < pupdate)
-        {
-          rotmat[i,j] <- rnorm(1)
-        }
-    }
-  }
-  else
-  {
-    for (j in (NRandom/2+1):NRandom)
-    {
-        if (runif(1) < pupdate)
-        {
-          rotmat[i,j] <- rnorm(1)
-        }
-    }
-  }
-}
-rotmat[abs(rotmat) < 0.1] <- 0
-diag(rotmat) <- 1.0
-
-rotmat <- as.data.frame(rotmat)
-rownames(rotmat) <- paste("V",rownames(rotmat),sep="")
-colnames(rotmat) <- paste("La_",colnames(rotmat),sep="")
-rotmat <- as.matrix(rotmat)
+syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=randomToCorrelRatio,pOfnoZero=pOfnoZero)
 
 ```
 
-### heatmap rotation
-
-### Heat map
-
-```{r}
-
-gplots::heatmap.2(abs(rotmat),
-                    trace = "none",
-                    mar = c(5,5),
-                    col=rev(heat.colors(5)),
-                    main = "Transformation",
-                    cexRow = 0.5,
-                    cexCol = 0.5,
-                     srtCol=45,
-                     srtRow= -45,
-                    key.title=NA,
-                    key.xlab="Coefficients",
-                    xlab="Feature", ylab="Feature")
-
-```
-
-
-## Rotate the data
-
-```{r}
-irotmat <- solve(rotmat)
-print(1*(abs(rotmat)>1.0e-3))
-print(1*(abs(irotmat)>1.0e-3))
-print((irotmat %*% rotmat) > 1.0e-6)
-
-CorrelObs <- as.data.frame(randdata %*% irotmat);
-
-#plot(CorrelObs)
-```
-
-
-### Heat map
-
-```{r}
-rawCor <- cor(CorrelObs)
-
-  gplots::heatmap.2(abs(rawCor),
-                    trace = "none",
-  #                  scale = "row",
-                    mar = c(5,5),
-                    col=rev(heat.colors(5)),
-                    main = "Original Correlation",
-                    cexRow = 0.5,
-                    cexCol = 0.5,
-                     srtCol=45,
-                     srtRow= -45,
-                    key.title=NA,
-                    key.xlab="Pearson Correlation",
-                    xlab="Feature", ylab="Feature")
-
-```
-
-
-### Add random features
-```{r}
-
-CorrelObs <- cbind(CorrelObs,matrix(rnorm(FacRand*NRandom*NObser),nrow=NObser,ncol=FacRand*NRandom))
-colnames(CorrelObs) <- paste("ER",colnames(CorrelObs),sep="")
-colnames(CorrelObs) <- str_replace_all(colnames(CorrelObs),"ERV","V")
-
-```
 
 ### IDeA
 
 ```{r}
 
-IdeT <- IDeA(CorrelObs,corRank=TRUE,thr=0.5,verbose=TRUE)
-#IdeT <- IDeA(CorrelObs,corRank=FALSE,thr=0.5,verbose=TRUE)
-#IdeT <- IDeA(CorrelObs,relaxed=FALSE,corRank=FALSE,thr=0.5,verbose=TRUE)
-attr(IdeT,"IDeAEvolution")
+IdeT <- IDeA(syndata$data,corRank=TRUE,thr=thr,verbose=TRUE)
 rmat <- attr(IdeT,"UPSTM")
 falsedisc <- str_detect(rownames(rmat),"R")
 sum(falsedisc)
@@ -191,15 +92,7 @@ falsedisc <- str_detect(colnames(rmat),"R")
 sum(falsedisc)
 rmat <- rmat[,!falsedisc]
 
-dtran <- IdeT
-attr(dtran,"UPSTM") <- rotmat
-
-getLatentCoefficients(dtran)
-
-getLatentCoefficients(IdeT)
-
-
-rnrotmat <- rotmat
+rnrotmat <- syndata$rotMatrix
 colnames(rnrotmat) <- str_remove_all(colnames(rnrotmat),"La_")
 GTassVar <- rnrotmat != 0
 GTassVar <- 1*(GTassVar | t(GTassVar))
@@ -210,7 +103,6 @@ IDassVar <- rnrmat != 0
 IDassVar <- 1*(IDassVar | t(IDassVar))
 
 
-print(GTassVar)
 aux <- IDassVar
 IDassVar <- 0*GTassVar
 for (rn in rownames(aux))
@@ -221,10 +113,243 @@ for (rn in rownames(aux))
   }
 }
 diag(IDassVar) <- 1
-print(IDassVar)
-print(GTassVar==IDassVar)
-print(sum(GTassVar==IDassVar)/(NRandom^2))
+
+print(sum(GTassVar==IDassVar)/(ncol(rnrotmat)^2))
 
 
 ```
 
+
+
+### Heat map
+
+```{r}
+rawCor <- cor(syndata$onlyRotatedData)
+
+  gplots::heatmap.2(abs(rawCor),
+                    trace = "none",
+                    mar = c(5,5),
+                    Rowv = FALSE,
+                    Colv = FALSE,
+                    col=rev(heat.colors(5)),
+                    main = "Pearson Correlation",
+                    dendrogram = "none",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                    key.title=NA,
+                    key.xlab="Coefficients",
+                    xlab="Feature", ylab="Feature")
+
+```
+
+
+### Heat map true rotation
+
+```{r}
+
+gplots::heatmap.2(GTassVar,
+                    trace = "none",
+                    mar = c(5,5),
+                    Rowv = FALSE,
+                    Colv = FALSE,
+                    col=rev(heat.colors(5)),
+                    main = "True Transformation",
+                    dendrogram = "none",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                    key.title=NA,
+                    key.xlab="Coefficients",
+                    xlab="Feature", ylab="Feature")
+
+```
+
+### Heat map estimated rotation
+
+```{r}
+
+gplots::heatmap.2(IDassVar,
+                    trace = "none",
+                    mar = c(5,5),
+                    Rowv = FALSE,
+                    Colv = FALSE,
+                    col=rev(heat.colors(5)),
+                    main = "IDeA Transformation",
+                    dendrogram = "none",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                    key.title=NA,
+                    key.xlab="Coefficients",
+                    xlab="Feature", ylab="Feature")
+
+```
+
+## Lets do 100 simulations
+
+### First
+```{r}
+
+
+falseDiscoveryT <- numeric(NUmberofSimulations)
+DiscoveryAccuracyT <- numeric(NUmberofSimulations)
+trainCorT <- numeric(NUmberofSimulations)
+testCorT <- numeric(NUmberofSimulations)
+
+falseDiscoveryF <- numeric(NUmberofSimulations)
+DiscoveryAccuracyF <- numeric(NUmberofSimulations)
+trainCorF <- numeric(NUmberofSimulations)
+testCorF <- numeric(NUmberofSimulations)
+
+falseDiscoveryST <- numeric(NUmberofSimulations)
+DiscoveryAccuracyST <- numeric(NUmberofSimulations)
+trainCorST <- numeric(NUmberofSimulations)
+testCorST <- numeric(NUmberofSimulations)
+
+falseDiscoverySF <- numeric(NUmberofSimulations)
+DiscoveryAccuracySF <- numeric(NUmberofSimulations)
+trainCorSF <- numeric(NUmberofSimulations)
+testCorSF <- numeric(NUmberofSimulations)
+
+overlapTF <- numeric(NUmberofSimulations)
+overlapSTSF <- numeric(NUmberofSimulations)
+overlapTST <- numeric(NUmberofSimulations)
+overlapFST <- numeric(NUmberofSimulations)
+overlapTSF <- numeric(NUmberofSimulations)
+overlapFSF <- numeric(NUmberofSimulations)
+
+
+i = 1
+for (i in 1:NUmberofSimulations)
+{
+  cat(".")
+  if (i %% 10 == 0) cat("\n")
+  syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=randomToCorrelRatio,pOfnoZero=pOfnoZero)
+  
+  trainSample <- sample(NumOfObs,NumOfObs/2)
+  cat("T")
+  evalIDeATRUE <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+                                 testdata=syndata$data[-trainSample,],
+                                 trueRotation=syndata$rotMatrix,
+                                 method=method,
+                                 corRank=TRUE,
+                                 thr=thr,
+                                 type=type)
+  trainCorT[i] <- evalIDeATRUE$trainCorrelation
+  testCorT[i] <- evalIDeATRUE$testCorrelation
+  falseDiscoveryT[i] <- evalIDeATRUE$falseDiscovery
+  DiscoveryAccuracyT[i] <- evalIDeATRUE$DiscoveryAccuracy
+  
+
+  cat("F")
+  evalIDeAFALSE <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+                                 testdata=syndata$data[-trainSample,],
+                                 trueRotation=syndata$rotMatrix,
+                                 method=method,
+                                 corRank=FALSE,
+                                 thr=thr,
+                                 type=type)
+  trainCorF[i] <- evalIDeAFALSE$trainCorrelation
+  testCorF[i] <- evalIDeAFALSE$testCorrelation
+  falseDiscoveryF[i] <- evalIDeAFALSE$falseDiscovery
+  DiscoveryAccuracyF[i] <- evalIDeAFALSE$DiscoveryAccuracy
+  
+  cat("t")
+  evalIDeASpearmanT <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+                                 testdata=syndata$data[-trainSample,],
+                                 trueRotation=syndata$rotMatrix,
+                                 method="spearman",
+                                 corRank=TRUE,
+                                 thr=thr,
+                                 type="RLM")
+  trainCorST[i] <- evalIDeASpearmanT$trainCorrelation
+  testCorST[i] <- evalIDeASpearmanT$testCorrelation
+  falseDiscoveryST[i] <- evalIDeASpearmanT$falseDiscovery
+  DiscoveryAccuracyST[i] <- evalIDeASpearmanT$DiscoveryAccuracy
+  
+  cat("f")
+  evalIDeASpearmanF <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+                                 testdata=syndata$data[-trainSample,],
+                                 trueRotation=syndata$rotMatrix,
+                                 method="spearman",
+                                 corRank=FALSE,
+                                 thr=thr,
+                                 type="RLM")
+  trainCorSF[i] <- evalIDeASpearmanF$trainCorrelation
+  testCorSF[i] <- evalIDeASpearmanF$testCorrelation
+  falseDiscoverySF[i] <- evalIDeASpearmanF$falseDiscovery
+  DiscoveryAccuracySF[i] <- evalIDeASpearmanF$DiscoveryAccuracy
+
+  overlapTF[i] <- sum(evalIDeATRUE$detectedFeatures == evalIDeAFALSE$detectedFeatures)/(nrow(evalIDeATRUE$detectedFeatures)^2)
+  overlapSTSF[i] <- sum(evalIDeASpearmanT$detectedFeatures == evalIDeASpearmanF$detectedFeatures)/(nrow(evalIDeATRUE$detectedFeatures)^2)
+  overlapTST[i] <- sum(evalIDeATRUE$detectedFeatures == evalIDeASpearmanT$detectedFeatures)/(nrow(evalIDeATRUE$detectedFeatures)^2)
+  overlapFST[i] <- sum(evalIDeAFALSE$detectedFeatures == evalIDeASpearmanT$detectedFeatures)/(nrow(evalIDeATRUE$detectedFeatures)^2)
+  overlapTSF[i] <- sum(evalIDeATRUE$detectedFeatures == evalIDeASpearmanF$detectedFeatures)/(nrow(evalIDeATRUE$detectedFeatures)^2)
+  overlapFSF[i] <- sum(evalIDeAFALSE$detectedFeatures == evalIDeASpearmanF$detectedFeatures)/(nrow(evalIDeATRUE$detectedFeatures)^2)
+  
+}
+
+boxplot(list(CorRank_T=DiscoveryAccuracyT,CorRank_F=DiscoveryAccuracyF,CorRank_ST=DiscoveryAccuracyST,CorRank_SF=DiscoveryAccuracySF))
+boxplot(list(TP=overlapTF,
+             STSF=overlapSTSF,
+             TST=overlapTST,
+             FST=overlapFST,
+             TSF=overlapTSF,
+             FSF=overlapFSF)
+        )
+boxplot(list(CorRank_T=trainCorT,CorRank_F=trainCorF,CorRank_ST=trainCorST,CorRank_SF=trainCorSF))
+boxplot(list(CorRank_T=testCorT,CorRank_F=testCorF,CorRank_ST=testCorST,CorRank_SF=testCorSF))
+
+```
+
+
+### Second Checking the thrs
+```{r}
+
+thrvals <- c(0.80,0.70,0.60,0.50,0.40,0.30)
+
+randomToCorrelRatio <- 1
+
+falseDiscovery <- matrix(0,nrow=NUmberofSimulations,ncol=length(thrvals))
+DiscoveryAccuracy <- falseDiscovery
+trainCor <- falseDiscovery
+testCor <- falseDiscovery
+
+i = 1
+for (i in 1:NUmberofSimulations)
+{
+  cat(".")
+  if (i %% 10 == 0) cat("\n")
+  syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=randomToCorrelRatio,pOfnoZero=pOfnoZero)
+  
+  trainSample <- sample(NumOfObs,NumOfObs/2)
+  cn <- 1;
+  for (thr in thrvals)
+  {
+    cat("T")
+    evalIDeA <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+                                   testdata=syndata$data[-trainSample,],
+                                   trueRotation=syndata$rotMatrix,
+                                   method=method,
+                                   corRank=FALSE,
+                                   thr=thr,
+                                   type=type)
+    trainCor[i,cn] <- evalIDeA$trainCorrelation
+    testCor[i,cn] <- evalIDeA$testCorrelation
+    falseDiscovery[i,cn] <- evalIDeA$falseDiscovery
+    DiscoveryAccuracy[i,cn] <- evalIDeA$DiscoveryAccuracy
+    cn <- cn + 1;
+  }
+}
+DiscoveryAccuracy <- as.data.frame(DiscoveryAccuracy)
+colnames(DiscoveryAccuracy) <- paste("At_",thrvals,sep="")
+testCor <- as.data.frame(testCor)
+colnames(testCor) <- colnames(DiscoveryAccuracy)
+
+falseDiscovery <- as.data.frame(falseDiscovery)
+colnames(falseDiscovery) <- colnames(falseDiscovery)
+
+
+boxplot(DiscoveryAccuracy)
+boxplot(testCor)
+boxplot(falseDiscovery)
+
+```
