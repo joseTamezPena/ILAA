@@ -4,7 +4,7 @@
 ## rotMatrix= the rotation matrix,
 ## onlyRotatedData= the dataframe with only rotated features
 
-SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=2,pOfnoZero=0.1)
+SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=2,pOfnoZero=0.1,noiseLevel=0.1)
 {
   NRandom <- NumOfCorFeatures
   NObser <- NumOfObs
@@ -70,11 +70,14 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
   irotmat <- solve(rotmat)
 
   MCorrelObs <- as.data.frame(randdata %*% irotmat);
-  
+
+  ## Add noise features
+  MCorrelObs <- MCorrelObs + matrix(rnorm(NRandom*NObser,0,noiseLevel),nrow=NObser,ncol=NRandom)
   ## Add random features
   CorrelObs <- cbind(MCorrelObs,matrix(rnorm(FacRand*NRandom*NObser),nrow=NObser,ncol=FacRand*NRandom))
   colnames(CorrelObs) <- paste("ER",colnames(CorrelObs),sep="")
   colnames(CorrelObs) <- str_replace_all(colnames(CorrelObs),"ERV","V")
+
   
   
   result <- list(data=CorrelObs,rotMatrix=rotmat,onlyRotatedData=MCorrelObs)

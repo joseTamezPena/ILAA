@@ -17,14 +17,9 @@ editor_options:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
-
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
-
 ```
+
 
 
 # Validating IDeA as metod to recover the transformation matrix structure
@@ -74,7 +69,11 @@ type <- "LM"
 
 ```{r}
 
-syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=randomToCorrelRatio,pOfnoZero=pOfnoZero)
+syndata <- SyntheticData(NumOfObs=NumOfObs,
+                         NumOfCorFeatures=NumOfCorFeatures,
+                         randomToCorrelRatio=randomToCorrelRatio,
+                         pOfnoZero=pOfnoZero,
+                         noiseLevel=0.1)
 
 ```
 
@@ -183,9 +182,9 @@ gplots::heatmap.2(IDassVar,
 
 ```
 
-## Lets do 100 simulations
+## Lets run simulations
 
-### First
+### Testing the differences in parameters
 ```{r}
 
 
@@ -301,12 +300,13 @@ boxplot(list(CorRank_T=testCorT,CorRank_F=testCorF,CorRank_ST=testCorST,CorRank_
 ```
 
 
-### Second Checking the thrs
+### Testing the effect of the threshold
 ```{r}
 
-thrvals <- c(0.80,0.70,0.60,0.50,0.40,0.30)
+thrvals <- c(0.20,0.30,0.40,0.50,0.60,0.70,0.80,0.90)
 
 randomToCorrelRatio <- 1
+NUmberofSimulations <- 30
 
 falseDiscovery <- matrix(0,nrow=NUmberofSimulations,ncol=length(thrvals))
 DiscoveryAccuracy <- falseDiscovery
@@ -345,11 +345,66 @@ testCor <- as.data.frame(testCor)
 colnames(testCor) <- colnames(DiscoveryAccuracy)
 
 falseDiscovery <- as.data.frame(falseDiscovery)
-colnames(falseDiscovery) <- colnames(falseDiscovery)
+colnames(falseDiscovery) <- colnames(DiscoveryAccuracy)
 
 
 boxplot(DiscoveryAccuracy)
 boxplot(testCor)
 boxplot(falseDiscovery)
+
+```
+
+### Testing the effect of the number of random features
+```{r}
+
+
+randomToCorrelRatios <- c(1,10,100)
+NUmberofSimulations <- 30
+
+falseDiscoveryR <- matrix(0,nrow=NUmberofSimulations,ncol=length(randomToCorrelRatios))
+DiscoveryAccuracyR <- falseDiscoveryR
+trainCorR <- falseDiscoveryR
+testCorR <- falseDiscoveryR
+thr <- 0.5
+
+i = 1
+cn <- 1;
+for (rToCRatio in randomToCorrelRatios)
+{
+  for (i in 1:NUmberofSimulations)
+  {
+    cat(".")
+    if (i %% 10 == 0) cat("\n")
+    syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=rToCRatio,pOfnoZero=pOfnoZero)
+    
+    trainSample <- sample(NumOfObs,NumOfObs/2)
+    evalIDeA <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+                                   testdata=syndata$data[-trainSample,],
+                                   trueRotation=syndata$rotMatrix,
+                                   method=method,
+                                   corRank=FALSE,
+                                   thr=thr,
+                                   type=type)
+    trainCorR[i,cn] <- evalIDeA$trainCorrelation
+    testCorR[i,cn] <- evalIDeA$testCorrelation
+    falseDiscoveryR[i,cn] <- evalIDeA$falseDiscovery
+    DiscoveryAccuracyR[i,cn] <- evalIDeA$DiscoveryAccuracy
+  }
+  cn <- cn + 1;
+}
+
+
+DiscoveryAccuracyR <- as.data.frame(DiscoveryAccuracyR)
+colnames(DiscoveryAccuracyR) <- paste("At_",randomToCorrelRatios,sep="")
+testCorR <- as.data.frame(testCorR)
+colnames(testCorR) <- colnames(DiscoveryAccuracyR)
+
+falseDiscoveryR <- as.data.frame(falseDiscoveryR)
+colnames(falseDiscoveryR) <- colnames(DiscoveryAccuracyR)
+
+
+boxplot(DiscoveryAccuracyR)
+boxplot(testCorR)
+boxplot(falseDiscoveryR)
 
 ```
