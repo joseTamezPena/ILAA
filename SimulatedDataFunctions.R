@@ -4,13 +4,13 @@
 ## rotMatrix= the rotation matrix,
 ## onlyRotatedData= the dataframe with only rotated features
 
-SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=2,pOfnoZero=0.1,noiseLevel=0.1)
+SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=2,pOfnoZero=0.35,noiseLevel=0.2)
 {
   NRandom <- NumOfCorFeatures
   NObser <- NumOfObs
   FacRand <- randomToCorrelRatio
   
-  ## Create a set of random data frame with normla and uniform distributions
+  ## Create a set of random data frame with normal and uniform distributions
   randdata <- matrix(0,nrow=NObser,ncol=NRandom)
   
   for (i in 1:(NRandom/2))
@@ -22,44 +22,47 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
   ## Create the rotation matrix
   rotmat <- matrix(0,nrow=NRandom,ncol=NRandom);
   pupdate <- pOfnoZero
+  isLatent <- runif(NRandom) <= pupdate
   for (i in 1:NRandom)
   {
     if (i <= NRandom/2)
     {
       for (j in 1:(NRandom/2))
       {
-        if (runif(1) <= pupdate)
+        maylatent <- (runif(1) <= pupdate^2)
+        if ( !isLatent[j] | maylatent)
         {
-          rotmat[i,j] <- 0.5*rnorm(1)
+          if (((runif(1) <= sqrt(pupdate)) && isLatent[i]) | maylatent)
+          {
+            rotmat[j,i] <- rnorm(1)*(1.0 - 0.5*isLatent[j])
+            if (abs(rotmat[j,i]) < 0.2)
+            {
+              rotmat[j,i] <- 0.2*sign(rotmat[j,i])
+            }
+          }
         }
       }
     }
     else
     {
-#      if (i <= 2*NRandom/3)
+      for (j in (NRandom/2 + 1):NRandom)
       {
-        for (j in (NRandom/2 + 1):NRandom)
+        maylatent <- (runif(1) <= pupdate^2)
+        if ( !isLatent[j] | maylatent)
         {
-          if (runif(1) <= pupdate)
+          if (((runif(1) <= sqrt(pupdate)) && isLatent[i]) | maylatent)
           {
-            rotmat[i,j] <- rnorm(1)
+            rotmat[j,i] <- rnorm(1)*(1.0 - 0.5*isLatent[j])
+            if (abs(rotmat[j,i]) < 0.2)
+            {
+              rotmat[j,i] <- 0.2*sign(rotmat[j,i])
+            }
           }
         }
       }
-#      else
-#      {
-#        for (j in (2*NRandom/3 + 1):NRandom)
-#        {
-#          if (runif(1) < pupdate)
-#          {
-#            rotmat[i,j] <- rnorm(1)
-#          }
-#        }
-#      }
     }
   }
-  rotmat[abs(rotmat) < 0.01] <- 0
-  diag(rotmat) <- 0.5 + runif(NRandom)
+  diag(rotmat) <- 1.0
   
   ## Rotate the random matrix
   rotmat <- as.data.frame(rotmat)
@@ -84,18 +87,23 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
   return (result)
 }
 
+#############################
 ## Estimates the IDeA rotation and compares with ground truth
 ## At return:
 ## FalseDiscovery
 ## Accuracy
 ## Correlation on test set
-
+## detectedFeatures
+## UPSTM
+##rcrit
+####################
 IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank=corRank,thr=thr,type=type)
 {
   
 #  IdeT <- IDeA(traindata,method=method,corRank=corRank,thr=thr,type=type,verbose=TRUE)
   IdeT <- IDeA(traindata,method=method,corRank=corRank,thr=thr,type=type)
-  rmat <- attr(IdeT,"UPSTM")
+  UPSTM <- attr(IdeT,"UPSTM")
+  rmat <- UPSTM
   
   if (method=="fast") method="pearson"
   cormat <- abs(cor(IdeT,method=method));
@@ -123,7 +131,7 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
   falsedisc <- str_detect(colnames(rmat),"R")
   rmat <- rmat[,!falsedisc]
   falseDiscovery <- sum(falsedisc)
-  
+
   rnrotmat <- trueRotation
   colnames(rnrotmat) <- str_remove_all(colnames(rnrotmat),"La_")
   GTassVar <- rnrotmat != 0
@@ -137,6 +145,7 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
   
   aux <- IDassVar
   IDassVar <- 0*GTassVar
+  fullRot <- IDassVar
   for (rn in rownames(aux))
   {
     for (cn in colnames(aux))
@@ -145,12 +154,23 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
     }
   }
   diag(IDassVar) <- 1
+  for (rn in rownames(rnrmat))
+  {
+    for (cn in colnames(rnrmat))
+    {
+      fullRot[rn,cn] <- rnrmat[rn,cn];
+    }
+  }
+  diag(fullRot) <- 1
+  
   DiscoveryAccuracy <- sum(GTassVar==IDassVar)/(ncol(rnrotmat)^2)
   result <- list(trainCorrelation=trainCorrelation,
                  testCorrelation=testCorrelation,
                  falseDiscovery=falseDiscovery,
                  DiscoveryAccuracy=DiscoveryAccuracy,
-                 detectedFeatures=IDassVar
+                 detectedFeatures=IDassVar,
+                 UPSTM=fullRot,
+                 rcrit=attr(IdeT,"R.critical")
                  )
   return(result)
 }

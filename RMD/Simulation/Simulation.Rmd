@@ -54,7 +54,7 @@ NUmberofSimulations = 100
 NumOfObs  <- 1000
 NumOfCorFeatures <- 40
 randomToCorrelRatio <- 1
-pOfnoZero <- 0.10
+pOfnoZero <- 0.30
 
 ## IDeA parameters
 thr <- 0.50
@@ -69,11 +69,14 @@ type <- "LM"
 
 ```{r}
 
-syndata <- SyntheticData(NumOfObs=NumOfObs,
-                         NumOfCorFeatures=NumOfCorFeatures,
-                         randomToCorrelRatio=randomToCorrelRatio,
-                         pOfnoZero=pOfnoZero,
-                         noiseLevel=0.1)
+syndata <- SyntheticData(NumOfObs=NumOfObs/10,
+                         NumOfCorFeatures=NumOfCorFeatures/4,
+                         randomToCorrelRatio=0,
+                         pOfnoZero=0.35,
+                         noiseLevel=0.2)
+
+plot(syndata$data)
+print(syndata$rotMatrix)
 
 ```
 
@@ -101,7 +104,6 @@ colnames(rnrmat) <- str_remove_all(colnames(rnrmat),"La_")
 IDassVar <- rnrmat != 0
 IDassVar <- 1*(IDassVar | t(IDassVar))
 
-
 aux <- IDassVar
 IDassVar <- 0*GTassVar
 for (rn in rownames(aux))
@@ -123,6 +125,7 @@ print(sum(GTassVar==IDassVar)/(ncol(rnrotmat)^2))
 ### Heat map
 
 ```{r}
+
 rawCor <- cor(syndata$onlyRotatedData)
 
   gplots::heatmap.2(abs(rawCor),
@@ -312,14 +315,16 @@ falseDiscovery <- matrix(0,nrow=NUmberofSimulations,ncol=length(thrvals))
 DiscoveryAccuracy <- falseDiscovery
 trainCor <- falseDiscovery
 testCor <- falseDiscovery
+rotSparcity <- falseDiscovery
 
+trueSpacity <- numeric(NUmberofSimulations)
 i = 1
 for (i in 1:NUmberofSimulations)
 {
   cat(".")
   if (i %% 10 == 0) cat("\n")
   syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=randomToCorrelRatio,pOfnoZero=pOfnoZero)
-  
+  trueSpacity[i] <- sum(syndata$rotMatrix==0)/(NumOfCorFeatures^2)
   trainSample <- sample(NumOfObs,NumOfObs/2)
   cn <- 1;
   for (thr in thrvals)
@@ -336,6 +341,7 @@ for (i in 1:NUmberofSimulations)
     testCor[i,cn] <- evalIDeA$testCorrelation
     falseDiscovery[i,cn] <- evalIDeA$falseDiscovery
     DiscoveryAccuracy[i,cn] <- evalIDeA$DiscoveryAccuracy
+    rotSparcity[i,cn] <- sum(evalIDeA$UPSTM==0)/(ncol(evalIDeA$UPSTM)^2)
     cn <- cn + 1;
   }
 }
@@ -348,9 +354,14 @@ falseDiscovery <- as.data.frame(falseDiscovery)
 colnames(falseDiscovery) <- colnames(DiscoveryAccuracy)
 
 
+rotSparcity <- as.data.frame(rotSparcity)
+colnames(rotSparcity) <- colnames(DiscoveryAccuracy)
+rotSparcity <- cbind(rotSparcity,True=trueSpacity)
+
 boxplot(DiscoveryAccuracy)
 boxplot(testCor)
 boxplot(falseDiscovery)
+boxplot(rotSparcity)
 
 ```
 
@@ -369,6 +380,7 @@ thr <- 0.5
 
 i = 1
 cn <- 1;
+rToCRatio <- 40
 for (rToCRatio in randomToCorrelRatios)
 {
   for (i in 1:NUmberofSimulations)
@@ -385,6 +397,9 @@ for (rToCRatio in randomToCorrelRatios)
                                    corRank=FALSE,
                                    thr=thr,
                                    type=type)
+#    acor <-abs(cor(syndata$data[,str_detect(colnames(syndata$data),"ER")])) 
+#    diag(acor) <- 0
+#    max(acor)
     trainCorR[i,cn] <- evalIDeA$trainCorrelation
     testCorR[i,cn] <- evalIDeA$testCorrelation
     falseDiscoveryR[i,cn] <- evalIDeA$falseDiscovery
