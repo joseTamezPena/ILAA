@@ -4,7 +4,7 @@
 ## rotMatrix= the rotation matrix,
 ## onlyRotatedData= the dataframe with only rotated features
 
-SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=2,pOfnoZero=0.35,noiseLevel=0.2)
+SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=2,pOfnoZero=0.35,noiseLevel=0.2,maxLatSize=5)
 {
   NRandom <- NumOfCorFeatures
   NObser <- NumOfObs
@@ -22,23 +22,29 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
   ## Create the rotation matrix
   rotmat <- matrix(0,nrow=NRandom,ncol=NRandom);
   pupdate <- pOfnoZero
-  isLatent <- runif(NRandom) <= pupdate
+  isLatent <- runif(NRandom) <= sqrt(pupdate)
+  isBasis <- (runif(NRandom) <= pupdate) & !isLatent
+  latsize <- numeric(NRandom)
+#  print(isLatent)
+#  print(isBasis)
   for (i in 1:NRandom)
   {
+    pin <- pupdate
+    if (isBasis[i])  pin <- sqrt(pupdate)       
     if (i <= NRandom/2)
     {
       for (j in 1:(NRandom/2))
       {
-        maylatent <- (runif(1) <= pupdate^2)
-        if ( !isLatent[j] | maylatent)
+        if (isLatent[j] && (latsize[j] < maxLatSize))
         {
-          if (((runif(1) <= sqrt(pupdate)) && isLatent[i]) | maylatent)
+          if (runif(1) <= pin)
           {
-            rotmat[j,i] <- rnorm(1)*(1.0 - 0.5*isLatent[j])
-            if (abs(rotmat[j,i]) < 0.2)
+            rotmat[i,j] <- rnorm(1)
+            if (abs(rotmat[i,j]) < 0.2)
             {
-              rotmat[j,i] <- 0.2*sign(rotmat[j,i])
+              rotmat[i,j] <- 0.2*sign(rotmat[i,j])
             }
+            latsize[j] <- latsize[j] + 1;
           }
         }
       }
@@ -47,16 +53,16 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
     {
       for (j in (NRandom/2 + 1):NRandom)
       {
-        maylatent <- (runif(1) <= pupdate^2)
-        if ( !isLatent[j] | maylatent)
+        if (isLatent[j] && (latsize[j] < maxLatSize))
         {
-          if (((runif(1) <= sqrt(pupdate)) && isLatent[i]) | maylatent)
+          if (runif(1) <= pin)
           {
-            rotmat[j,i] <- rnorm(1)*(1.0 - 0.5*isLatent[j])
-            if (abs(rotmat[j,i]) < 0.2)
+            rotmat[i,j] <- rnorm(1)
+            if (abs(rotmat[i,j]) < 0.2)
             {
-              rotmat[j,i] <- 0.2*sign(rotmat[j,i])
+              rotmat[i,j] <- 0.2*sign(rotmat[i,j])
             }
+            latsize[j] <- latsize[j] + 1;
           }
         }
       }
@@ -134,26 +140,26 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
 
   rnrotmat <- trueRotation
   colnames(rnrotmat) <- str_remove_all(colnames(rnrotmat),"La_")
-  GTassVar <- rnrotmat != 0
-  GTassVar <- 1*(GTassVar | t(GTassVar))
+  trueUsedFeatures <- rnrotmat != 0
+  trueUsedFeatures <- 1*(trueUsedFeatures | t(trueUsedFeatures))
   
   rnrmat <- rmat
   colnames(rnrmat) <- str_remove_all(colnames(rnrmat),"La_")
-  IDassVar <- rnrmat != 0
-  IDassVar <- 1*(IDassVar | t(IDassVar))
+  detectedFeatures <- rnrmat != 0
+  detectedFeatures <- 1*(detectedFeatures | t(detectedFeatures))
   
   
-  aux <- IDassVar
-  IDassVar <- 0*GTassVar
-  fullRot <- IDassVar
+  aux <- detectedFeatures
+  detectedFeatures <- 0*trueUsedFeatures
+  fullRot <- detectedFeatures
   for (rn in rownames(aux))
   {
     for (cn in colnames(aux))
     {
-      IDassVar[rn,cn] <- aux[rn,cn];
+      detectedFeatures[rn,cn] <- aux[rn,cn];
     }
   }
-  diag(IDassVar) <- 1
+  diag(detectedFeatures) <- 1
   for (rn in rownames(rnrmat))
   {
     for (cn in colnames(rnrmat))
@@ -163,13 +169,42 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
   }
   diag(fullRot) <- 1
   
-  DiscoveryAccuracy <- sum(GTassVar==IDassVar)/(ncol(rnrotmat)^2)
+
+  pairAsosTable <- NULL
+  for (rn in c(1:(nrow(trueUsedFeatures)-1)))
+  {
+    for (cn in c((rn+1):ncol(trueUsedFeatures)))
+    {
+      pairAsosTable <- rbind(pairAsosTable,c(detectedFeatures[rn,cn],trueUsedFeatures[rn,cn]))
+    }
+  }
+  colnames(pairAsosTable) <- c("Estimated","True")
+  pairAsosTable <- as.data.frame(pairAsosTable)
+  pairTable <- table(pairAsosTable)
+#  npairAsosTable <- as.data.frame(pairAsosTable==0)
+#  pair_Analysis <- epiR::epi.tests(table(npairAsosTable))
+#  sen <- pair_Analysis$detail[3,2]
+#  spe <- pair_Analysis$detail[4,2]
+#  acc <- pair_Analysis$detail[5,2]
+#  pander::pander(c(Accuracy=acc,Sensitivity=sen,Specificity=spe))
+  sen <- sum((pairAsosTable$Estimated==pairAsosTable$True)&pairAsosTable$True)/sum(pairAsosTable$True)
+  spe <- sum((pairAsosTable$Estimated==pairAsosTable$True)&(pairAsosTable$True==0))/sum(pairAsosTable$True==0)
+  acc <- sum(pairAsosTable$Estimated==pairAsosTable$True)/nrow(pairAsosTable)
+#  pander::pander(c(Accuracy=acc,Sensitivity=sen,Specificity=spe))
+  
+  
+  
+  
   result <- list(trainCorrelation=trainCorrelation,
                  testCorrelation=testCorrelation,
                  falseDiscovery=falseDiscovery,
-                 DiscoveryAccuracy=DiscoveryAccuracy,
-                 detectedFeatures=IDassVar,
+                 pairTable=pairTable,
+                 DiscoveryAccuracy=acc,
+                 DiscoverySen=sen,
+                 DiscoverySpe=spe,
+                 detectedFeatures=detectedFeatures,
                  UPSTM=fullRot,
+                 UsedBetas=1*(fullRot != 0),
                  rcrit=attr(IdeT,"R.critical")
                  )
   return(result)
