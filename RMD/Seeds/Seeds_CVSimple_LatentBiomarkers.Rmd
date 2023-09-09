@@ -91,3 +91,75 @@ thro <- 0.8
 ```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/CV_analysis.Rmd")}
 ```
 
+
+
+## Testing different parameters
+```{r}
+
+cvData_0.9 <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.9)
+cvData_0.8 <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.8)
+cvData_0.7 <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.7)
+cvData_0.6 <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.6)
+cvData_0.5 <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.5)
+bpDe <- predictionStats_binary(cvData_0.9$DeMedTestRaw,"IDeA@0.9")
+bpDe <- predictionStats_binary(cvData_0.8$DeMedTestRaw,"IDeA@0.8")
+bpDe <- predictionStats_binary(cvData_0.7$DeMedTestRaw,"IDeA@0.7")
+bpDe <- predictionStats_binary(cvData_0.6$DeMedTestRaw,"IDeA@0.6")
+bpDe <- predictionStats_binary(cvData_0.5$DeMedTestRaw,"IDeA@0.5")
+
+cvData_0.9_R <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.9,corRank=FALSE)
+cvData_0.8_R <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.8,corRank=FALSE)
+cvData_0.7_R <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.7,corRank=FALSE)
+cvData_0.6_R <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.6,corRank=FALSE)
+cvData_0.5_R <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.5,corRank=FALSE)
+bpDe <- predictionStats_binary(cvData_0.9_R$DeMedTestRaw,"IDeA@0.9 CorRank")
+bpDe <- predictionStats_binary(cvData_0.8_R$DeMedTestRaw,"IDeA@0.8 CorRank")
+bpDe <- predictionStats_binary(cvData_0.7_R$DeMedTestRaw,"IDeA@0.7 CorRank")
+bpDe <- predictionStats_binary(cvData_0.6_R$DeMedTestRaw,"IDeA@0.6 CorRank")
+bpDe <- predictionStats_binary(cvData_0.5_R$DeMedTestRaw,"IDeA@0.5 CorRank")
+
+
+cvData_0.9_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.9,Outcome=outcome)
+cvData_0.8_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.8,Outcome=outcome)
+cvData_0.7_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.7,Outcome=outcome)
+cvData_0.6_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.6,Outcome=outcome)
+cvData_0.5_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.5,Outcome=outcome)
+bpDe <- predictionStats_binary(cvData_0.9_D$DeMedTestRaw,"IDeA@0.9 Driven")
+bpDe <- predictionStats_binary(cvData_0.8_D$DeMedTestRaw,"IDeA@0.8 Driven")
+bpDe <- predictionStats_binary(cvData_0.7_D$DeMedTestRaw,"IDeA@0.7 Driven")
+bpDe <- predictionStats_binary(cvData_0.6_D$DeMedTestRaw,"IDeA@0.6 Driven")
+bpDe <- predictionStats_binary(cvData_0.5_D$DeMedTestRaw,"IDeA@0.5 Driven")
+
+cvData_0.9_S <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.9,method="spearman")
+cvData_0.8_S <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.8,method="spearman")
+cvData_0.7_S <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.7,method="spearman")
+cvData_0.6_S <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.6,method="spearman")
+cvData_0.5_S <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.5,method="spearman")
+bpDe <- predictionStats_binary(cvData_0.9_S$DeMedTestRaw,"IDeA@0.9 Spearman")
+bpDe <- predictionStats_binary(cvData_0.8_S$DeMedTestRaw,"IDeA@0.8 Spearman")
+bpDe <- predictionStats_binary(cvData_0.7_S$DeMedTestRaw,"IDeA@0.7 Spearman")
+bpDe <- predictionStats_binary(cvData_0.6_S$DeMedTestRaw,"IDeA@0.6 Spearman")
+bpDe <- predictionStats_binary(cvData_0.5_S$DeMedTestRaw,"IDeA@0.5 Spearman")
+
+cvData_0.9_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                         DecorPCAEFA=FALSE,thr=0.9,Outcome=outcome,method="spearman")
+cvData_0.8_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                         DecorPCAEFA=FALSE,thr=0.8,Outcome=outcome,method="spearman")
+cvData_0.7_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                         DecorPCAEFA=FALSE,thr=0.7,Outcome=outcome,method="spearman")
+cvData_0.6_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                         DecorPCAEFA=FALSE,thr=0.6,Outcome=outcome,method="spearman")
+cvData_0.5_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                         DecorPCAEFA=FALSE,thr=0.5,Outcome=outcome,method="spearman")
+bpDe <- predictionStats_binary(cvData_0.9_S_D$DeMedTestRaw,"IDeA@0.9 Spearman Driven")
+bpDe <- predictionStats_binary(cvData_0.8_S_D$DeMedTestRaw,"IDeA@0.8 Spearman Driven")
+bpDe <- predictionStats_binary(cvData_0.7_S_D$DeMedTestRaw,"IDeA@0.7 Spearman Driven")
+bpDe <- predictionStats_binary(cvData_0.6_S_D$DeMedTestRaw,"IDeA@0.6 Spearman Driven")
+bpDe <- predictionStats_binary(cvData_0.5_S_D$DeMedTestRaw,"IDeA@0.5 Spearman Driven")
+
+
+save.image(paste("ALLCV_analyiss",studyName,".RData",sep="_"))
+
+```
+
+

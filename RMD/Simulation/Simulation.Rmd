@@ -356,7 +356,7 @@ boxplot(list(Pearson_1=testCorT,Pearson_2=testCorF,Spearman_1=testCorST,Spearman
 ### Testing the effect of the threshold
 ```{r}
 
-thrvals <- c(0.20,0.30,0.40,0.50,0.60,0.70,0.80,0.90)
+thrvals <- c(0.10,0.20,0.30,0.40,0.50,0.60,0.70,0.80,0.90)
 
 randomToCorrelRatio <- 1
 NUmberofSimulations <- 30
@@ -375,7 +375,16 @@ for (i in 1:NUmberofSimulations)
 {
   cat(".")
   if (i %% 10 == 0) cat("\n")
-  syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=randomToCorrelRatio,pOfnoZero=pOfnoZero)
+  syndata <- SyntheticData(NumOfObs=NumOfObs,
+                           NumOfCorFeatures=NumOfCorFeatures,
+                           randomToCorrelRatio=randomToCorrelRatio,
+                           pOfnoZero=pOfnoZero)
+  
+#  syndata <- SyntheticData(NumOfObs=NumOfObs,
+#                           NumOfCorFeatures=NumOfCorFeatures,
+#                           randomToCorrelRatio=randomToCorrelRatio,
+#                           pOfnoZero= -pOfnoZero)
+  
   trueSpacity[i] <- sum(syndata$rotMatrix==0)/(NumOfCorFeatures^2)
   trainSample <- sample(NumOfObs,NumOfObs/2)
   cn <- 1;
@@ -386,7 +395,7 @@ for (i in 1:NUmberofSimulations)
                                    testdata=syndata$data[-trainSample,],
                                    trueRotation=syndata$rotMatrix,
                                    method=method,
-                                   corRank=FALSE,
+                                   corRank=TRUE,
                                    thr=thr,
                                    type=type)
     trainCor[i,cn] <- evalIDeA$trainCorrelation
@@ -422,11 +431,95 @@ rotSparcity <- cbind(rotSparcity,True=trueSpacity)
 boxplot(DiscoveryAccuracy,main="Accuracy",ylab="Accuracy")
 boxplot(DiscoverySen,main="Sensitivity",ylab="Sensitivity")
 boxplot(DiscoverySpe,main="Specificity",ylab="Specificity")
+boxplot(0.5*(DiscoverySpe+DiscoverySen),main="Balanced Accuracy",ylab="BACC")
+boxplot(falseDiscovery,main="False Discoveries",ylab="Number of False Discoveries")
+boxplot(rotSparcity,main="Rotation Matrix Sparcity",ylab="Sparcity")
+
+ylim <- c(thrvals[1],thrvals[length(thrvals)])
+boxplot(testCor,main="Test Correlation",ylab="Correlation",ylim=ylim)
+lines(c(1,length(thrvals)),ylim)
+
+```
+
+
+### Testing the effect of the threshold
+```{r}
+
+
+falseDiscovery <- matrix(0,nrow=NUmberofSimulations,ncol=length(thrvals))
+DiscoveryAccuracy <- falseDiscovery
+DiscoverySen <- falseDiscovery
+DiscoverySpe <- falseDiscovery
+trainCor <- falseDiscovery
+testCor <- falseDiscovery
+rotSparcity <- falseDiscovery
+
+trueSpacity <- numeric(NUmberofSimulations)
+i = 1
+for (i in 1:NUmberofSimulations)
+{
+  cat(".")
+  if (i %% 10 == 0) cat("\n")
+
+  syndata <- SyntheticData(NumOfObs=NumOfObs,
+                           NumOfCorFeatures=NumOfCorFeatures,
+                           randomToCorrelRatio=randomToCorrelRatio,
+                           pOfnoZero= -pOfnoZero)
+  
+  trueSpacity[i] <- sum(syndata$rotMatrix==0)/(NumOfCorFeatures^2)
+  trainSample <- sample(NumOfObs,NumOfObs/2)
+  cn <- 1;
+  for (thr in thrvals)
+  {
+    cat("T")
+    evalIDeA <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+                                   testdata=syndata$data[-trainSample,],
+                                   trueRotation=syndata$rotMatrix,
+                                   method=method,
+                                   corRank=TRUE,
+                                   thr=thr,
+                                   type=type)
+    trainCor[i,cn] <- evalIDeA$trainCorrelation
+    testCor[i,cn] <- evalIDeA$testCorrelation
+    falseDiscovery[i,cn] <- evalIDeA$falseDiscovery
+    DiscoveryAccuracy[i,cn] <- evalIDeA$DiscoveryAccuracy
+    DiscoverySen[i,cn] <- evalIDeA$DiscoverySen
+    DiscoverySpe[i,cn] <- evalIDeA$DiscoverySpe
+
+    rotSparcity[i,cn] <- sum(evalIDeA$UPSTM==0)/(ncol(evalIDeA$UPSTM)^2)
+    cn <- cn + 1;
+  }
+}
+DiscoveryAccuracy <- as.data.frame(DiscoveryAccuracy)
+colnames(DiscoveryAccuracy) <- paste("At_",thrvals,sep="")
+
+DiscoverySen <- as.data.frame(DiscoverySen)
+colnames(DiscoverySen) <- colnames(DiscoveryAccuracy)
+DiscoverySpe <- as.data.frame(DiscoverySpe)
+colnames(DiscoverySpe) <- colnames(DiscoveryAccuracy)
+
+testCor <- as.data.frame(testCor)
+colnames(testCor) <- colnames(DiscoveryAccuracy)
+
+falseDiscovery <- as.data.frame(falseDiscovery)
+colnames(falseDiscovery) <- colnames(DiscoveryAccuracy)
+
+
+rotSparcity <- as.data.frame(rotSparcity)
+colnames(rotSparcity) <- colnames(DiscoveryAccuracy)
+rotSparcity <- cbind(rotSparcity,True=trueSpacity)
+
+boxplot(DiscoveryAccuracy,main="Accuracy",ylab="Accuracy")
+boxplot(DiscoverySen,main="Sensitivity",ylab="Sensitivity")
+boxplot(DiscoverySpe,main="Specificity",ylab="Specificity")
+boxplot(0.5*(DiscoverySpe+DiscoverySen),main="Balanced Accuracy",ylab="BACC")
 boxplot(testCor,main="Test Correlation",ylab="Correlation")
+lines(c(1,length(thrvals)),ylim)
 boxplot(falseDiscovery,main="False Discoveries",ylab="Number of False Discoveries")
 boxplot(rotSparcity,main="Rotation Matrix Sparcity",ylab="Sparcity")
 
 ```
+
 
 ### Testing the effect of the number of random features
 ```{r}
@@ -441,7 +534,7 @@ DiscoverySenR <- falseDiscoveryR
 DiscoverySpeR <- falseDiscoveryR
 trainCorR <- falseDiscoveryR
 testCorR <- falseDiscoveryR
-thr <- 0.5
+thr <- 0.4
 
 i = 1
 cn <- 1;
@@ -459,7 +552,7 @@ for (rToCRatio in randomToCorrelRatios)
                                    testdata=syndata$data[-trainSample,],
                                    trueRotation=syndata$rotMatrix,
                                    method=method,
-                                   corRank=FALSE,
+                                   corRank=TRUE,
                                    thr=thr,
                                    type=type)
 #    acor <-abs(cor(syndata$data[,str_detect(colnames(syndata$data),"ER")])) 

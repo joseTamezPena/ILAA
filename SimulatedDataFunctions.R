@@ -21,7 +21,8 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
   
   ## Create the rotation matrix
   rotmat <- matrix(0,nrow=NRandom,ncol=NRandom);
-  pupdate <- pOfnoZero
+  
+  pupdate <- abs(pOfnoZero)
   isLatent <- runif(NRandom) <= sqrt(pupdate)
   isBasis <- (runif(NRandom) <= pupdate) & !isLatent
   latsize <- numeric(NRandom)
@@ -35,16 +36,30 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
     {
       for (j in 1:(NRandom/2))
       {
-        if (isLatent[j] && (latsize[j] < maxLatSize))
+        if (pOfnoZero < 0)
         {
-          if (runif(1) <= pin)
+          if (runif(1) <= pupdate)
           {
             rotmat[i,j] <- rnorm(1)
-            if (abs(rotmat[i,j]) < 0.2)
+            if (abs(rotmat[i,j]) < noiseLevel)
             {
-              rotmat[i,j] <- 0.2*sign(rotmat[i,j])
+              rotmat[i,j] <- noiseLevel*sign(rotmat[i,j])
             }
-            latsize[j] <- latsize[j] + 1;
+          }
+        }
+        else
+        {
+          if (isLatent[j] && (latsize[j] < maxLatSize))
+          {
+            if (runif(1) <= pin)
+            {
+              rotmat[i,j] <- rnorm(1)
+              if (abs(rotmat[i,j]) < noiseLevel)
+              {
+                rotmat[i,j] <- noiseLevel*sign(rotmat[i,j])
+              }
+              latsize[j] <- latsize[j] + 1;
+            }
           }
         }
       }
@@ -53,16 +68,30 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
     {
       for (j in (NRandom/2 + 1):NRandom)
       {
-        if (isLatent[j] && (latsize[j] < maxLatSize))
+        if (pOfnoZero < 0)
         {
-          if (runif(1) <= pin)
+          if (runif(1) <= pupdate)
           {
             rotmat[i,j] <- rnorm(1)
-            if (abs(rotmat[i,j]) < 0.2)
+            if (abs(rotmat[i,j]) < noiseLevel)
             {
-              rotmat[i,j] <- 0.2*sign(rotmat[i,j])
+              rotmat[i,j] <- noiseLevel*sign(rotmat[i,j])
             }
-            latsize[j] <- latsize[j] + 1;
+          }
+        }
+        else
+        {
+          if (isLatent[j] && (latsize[j] < maxLatSize))
+          {
+            if (runif(1) <= pin)
+            {
+              rotmat[i,j] <- rnorm(1)
+              if (abs(rotmat[i,j]) < noiseLevel)
+              {
+                rotmat[i,j] <- noiseLevel*sign(rotmat[i,j])
+              }
+              latsize[j] <- latsize[j] + 1;
+            }
           }
         }
       }

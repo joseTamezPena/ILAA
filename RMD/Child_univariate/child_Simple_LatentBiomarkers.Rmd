@@ -98,7 +98,7 @@ if (!largeSet)
                      srtCol=45,
                      srtRow=45,
                     key.title=NA,
-                    key.xlab="Pearson Correlation",
+                    key.xlab="|Pearson Correlation|",
                     xlab="Feature", ylab="Feature")
   diag(cormat) <- 0
   print(max(abs(cormat)))
@@ -195,7 +195,7 @@ if (!largeSet)
                      srtCol=45,
                      srtRow=45,
                     key.title=NA,
-                    key.xlab="Pearson Correlation",
+                    key.xlab="|Pearson Correlation|",
                     xlab="Feature", ylab="Feature")
   
   par(op)
