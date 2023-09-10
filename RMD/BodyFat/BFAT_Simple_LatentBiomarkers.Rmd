@@ -88,11 +88,15 @@ varlist <- varlist[varlist != "BodyFat"]
 ## Training and testing set
 
 ```{r}
-set.seed(1)
-trainsamples <- sample(nrow(body_fat),nrow(body_fat)/2)
+set.seed(2)
+trainsamples <- sample(nrow(body_fat),2*nrow(body_fat)/3)
 
 trainingset <- body_fat[trainsamples,]
 testingset <- body_fat[-trainsamples,]
+
+pander::pander(summary(trainingset))
+pander::pander(summary(testingset))
+
 ```
 
 
@@ -134,7 +138,6 @@ predbfat <- predict(fatmodel,testingset)
 pander::pander(fatmodel$coef)
 
 
-
 ```
 
 
@@ -144,7 +147,7 @@ pander::pander(fatmodel$coef)
 trainfat_driven <- IDeA(trainingset,Outcome="BodyFat",thr=0.4)
 testfat_driven <- predictDecorrelate(trainfat_driven,testingset)
 
-pander::pander(colnames(trainfat_driven))
+pander::pander(t(colnames(trainfat_driven)))
 theLaFormulas <- getLatentCoefficients(trainfat_driven)
 pander::pander(theLaFormulas)
                        
@@ -200,10 +203,8 @@ for (cn in names(coefnames))
 pander::pander(devCoef)
 
 obsCoef <- getObservedCoef(trainfat_driven,fatmodel_DE$coef)
+pander::pander(obsCoef,"IDeA Modeling")
 
-
-pander::pander(obsCoef,caption="From Decorrelation Formula")
-pander::pander(fatmodel$coef,caption="From Raw Formula")
 
 pred2 <- as.matrix(testingset[,names(obsCoef[-1])]) %*% as.matrix(obsCoef[-1]) + obsCoef[1]
 pander::pander(sum((pred2-predbfat_DE)^2))
@@ -219,7 +220,7 @@ trainDe <- IDeA(trainingset[,varlist],thr=0.4,drivingFeatures=c("Age"))
 trainfat_driven2 <- predictDecorrelate(trainDe,trainingset)
 testfat_driven2 <- predictDecorrelate(trainDe,testingset)
 
-pander::pander(colnames(trainfat_driven2))
+pander::pander(t(colnames(trainfat_driven2)))
 theLaFormulas <- getLatentCoefficients(trainDe)
 pander::pander(theLaFormulas)
                        
@@ -263,7 +264,6 @@ fatmodel_DE2 <- LASSO_1SE(BodyFat~.,trainfat_driven2);
 predbfat_DE2 <- predict(fatmodel_DE2,testfat_driven2)
 pander::pander(fatmodel_DE2$coef)
 devCoef <- fatmodel_DE2$coef
-pander::pander(devCoef)
 coefnamesLa <- theLaFormulas[names(devCoef)]
 coefnames <- coefnamesLa[!unlist(lapply(coefnamesLa,is.null))]
 for (cn in names(coefnames))
@@ -272,26 +272,28 @@ for (cn in names(coefnames))
 }
 pander::pander(devCoef)
 
-obsCoef <- getObservedCoef(trainDe,fatmodel_DE2$coef)
+obsCoef2 <- getObservedCoef(trainDe,fatmodel_DE2$coef)
+pander::pander(obsCoef2,"IDeA Modeling2")
 
-
-pander::pander(obsCoef,caption="From Decorrelation Formula")
-pander::pander(fatmodel$coef,caption="From Raw Formula")
 
 
 ```
 
-### Comparing the correlation
+### Comparing the models
 
 ```{r}
 
-lmod <- lm(paste("BodyFat~1+",str_flatten(names(fatmodel$coef)[-1],collapse="+"),sep=""),trainingset)
+pander::pander(fatmodel$coef,"Raw Modeling")
+pander::pander(obsCoef,"IDeA 1 Modeling")
+pander::pander(obsCoef2,"IDeA 2 Modeling")
+
+lmod <- lm(BodyFat~.,trainingset[,c("BodyFat",names(fatmodel$coef)[-1])])
 pander::pander(summary(lmod))
 
-lmod_DE <- lm(paste("BodyFat~ 1+",str_flatten(names(fatmodel_DE$coef)[-1],collapse="+"),sep=""),trainfat_driven)
+lmod_DE <- lm(BodyFat~.,trainfat_driven[,c("BodyFat",names(fatmodel_DE$coef)[-1])])
 pander::pander(summary(lmod_DE))
 
-lmod_DE2 <- lm(paste("BodyFat~ 1+",str_flatten(names(fatmodel_DE2$coef)[-1],collapse="+"),sep=""),trainfat_driven2)
+lmod_DE2 <- lm(BodyFat~.,trainfat_driven2[,c("BodyFat",names(fatmodel_DE2$coef)[-1])])
 pander::pander(summary(lmod_DE2))
 
 
@@ -306,19 +308,5 @@ plot(predbfat_DE2,testingset$BodyFat,main="Body Fat Prediction",ylab="Body Fat",
 pander::pander(cor.test(testingset$BodyFat,predbfat_DE2))
 
 ```
-
-### Comparing the correlation
-
-```{r}
-
-
-
-
-
-
-
-
-```
-
 
 
