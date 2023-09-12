@@ -195,7 +195,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
             pred <- as.vector(predict(ml,EFA_Test))
             pred[is.na(pred)] <- 0
             pred[is.infinite(pred)] <- 0
-            print(table(EFA_Test[,outcome]))
+#            print(table(EFA_Test[,outcome]))
             rocEFA <- pROC::roc(EFA_Test[,outcome],pred,auc=TRUE,quiet=TRUE)
             
             EFAROCAUC[lp] <- rocEFA$auc

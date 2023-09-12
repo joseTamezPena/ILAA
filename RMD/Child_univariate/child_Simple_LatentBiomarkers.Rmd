@@ -23,7 +23,7 @@ pander::pander(table(dataframe[,outcome]))
 varlist <- colnames(dataframe)
 varlist <- varlist[varlist != outcome]
 
-largeSet <- length(varlist) > 1500
+largeSet <- length(varlist) > 1500 
 ```
 
 ### Scaling the data
@@ -44,7 +44,7 @@ Scaling and removing near zero variance columns and highly co-linear(r>0.99999) 
   varlist <- varlist[varlist != outcome]
 
 
-dataframe <- FRESAScale(dataframe,method="OrderLogit")$scaledData
+dataframeScaled <- FRESAScale(dataframe,method="OrderLogit")$scaledData
 
 ```
 
@@ -52,11 +52,14 @@ dataframe <- FRESAScale(dataframe,method="OrderLogit")$scaledData
 ## The heatmap of the data
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+numsub <- nrow(dataframe)
+if (numsub > 1000) numsub <- 1000
+
 
 if (!largeSet)
 {
-  
-  hm <- heatMaps(data=dataframe,
+
+  hm <- heatMaps(data=dataframeScaled[1:numsub,],
                  Outcome=outcome,
                  Scale=TRUE,
                  hCluster = "row",
@@ -160,7 +163,7 @@ if (!largeSet)
 if (!largeSet)
 {
 
-  hm <- heatMaps(data=DEdataframe,
+  hm <- heatMaps(data=DEdataframe[1:numsub,],
                  Outcome=outcome,
                  Scale=TRUE,
                  hCluster = "row",
@@ -211,22 +214,29 @@ if (!largeSet)
 
 ### The UMAP based on LASSO on Raw Data
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-classes <- unique(dataframe[,outcome])
-raincolors <- rainbow(length(classes))
-names(raincolors) <- classes
-datasetframe.umap = umap(scale(dataframe[,varlist]),n_components=2)
-plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: Original",t='n')
-text(datasetframe.umap$layout,labels=dataframe[,outcome],col=raincolors[dataframe[,outcome]+1])
+
+if (nrow(dataframe) < 1000)
+{
+  classes <- unique(dataframe[1:numsub,outcome])
+  raincolors <- rainbow(length(classes))
+  names(raincolors) <- classes
+  datasetframe.umap = umap(scale(dataframe[1:numsub,varlist]),n_components=2)
+  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: Original",t='n')
+  text(datasetframe.umap$layout,labels=dataframe[1:numsub,outcome],col=raincolors[dataframe[1:numsub,outcome]+1])
+}
 
 ```
 
 
 ### The decorralted UMAP
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+if (nrow(dataframe) < 1000)
+{
 
-datasetframe.umap = umap(scale(DEdataframe[,varlistc]),n_components=2)
-plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: After IDeA",t='n')
-text(datasetframe.umap$layout,labels=DEdataframe[,outcome],col=raincolors[DEdataframe[,outcome]+1])
+  datasetframe.umap = umap(scale(DEdataframe[1:numsub,varlistc]),n_components=2)
+  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: After IDeA",t='n')
+  text(datasetframe.umap$layout,labels=DEdataframe[1:numsub,outcome],col=raincolors[DEdataframe[1:numsub,outcome]+1])
+}
 
 ```
 
