@@ -262,7 +262,7 @@ outcome <- "status"
 
 TopVariables <- 10
 
-thro <- 0.80
+thro <- 0.60
 cexheat = 0.15
 
 ```

@@ -197,7 +197,7 @@ table(NHNESDepEq$depressionTot)
 
 ```{r results = "asis"}
 studyName <- "NHNES"
-dataframe <- NHNESDepEq
+dataframe <- NHNESDep
 outcome <- "depressionTot"
 
 

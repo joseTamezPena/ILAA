@@ -181,7 +181,9 @@ sum(isContinuous)
 NHNESDep <- cbind(NHNESDep[,isContinuous],genderDiab)
 
 table(NHNESDep$depressionTot)
-  
+
+colnames(NHNESDep)[sapply(apply(NHNESDep,2,unique),length) < 10]
+
 ```
 #### Standarize the names for the reporting
 

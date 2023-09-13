@@ -89,8 +89,9 @@ outcome <- "status"
 
 
 nLoops <- 100
-
-needScaling <- TRUE
+needScaling <- FALSE
+IDSample <- FALSE
+thro <- 0.4
 
 ```
 ## CV Analysis and report

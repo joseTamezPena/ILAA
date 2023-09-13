@@ -9,6 +9,7 @@ Some libraries
 library(psych)
 library(whitening)
 library("vioplot")
+library("rpart")
 
 ```
 
@@ -42,6 +43,9 @@ Scaling and removing near zero variance columns and highly co-linear(r>0.99999) 
 
   varlist <- colnames(dataframe)
   varlist <- varlist[varlist != outcome]
+  
+  iscontinous <- sapply(apply(dataframe,2,unique),length) > 5 ## Only variables with enough samples
+
 
 
 dataframeScaled <- FRESAScale(dataframe,method="OrderLogit")$scaledData
@@ -341,6 +345,165 @@ Final_Columns <- c("DecorFormula","caseMean","caseStd","controlMean","controlStd
 
 finalTable <- finalTable[order(-finalTable$ROCAUC),]
 pander::pander(finalTable[,Final_Columns])
+
+```
+
+
+
+## Comparing IDeA vs PCA vs EFA
+
+
+### PCA
+
+```{r results = "asis" ,warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+featuresnames <- colnames(dataframe)[colnames(dataframe) != outcome]
+pc <- prcomp(dataframe[,iscontinous],center = TRUE,tol=0.002)   #principal components
+predPCA <- predict(pc,dataframe[,iscontinous])
+PCAdataframe <- as.data.frame(cbind(predPCA,dataframe[,!iscontinous]))
+colnames(PCAdataframe) <- c(colnames(predPCA),colnames(dataframe)[!iscontinous]) 
+#plot(PCAdataframe[,colnames(PCAdataframe)!=outcome],col=dataframe[,outcome],cex=0.65,cex.lab=0.5,cex.axis=0.75,cex.sub=0.5,cex.main=0.75)
+
+#pander::pander(pc$rotation)
+
+
+PCACor <- cor(PCAdataframe[,colnames(PCAdataframe) != outcome])
+
+
+  gplots::heatmap.2(abs(PCACor),
+                    trace = "none",
+  #                  scale = "row",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "PCA Correlation",
+                    cexRow = 0.5,
+                    cexCol = 0.5,
+                     srtCol=45,
+                     srtRow= -45,
+                    key.title=NA,
+                    key.xlab="Pearson Correlation",
+                    xlab="Feature", ylab="Feature")
+
+
+```
+
+### EFA
+
+```{r results = "asis" ,warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+
+EFAdataframe <- dataframeScaled
+
+if (length(iscontinous) < 2000)
+{
+  topred <- min(length(iscontinous),nrow(dataframeScaled),ncol(predPCA)/2)
+  if (topred < 2) topred <- 2
+  
+  uls <- fa(dataframeScaled[,iscontinous],nfactors=topred,rotate="varimax",warnings=FALSE)  # EFA analysis
+  predEFA <- predict(uls,dataframeScaled[,iscontinous])
+  EFAdataframe <- as.data.frame(cbind(predEFA,dataframeScaled[,!iscontinous]))
+  colnames(EFAdataframe) <- c(colnames(predEFA),colnames(dataframeScaled)[!iscontinous]) 
+
+
+  
+  EFACor <- cor(EFAdataframe[,colnames(EFAdataframe) != outcome])
+  
+  
+    gplots::heatmap.2(abs(EFACor),
+                      trace = "none",
+    #                  scale = "row",
+                      mar = c(5,5),
+                      col=rev(heat.colors(5)),
+                      main = "EFA Correlation",
+                      cexRow = 0.5,
+                      cexCol = 0.5,
+                       srtCol=45,
+                       srtRow= -45,
+                      key.title=NA,
+                      key.xlab="Pearson Correlation",
+                      xlab="Feature", ylab="Feature")
+}
+
+```
+
+
+## Effect on CAR modeling
+
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+par(op)
+par(xpd = TRUE)
+dataframe[,outcome] <- factor(dataframe[,outcome])
+rawmodel <- rpart(paste(outcome,"~."),dataframe,control=rpart.control(maxdepth=3))
+pr <- predict(rawmodel,dataframe,type = "class")
+
+  ptab <- list(er="Error",detail=matrix(nrow=6,ncol=1))
+  if (length(unique(pr))>1)
+  {
+    plot(rawmodel,main="Raw",branch=0.5,uniform = TRUE,compress = TRUE,margin=0.1)
+    text(rawmodel, use.n = TRUE,cex=0.75)
+    ptab <- epiR::epi.tests(table(pr==0,dataframe[,outcome]==0))
+  }
+
+pander::pander(table(dataframe[,outcome],pr))
+pander::pander(ptab)
+pander::pander(ptab$detail[c(5,3,4,6),])
+
+par(op)
+par(xpd = TRUE)
+DEdataframe[,outcome] <- factor(DEdataframe[,outcome])
+IDeAmodel <- rpart(paste(outcome,"~."),DEdataframe,control=rpart.control(maxdepth=3))
+pr <- predict(IDeAmodel,DEdataframe,type = "class")
+
+  ptab <- list(er="Error",detail=matrix(nrow=6,ncol=1))
+  if (length(unique(pr))>1)
+  {
+    plot(IDeAmodel,main="IDeA",branch=0.5,uniform = TRUE,compress = TRUE,margin=0.1)
+    text(IDeAmodel, use.n = TRUE,cex=0.75)
+    ptab <- epiR::epi.tests(table(pr==0,DEdataframe[,outcome]==0))
+  }
+pander::pander(table(DEdataframe[,outcome],pr))
+pander::pander(ptab)
+pander::pander(ptab$detail[c(5,3,4,6),])
+
+par(op)
+par(xpd = TRUE)
+PCAdataframe[,outcome] <- factor(PCAdataframe[,outcome])
+PCAmodel <- rpart(paste(outcome,"~."),PCAdataframe,control=rpart.control(maxdepth=3))
+pr <- predict(PCAmodel,PCAdataframe,type = "class")
+ptab <- list(er="Error",detail=matrix(nrow=6,ncol=1))
+if (length(unique(pr))>1)
+{
+  plot(PCAmodel,main="PCA",branch=0.5,uniform = TRUE,compress = TRUE,margin=0.1)
+  text(PCAmodel, use.n = TRUE,cex=0.75)
+  ptab <- epiR::epi.tests(table(pr==0,PCAdataframe[,outcome]==0))
+}
+pander::pander(table(PCAdataframe[,outcome],pr))
+pander::pander(ptab)
+pander::pander(ptab$detail[c(5,3,4,6),])
+
+
+par(op)
+```
+
+
+### EFA
+```{r results = "asis", warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
+
+  EFAdataframe[,outcome] <- factor(EFAdataframe[,outcome])
+  EFAmodel <- rpart(paste(outcome,"~."),EFAdataframe,control=rpart.control(maxdepth=3))
+  pr <- predict(EFAmodel,EFAdataframe,type = "class")
+  
+  ptab <- list(er="Error",detail=matrix(nrow=6,ncol=1))
+  if (length(unique(pr))>1)
+  {
+    plot(EFAmodel,main="EFA",branch=0.5,uniform = TRUE,compress = TRUE,margin=0.1)
+    text(EFAmodel, use.n = TRUE,cex=0.75)
+    ptab <- epiR::epi.tests(table(pr==0,EFAdataframe[,outcome]==0))
+  }
+
+  pander::pander(table(EFAdataframe[,outcome],pr))
+  pander::pander(ptab)
+  pander::pander(ptab$detail[c(5,3,4,6),])
+  par(op)
+
 
 ```
 
