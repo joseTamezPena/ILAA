@@ -1,0 +1,243 @@
+---
+title: "Decorrelation-Based Feature Discovery: Personality Age"
+author: "Jose Tamez"
+date: "`r Sys.Date()`"
+output:
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+
+```
+
+
+# Effect of UPSTM-Based Decorrelation on Feature Discovery
+
+
+### Loading the libraries
+
+```{r}
+library("FRESA.CAD")
+library(readxl)
+library(igraph)
+library(umap)
+library(tsne)
+library(entropy)
+
+op <- par(no.readonly = TRUE)
+pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+
+```
+
+
+## Material and Methods
+
+Data Source 
+https://quantdev.ssri.psu.edu/tutorials/intro-basic-exploratory-factor-analysis
+
+"For this example, we use data from the web that are collected and distributed at https://openpsychometrics.org/_rawdata/. The data were obtained from 19,719 participants (rows) who provided answers to the Big Five Personality Test, constructed with items from the International Personality Item Pool. Data columns include gender, age, race, native language, country, and answers to the 50 likert rated statements (1-5;0 if missed; 1 was labeled as “strongly disagree”, 2 was labeled as “disagree”, 3 was labeled as “neither agree not disagree”, 4 was labeled as “agree” and 5 was labeled as “strongly agree”.) The original files can be obtaned at http://openpsychometrics.org/_rawdata/BIG5.zip"
+
+
+
+## The Data
+
+```{r}
+BigData <- as.data.frame(read_excel("~/GitHub/LatentBiomarkers/Data/BigData.xlsx"))
+
+BigData[BigData==0] <- NA 
+BigData <- BigData[complete.cases(BigData),]
+BigData <- BigData[BigData$age<100,]
+
+BigData <- BigData[,-c(1,3,5,6,7)]
+
+BigData$gender <- 1*(BigData$gender==1)
+
+BigData$age <- log(BigData$age)
+```
+
+#### Standarize the names for the reporting
+
+```{r results = "asis"}
+studyName <- "PersonalityAge"
+dataframe <- BigData
+outcome <- "age"
+
+thro <- 0.20
+cexheat = 0.15
+
+```
+
+
+## Training and testing set
+
+```{r}
+set.seed(2)
+trainsamples <- sample(nrow(dataframe),2*nrow(dataframe)/3)
+
+trainingset <- dataframe[trainsamples,]
+testingset <- dataframe[-trainsamples,]
+
+pander::pander(summary(trainingset))
+pander::pander(summary(testingset))
+
+varlist <- colnames(trainingset)
+varlist <- varlist[varlist != outcome]
+```
+
+
+#### Correlation Matrix of the Data
+
+The heat map of the data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+
+  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+  cormat <- cor(trainingset[,varlist],method="pearson")
+  cormat[is.na(cormat)] <- 0
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+  #                  scale = "row",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Original Correlation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+  diag(cormat) <- 0
+  pander::pander(max(abs(cormat)))
+
+```
+
+
+
+## Modeling age using raw set
+
+```{r}
+agemodel <- LASSO_1SE(age~.,trainingset);
+predage <- predict(agemodel,testingset)
+pander::pander(agemodel$coef)
+cor.test(predage,testingset$age)
+
+
+```
+
+
+##  Decorrelating using age as the outcome
+
+```{r}
+trainfat_driven <- IDeA(trainingset,Outcome=outcome,thr=thro)
+testfat_driven <- predictDecorrelate(trainfat_driven,testingset)
+
+covraw <- det(cov(trainingset))
+covla <- det(cov(trainfat_driven))
+
+varraw <- apply(trainingset,2,var)
+pander::pander(t(varraw[order(-varraw)]))
+
+
+varla <- apply(trainfat_driven,2,var)
+pander::pander(t(varla[order(-varla)]))
+
+pander::pander(t(colnames(trainfat_driven)))
+theLaFormulas <- getLatentCoefficients(trainfat_driven)
+pander::pander(theLaFormulas)
+                       
+```
+
+#### Correlation Matrix of the Data
+
+The heat map of the decorrelated data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+varlistDe <- colnames(trainfat_driven)
+varlistDe <- varlistDe[varlistDe != outcome]
+
+  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+  cormat <- cor(trainfat_driven[,varlistDe],method="pearson")
+  cormat[is.na(cormat)] <- 0
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+  #                  scale = "row",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "After IDeA Correlation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+  diag(cormat) <- 0
+  pander::pander(max(abs(cormat)))
+
+```
+
+
+## Modeling body fat using decorrelated set
+
+```{r}
+agemodel_DE <- LASSO_1SE(age~.,trainfat_driven);
+predage_DE <- predict(agemodel_DE,testfat_driven)
+cor.test(predage_DE,testfat_driven$age)
+pander::pander(agemodel_DE$coef)
+
+
+devCoef <- agemodel_DE$coef
+
+coefnamesLa <- theLaFormulas[names(devCoef)]
+coefnames <- coefnamesLa[!unlist(lapply(coefnamesLa,is.null))]
+for (cn in names(coefnames))
+{
+  names(devCoef)[names(devCoef) %in% cn] <- coefnames[cn]
+}
+pander::pander(devCoef)
+
+obsCoef <- getObservedCoef(trainfat_driven,agemodel_DE$coef)
+pander::pander(obsCoef,"IDeA Modeling")
+
+plot(abs(obsCoef),abs(agemodel$coef[names(obsCoef)]),log="xy")
+
+```
+
+### Comparing summaries
+
+```{r}
+
+lmod <- lm(age~.,trainingset[,c("age",names(agemodel$coef)[-1])])
+sm <- summary(lmod)
+sm$coefficients <- sm$coefficients[order(-abs(sm$coefficients[,3])),]
+pander::pander(sm)
+
+lmod_DE <- lm(age~.,trainfat_driven[,c("age",names(agemodel_DE$coef)[-1])])
+sm <- summary(lmod_DE)
+sm$coefficients <- sm$coefficients[order(-abs(sm$coefficients[,3])),]
+pander::pander(sm)
+
+plot(predage,predage_DE)
+
+plot(predage,exp(testingset$age))
+plot(predage_DE,exp(testingset$age))
+
+```
+
+

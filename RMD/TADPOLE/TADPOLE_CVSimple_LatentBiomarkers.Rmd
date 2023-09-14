@@ -261,7 +261,7 @@ outcome <- "status"
 nLoops <- 100
 needScaling <- TRUE
 IDSample <- FALSE
-thro <- 0.8
+thro <- 0.6
 
 
 ```

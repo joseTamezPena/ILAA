@@ -210,7 +210,7 @@ outcome <- "depressionTot"
 
 nLoops <- 100
 
-needScaling <- FALSE
+needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.4
 

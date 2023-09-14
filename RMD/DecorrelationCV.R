@@ -143,7 +143,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
           
    ### Preparation for PCA and FCA
         cat("|")
-        iscontinous <- sapply(apply(trainSet,2,unique),length) > 5 ## Only variables with enough samples
+        iscontinous <- sapply(apply(trainSet,2,unique),length) >= 5 ## Only variables with enough samples
         ndf <- nrow(trainSet)-2
         tvalue <- qt(1.0 - 0.001,ndf)
         rcrit <- tvalue/sqrt(ndf + tvalue^2)

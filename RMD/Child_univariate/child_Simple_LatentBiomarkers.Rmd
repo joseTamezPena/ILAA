@@ -44,7 +44,7 @@ Scaling and removing near zero variance columns and highly co-linear(r>0.99999) 
   varlist <- colnames(dataframe)
   varlist <- varlist[varlist != outcome]
   
-  iscontinous <- sapply(apply(dataframe,2,unique),length) > 5 ## Only variables with enough samples
+  iscontinous <- sapply(apply(dataframe,2,unique),length) >= 5 ## Only variables with enough samples
 
 
 
@@ -357,7 +357,7 @@ pander::pander(finalTable[,Final_Columns])
 
 ```{r results = "asis" ,warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
 featuresnames <- colnames(dataframe)[colnames(dataframe) != outcome]
-pc <- prcomp(dataframe[,iscontinous],center = TRUE,tol=0.002)   #principal components
+pc <- prcomp(dataframe[,iscontinous],center = TRUE,scale. = TRUE)   #principal components
 predPCA <- predict(pc,dataframe[,iscontinous])
 PCAdataframe <- as.data.frame(cbind(predPCA,dataframe[,!iscontinous]))
 colnames(PCAdataframe) <- c(colnames(predPCA),colnames(dataframe)[!iscontinous]) 

@@ -103,7 +103,7 @@ studyName <- "SalivaCOVID19"
 dataframe <- SalivaIR_Avg
 outcome <- "class"
 nLoops <- 100
-needScaling <- FALSE
+needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.8
 

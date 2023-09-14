@@ -1,5 +1,5 @@
 ---
-title: "Decorrelation-Based Feature Discovery: Activity"
+title: "Decorrelation-Based Feature Discovery: CV Personality Big Five"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
@@ -42,68 +42,26 @@ source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
 
 ```
 
+
 ## Material and Methods
 
 Data Source 
-https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6960825/
+https://quantdev.ssri.psu.edu/tutorials/intro-basic-exploratory-factor-analysis
 
-Mohino-Herranz I, Gil-Pita R, Rosa-Zurera M, Seoane F. Activity Recognition Using Wearable Physiological Measurements: Selection of Features from a Comprehensive Literature Study. Sensors (Basel). 2019 Dec 13;19(24):0. doi: 10.3390/s19245524. PMID: 31847261; PMCID: PMC6960825.
+"For this example, we use data from the web that are collected and distributed at https://openpsychometrics.org/_rawdata/. The data were obtained from 19,719 participants (rows) who provided answers to the Big Five Personality Test, constructed with items from the International Personality Item Pool. Data columns include gender, age, race, native language, country, and answers to the 50 likert rated statements (1-5;0 if missed; 1 was labeled as “strongly disagree”, 2 was labeled as “disagree”, 3 was labeled as “neither agree not disagree”, 4 was labeled as “agree” and 5 was labeled as “strongly agree”.) The original files can be obtaned at http://openpsychometrics.org/_rawdata/BIG5.zip"
 
 
 
 ## The Data
 
 ```{r}
-Activitydata <- read.csv("~/GitHub/LatentBiomarkers/Data/ActivityData/data.txt", header=FALSE, stringsAsFactors=TRUE)
-featNames <- read.table("~/GitHub/LatentBiomarkers/Data/ActivityData/Featurelabels.txt", quote="\"", comment.char="")
-featNames <- as.character(t(featNames))
-featNames <- str_replace_all(featNames,"\\(abs\\)","_A_")
-featNames[duplicated(featNames)] <- paste(featNames[duplicated(featNames)],"D",sep="_")
+BigData <- as.data.frame(read_excel("~/GitHub/LatentBiomarkers/Data/BigData.xlsx"))
 
-rep_ID <- numeric(nrow(Activitydata))
-ctr <- 1
-for (ind in c(1:(nrow(Activitydata)-1)))
-{
-  rep_ID[ind] <- ctr
-  if (Activitydata$V1[ind] != Activitydata$V1[ind+1]) ctr <- 0;
-  ctr <- ctr + 1
-}
-rownames(Activitydata) <- paste(Activitydata$V1,rep_ID,sep="_")
-colnames(Activitydata) <- c("ID",featNames,"class")
-Activitydata$rep <- rep_ID
-  
-tb <- table(Activitydata$class)
+BigData[BigData==0] <- NA 
+BigData <- BigData[complete.cases(BigData),]
+BigData <- BigData[,-c(1,3,5,6,7)]
 
-classes <- c("Neu","Emo","Men","Phy")
-names(classes) <- names(tb)
-Activitydata$class <- classes[as.character(Activitydata$class)]
-table(Activitydata$class)
-
-
-
-ID_class <- paste(Activitydata$ID,Activitydata$class)
-IDCLASS <- unique(ID_class)
-theclass <- Activitydata$class[!duplicated(ID_class)]
-theIDs <- Activitydata$ID[!duplicated(ID_class)]
-
-ActivitydataAvg <- NULL
-for (id in IDCLASS)
-{
-  ActivitydataAvg <- rbind(ActivitydataAvg,apply(Activitydata[ID_class==id,featNames],2,mean))
-}
-colnames(ActivitydataAvg) <- featNames
-rownames(ActivitydataAvg) <- IDCLASS
-ActivitydataAvg <- as.data.frame(ActivitydataAvg)
-ActivitydataAvg$class <- theclass
-ActivitydataAvg$ID <- theIDs
-
-table(ActivitydataAvg$class)
-
-
-ActivitydataAvg <- subset(ActivitydataAvg, class=="Men" | class=="Emo")
-
-ActivitydataAvg$class <- 1*(ActivitydataAvg$class == "Men")
-table(ActivitydataAvg$class)
+BigData$gender <- 1*(BigData$gender==1)
 
 ```
 
@@ -111,16 +69,20 @@ table(ActivitydataAvg$class)
 #### Standarize the names for the reporting
 
 ```{r results = "asis"}
-studyName <- "Activity"
-dataframe <- ActivitydataAvg
-outcome <- "class"
-nLoops <- 100
+studyName <- "Personality"
+dataframe <- BigData
+outcome <- "gender"
+
+nLoops <- 10
 
 needScaling <- TRUE
-IDSample <- TRUE
-thro <- 0.8
+IDSample <- FALSE
+thro <- 0.25
+
 
 ```
+
+
 ## CV Analysis and report
 
 ```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/CV_analysis.Rmd")}

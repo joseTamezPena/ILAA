@@ -71,7 +71,7 @@ outcome <- "diabetes"
 
 nLoops <- 100
 
-needScaling <- FALSE
+needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.25
 
