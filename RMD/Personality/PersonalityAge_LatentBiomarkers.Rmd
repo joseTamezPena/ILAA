@@ -65,7 +65,9 @@ BigData <- BigData[,-c(1,3,5,6,7)]
 
 BigData$gender <- 1*(BigData$gender==1)
 
-BigData$age <- log(BigData$age)
+
+BigData$age <- log10(BigData$age)
+
 ```
 
 #### Standarize the names for the reporting
@@ -76,168 +78,22 @@ dataframe <- BigData
 outcome <- "age"
 
 thro <- 0.20
-cexheat = 0.15
+cexheat = 0.25
 
 ```
 
+## Generaring the report
 
-## Training and testing set
-
-```{r}
-set.seed(2)
-trainsamples <- sample(nrow(dataframe),2*nrow(dataframe)/3)
-
-trainingset <- dataframe[trainsamples,]
-testingset <- dataframe[-trainsamples,]
-
-pander::pander(summary(trainingset))
-pander::pander(summary(testingset))
-
-varlist <- colnames(trainingset)
-varlist <- varlist[varlist != outcome]
+```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/child_regression.Rmd")}
 ```
 
 
-#### Correlation Matrix of the Data
-
-The heat map of the data
+### The age plots
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-
-  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
-  cormat <- cor(trainingset[,varlist],method="pearson")
-  cormat[is.na(cormat)] <- 0
-  gplots::heatmap.2(abs(cormat),
-                    trace = "none",
-  #                  scale = "row",
-                    mar = c(5,5),
-                    col=rev(heat.colors(5)),
-                    main = "Original Correlation",
-                    cexRow = cexheat,
-                    cexCol = cexheat,
-                     srtCol=45,
-                     srtRow=45,
-                    key.title=NA,
-                    key.xlab="|Pearson Correlation|",
-                    xlab="Feature", ylab="Feature")
-  diag(cormat) <- 0
-  pander::pander(max(abs(cormat)))
+plot(10^predOutcome,10^testingset[,outcome],xlab="Raw Predicted",ylab=outcome,main="Age Prediction")
+plot(10^predOutcome_DE,10^testingset[,outcome],xlab="IDeA Predicted",ylab=outcome,main="Age Prediction")
 
 ```
-
-
-
-## Modeling age using raw set
-
-```{r}
-agemodel <- LASSO_1SE(age~.,trainingset);
-predage <- predict(agemodel,testingset)
-pander::pander(agemodel$coef)
-cor.test(predage,testingset$age)
-
-
-```
-
-
-##  Decorrelating using age as the outcome
-
-```{r}
-trainfat_driven <- IDeA(trainingset,Outcome=outcome,thr=thro)
-testfat_driven <- predictDecorrelate(trainfat_driven,testingset)
-
-covraw <- det(cov(trainingset))
-covla <- det(cov(trainfat_driven))
-
-varraw <- apply(trainingset,2,var)
-pander::pander(t(varraw[order(-varraw)]))
-
-
-varla <- apply(trainfat_driven,2,var)
-pander::pander(t(varla[order(-varla)]))
-
-pander::pander(t(colnames(trainfat_driven)))
-theLaFormulas <- getLatentCoefficients(trainfat_driven)
-pander::pander(theLaFormulas)
-                       
-```
-
-#### Correlation Matrix of the Data
-
-The heat map of the decorrelated data
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-
-varlistDe <- colnames(trainfat_driven)
-varlistDe <- varlistDe[varlistDe != outcome]
-
-  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
-  cormat <- cor(trainfat_driven[,varlistDe],method="pearson")
-  cormat[is.na(cormat)] <- 0
-  gplots::heatmap.2(abs(cormat),
-                    trace = "none",
-  #                  scale = "row",
-                    mar = c(5,5),
-                    col=rev(heat.colors(5)),
-                    main = "After IDeA Correlation",
-                    cexRow = cexheat,
-                    cexCol = cexheat,
-                     srtCol=45,
-                     srtRow=45,
-                    key.title=NA,
-                    key.xlab="|Pearson Correlation|",
-                    xlab="Feature", ylab="Feature")
-  diag(cormat) <- 0
-  pander::pander(max(abs(cormat)))
-
-```
-
-
-## Modeling body fat using decorrelated set
-
-```{r}
-agemodel_DE <- LASSO_1SE(age~.,trainfat_driven);
-predage_DE <- predict(agemodel_DE,testfat_driven)
-cor.test(predage_DE,testfat_driven$age)
-pander::pander(agemodel_DE$coef)
-
-
-devCoef <- agemodel_DE$coef
-
-coefnamesLa <- theLaFormulas[names(devCoef)]
-coefnames <- coefnamesLa[!unlist(lapply(coefnamesLa,is.null))]
-for (cn in names(coefnames))
-{
-  names(devCoef)[names(devCoef) %in% cn] <- coefnames[cn]
-}
-pander::pander(devCoef)
-
-obsCoef <- getObservedCoef(trainfat_driven,agemodel_DE$coef)
-pander::pander(obsCoef,"IDeA Modeling")
-
-plot(abs(obsCoef),abs(agemodel$coef[names(obsCoef)]),log="xy")
-
-```
-
-### Comparing summaries
-
-```{r}
-
-lmod <- lm(age~.,trainingset[,c("age",names(agemodel$coef)[-1])])
-sm <- summary(lmod)
-sm$coefficients <- sm$coefficients[order(-abs(sm$coefficients[,3])),]
-pander::pander(sm)
-
-lmod_DE <- lm(age~.,trainfat_driven[,c("age",names(agemodel_DE$coef)[-1])])
-sm <- summary(lmod_DE)
-sm$coefficients <- sm$coefficients[order(-abs(sm$coefficients[,3])),]
-pander::pander(sm)
-
-plot(predage,predage_DE)
-
-plot(predage,exp(testingset$age))
-plot(predage_DE,exp(testingset$age))
-
-```
-
 

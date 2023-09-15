@@ -276,69 +276,35 @@ univarDe <- uniRankVar(varlistc,
 
 univariate_columns <- c("caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC")
 
-##topfive
+##top variables
 topvar <- c(1:length(varlist)) <= TopVariables
-pander::pander(univarRAW$orderframe[topvar,univariate_columns])
+tableRaw <- univarRAW$orderframe[topvar,univariate_columns]
+pander::pander(tableRaw)
 
 
 topLAvar <- univarDe$orderframe$Name[str_detect(univarDe$orderframe$Name,"La_")]
 topLAvar <- unique(c(univarDe$orderframe$Name[topvar],topLAvar[1:as.integer(TopVariables/2)]))
 finalTable <- univarDe$orderframe[topLAvar,univariate_columns]
 
-theLaVar <- rownames(finalTable)[str_detect(rownames(finalTable),"La_")]
 
-pander::pander(univarDe$orderframe[topLAvar,univariate_columns])
+pander::pander(finalTable)
 
 dc <- getLatentCoefficients(DEdataframe)
 fscores <- attr(DEdataframe,"fscore")
 
-theSigDc <- dc[theLaVar]
-names(theSigDc) <- NULL
-theSigDc <- unique(names(unlist(theSigDc)))
-
-
-theFormulas <- dc[rownames(finalTable)]
-deFromula <- character(length(theFormulas))
-names(deFromula) <- rownames(finalTable)
 
 pander::pander(c(mean=mean(sapply(dc,length)),total=length(dc),fraction=length(dc)/(ncol(dataframe)-1)))
 
-
-allSigvars <- names(dc)
-
+theCharformulas <- attr(dc,"LatentCharFormulas")
 
 
-dx <- names(deFromula)[1]
-for (dx in names(deFromula))
-{
-  coef <- theFormulas[[dx]]
-  cname <- names(theFormulas[[dx]])
-  names(cname) <- cname
-  for (cf in names(coef))
-  {
-    if (cf != dx)
-    {
-      if (coef[cf]>0)
-      {
-        deFromula[dx] <- paste(deFromula[dx],
-                               sprintf("+ %5.3f*%s",coef[cf],cname[cf]))
-      }
-      else
-      {
-        deFromula[dx] <- paste(deFromula[dx],
-                               sprintf("%5.3f*%s",coef[cf],cname[cf]))
-      }
-    }
-  }
-}
-
-finalTable <- rbind(finalTable,univarRAW$orderframe[theSigDc[!(theSigDc %in% rownames(finalTable))],univariate_columns])
+finalTable <- rbind(finalTable,tableRaw[topvar[!(topvar %in% topLAvar)],univariate_columns])
 
 
 orgnamez <- rownames(finalTable)
 orgnamez <- str_remove_all(orgnamez,"La_")
 finalTable$RAWAUC <- univarRAW$orderframe[orgnamez,"ROCAUC"]
-finalTable$DecorFormula <- deFromula[rownames(finalTable)]
+finalTable$DecorFormula <- theCharformulas[rownames(finalTable)]
 finalTable$fscores <- fscores[rownames(finalTable)]
 
 Final_Columns <- c("DecorFormula","caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","RAWAUC","fscores")
@@ -443,7 +409,6 @@ pr <- predict(rawmodel,dataframe,type = "class")
   }
 
 pander::pander(table(dataframe[,outcome],pr))
-pander::pander(ptab)
 pander::pander(ptab$detail[c(5,3,4,6),])
 
 par(op)
@@ -460,7 +425,6 @@ pr <- predict(IDeAmodel,DEdataframe,type = "class")
     ptab <- epiR::epi.tests(table(pr==0,DEdataframe[,outcome]==0))
   }
 pander::pander(table(DEdataframe[,outcome],pr))
-pander::pander(ptab)
 pander::pander(ptab$detail[c(5,3,4,6),])
 
 par(op)
@@ -476,7 +440,6 @@ if (length(unique(pr))>1)
   ptab <- epiR::epi.tests(table(pr==0,PCAdataframe[,outcome]==0))
 }
 pander::pander(table(PCAdataframe[,outcome],pr))
-pander::pander(ptab)
 pander::pander(ptab$detail[c(5,3,4,6),])
 
 
@@ -500,7 +463,6 @@ par(op)
   }
 
   pander::pander(table(EFAdataframe[,outcome],pr))
-  pander::pander(ptab)
   pander::pander(ptab$detail[c(5,3,4,6),])
   par(op)
 
