@@ -76,10 +76,12 @@ The heat map of the data
 ##  Decorrelating using IDeA
 
 ```{r results = "asis", warning = FALSE}
-#decormat <- IDeA(trainingset[,colnames(trainingset) != outcome],thr=thro)
-#trainage_DE <- predictDecorrelate(decormat,trainingset)
-decormat <- IDeA(trainingset,Outcome = outcome,thr=thro)
-trainage_DE <- decormat
+decormat <- IDeA(trainingset[,colnames(trainingset) != outcome],thr=thro)
+
+trainage_DE <- predictDecorrelate(decormat,trainingset)
+#decormat <- IDeA(trainingset,Outcome = outcome,thr=thro)
+#trainage_DE <- decormat
+
 testage_DE <- predictDecorrelate(decormat,testingset)
 
 
@@ -108,14 +110,14 @@ varlistDe <- colnames(trainage_DE)
 varlistDe <- varlistDe[varlistDe != outcome]
 
   par(cex=0.6,cex.main=0.85,cex.axis=0.7)
-  cormat <- cor(testage_DE[,varlistDe],method="pearson")
+  
+  cormat <- cor(trainage_DE[,varlistDe],method="pearson")
   cormat[is.na(cormat)] <- 0
   gplots::heatmap.2(abs(cormat),
                     trace = "none",
-  #                  scale = "row",
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
-                    main = "After IDeA Correlation",
+                    main = "Training: After IDeA Correlation",
                     cexRow = cexheat,
                     cexCol = cexheat,
                      srtCol=45,
@@ -126,6 +128,27 @@ varlistDe <- varlistDe[varlistDe != outcome]
   diag(cormat) <- 0
   pander::pander(max(abs(cormat)))
 
+  
+  cormat <- cor(testage_DE[,varlistDe],method="pearson")
+  cormat[is.na(cormat)] <- 0
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Testing: After IDeA Correlation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+  diag(cormat) <- 0
+  pander::pander(max(abs(cormat)))
+
+  par(op)
+
+  
 ```
 
 
@@ -176,15 +199,23 @@ deunittvalues <- apply(testage_DE[,names(outcomeModel_DE$coef)[-1]],2,tvals,test
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 7.0}
 
-psig <- 0.05/(ncol(testingset)-1)
+psig <- 0.1/(ncol(testingset)-1)
 lmod <- lm(paste(outcome,"~."),testingset[,c(outcome,names(outcomeModel$coef)[-1])])
-
+sm <- summary(lmod)
+if (length(lmod$coef)>10)
+{
+  sm$coefficients[1,4] <- 1.0
+  gcoef <- lmod$coef[sm$coefficients[,4]<psig]
+  lmod <- lm(paste(outcome,"~."),testingset[,c(outcome,names(gcoef))])
+}
 
 sm <- summary(lmod)
 smcoef <- as.data.frame(sm$coefficients)
 smcoef <- smcoef[order(-abs(smcoef[,3])),]
 smcoef$Uni_t_values <- rawunittvalues[rownames(smcoef)]
 smcoef <- smcoef[!is.na(smcoef$Uni_t_values),]
+if (nrow(smcoef)>10) smcoef <- smcoef[smcoef[,4]<psig,]
+
 pander::pander(smcoef)
 pander::pander(t(c(R2=sm$r.squared,adj_R2=sm$adj.r.squared)))
 pander::pander(c(numvar=nrow(smcoef)))
@@ -192,10 +223,19 @@ pander::pander(c(numvar=nrow(smcoef)))
 
 lmod_DE <- lm(paste(outcome,"~."),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])
 sm <- summary(lmod_DE)
+if (length(lmod_DE$coef)>10)
+{
+  sm$coefficients[1,4] <- 1.0
+  gcoef <- lmod_DE$coef[sm$coefficients[,4]<psig]
+  lmod_DE <- lm(paste(outcome,"~."),testage_DE[,c(outcome,names(gcoef))])
+}
+
+sm <- summary(lmod_DE)
 lacoef <- as.data.frame(sm$coefficients)
 lacoef <- lacoef[order(-abs(lacoef[,3])),]
 lacoef$Uni_t_values <- deunittvalues[rownames(lacoef)]
 lacoef <- lacoef[!is.na(lacoef$Uni_t_values),]
+if (nrow(lacoef)>10) lacoef <- lacoef[lacoef[,4]<psig,]
 
 lacoef$formula <- theCharformulas[rownames(lacoef)]
 pander::pander(lacoef)
@@ -216,6 +256,7 @@ plot(smcoef[,c(3,5)],
 lmtvals <- lm(smcoef[,5]~smcoef[,3])
 pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
 lines(x=xvals,y=pred,col="red")
+text(xvals[1]+(xvals[2]-xvals[1])/2,xvals[2]-1,sprintf("Slope= %.2f",lmtvals$coefficients[2]))
 
 
 plot(lacoef[-1,c(3,5)],
@@ -227,6 +268,7 @@ plot(lacoef[-1,c(3,5)],
 lmtvals <- lm(lacoef[,5]~lacoef[,3])
 pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
 lines(x=xvals,y=pred,col="red")
+text(xvals[1]+(xvals[2]-xvals[1])/2,xvals[2]-1,sprintf("Slope= %.2f",lmtvals$coefficients[2]))
 
 #pander::pander(summary(lmtvals))
 
