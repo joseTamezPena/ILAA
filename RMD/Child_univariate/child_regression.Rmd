@@ -10,6 +10,7 @@ library(psych)
 library(whitening)
 library("vioplot")
 library("rpart")
+source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/RepeatedLinearCV.R")
 
 ```
 
@@ -183,13 +184,6 @@ pander::pander(cor.test(predOutcome_DE,testage_DE[,outcome]),caption="IDeA-based
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-tvals <- function(x,target)
-{
-  lmt <- lm(target~x)
-  sm <- summary(lmt)
-  return(sm$coefficients[2,3])
-}
-
 rawunittvalues <- apply(testingset[,names(outcomeModel$coef)[-1]],2,tvals,testingset[,outcome])
 deunittvalues <- apply(testage_DE[,names(outcomeModel_DE$coef)[-1]],2,tvals,testingset[,outcome])
 ```
@@ -294,6 +288,61 @@ plot(lmod_DE$fitted.values,predOutcome_DE,main="IDeA: lm train predict vs. test 
 plot(predOutcome,predOutcome_DE,xlab="Raw Predicted",ylab="IDeA Predicted",main="Raw vs. IDeA")
 
 par(op)
+
+```
+
+
+### CV 
+
+### test Correlations
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 7.0}
+par(op)
+corresults <- CV_IDeA(dataframe,outcome,loops=loops)
+
+mintvals <- min(c(min(corresults$rawtValues),min(corresults$detValues)))
+maxvals <- max(c(max(corresults$rawtValues),max(corresults$detValues)))
+xvals <- c(mintvals,maxvals)
+
+vioplot(list(raw=corresults$testRawCorrelations,IDeA=corresults$testDeCorrelations),
+        ylab="Pearson Correlation",
+        main="Test Correlations")
+
+```
+
+### The t-values
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
+
+par(op)
+par(mfrow=c(1,2),cex=0.5)
+plot(corresults$rawtValues,
+     main="Raw: Univariate t-values vs Model t-values",
+     xlab="Univariate",
+     ylab="Model",
+     xlim=xvals,
+     ylim=xvals)
+
+lmtvals <- lm(Model~.,corresults$rawtValues)
+pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
+lines(x=xvals,y=pred,col="red")
+text(xvals[1]+(xvals[2]-xvals[1])/2,xvals[2]-1,sprintf("Slope= %.2f",lmtvals$coefficients[2]))
+
+pander::pander(summary(lmtvals))
+
+plot(corresults$detValues,
+      main="IDeA: Univariate t-values vs Model t-values",
+     xlab="Univariate",
+     ylab="Model",
+     xlim=xvals,
+     ylim=xvals)
+
+lmtvals <- lm(Model~.,corresults$detValues)
+pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
+lines(x=xvals,y=pred,col="red")
+text(xvals[1]+(xvals[2]-xvals[1])/2,xvals[2]-1,sprintf("Slope= %.2f",lmtvals$coefficients[2]))
+
+pander::pander(summary(lmtvals))
 
 ```
 

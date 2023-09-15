@@ -1,0 +1,297 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+### Libraries
+Some libraries
+```{r}
+library(psych)
+library(whitening)
+library("vioplot")
+library("rpart")
+
+```
+
+### Data specs
+
+
+
+```{r results = "asis"}
+pander::pander(c(rows=nrow(dataframe),col=ncol(dataframe)-1))
+
+varlist <- colnames(dataframe)
+varlist <- varlist[varlist != outcome]
+
+```
+
+
+## Training and testing sets
+
+```{r results = "asis", warning = FALSE}
+trainsamples <- sample(nrow(dataframe),2*nrow(dataframe)/3)
+
+trainingset <- dataframe[trainsamples,]
+testingset <- dataframe[-trainsamples,]
+
+pander::pander(t(summary(trainingset)))
+
+varlist <- colnames(trainingset)
+varlist <- varlist[varlist != outcome]
+```
+
+
+#### Correlation Matrix of the Data
+
+The heat map of the data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+
+  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+  cormat <- cor(testingset[,varlist],method="pearson")
+  cormat[is.na(cormat)] <- 0
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+  #                  scale = "row",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Original Correlation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+  diag(cormat) <- 0
+  pander::pander(max(abs(cormat)))
+
+```
+
+
+
+##  Decorrelating using IDeA
+
+```{r results = "asis", warning = FALSE}
+decormat <- IDeA(trainingset[,colnames(trainingset) != outcome],thr=thro)
+
+trainage_DE <- predictDecorrelate(decormat,trainingset)
+#decormat <- IDeA(trainingset,Outcome = outcome,thr=thro)
+#trainage_DE <- decormat
+
+testage_DE <- predictDecorrelate(decormat,testingset)
+
+
+varraw <- apply(trainingset,2,var)
+pander::pander(as.matrix(varraw[order(-varraw)]))
+
+
+varla <- apply(trainage_DE,2,var)
+pander::pander(as.matrix(varla[order(-varla)]))
+
+theLaFormulas <- getLatentCoefficients(decormat)
+
+theCharformulas <- attr(theLaFormulas,"LatentCharFormulas")
+pander::pander(as.matrix(theCharformulas))
+
+
+```
+
+#### Correlation Matrix of the Data
+
+The heat map of the IDeA transformed data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+varlistDe <- colnames(trainage_DE)
+varlistDe <- varlistDe[varlistDe != outcome]
+
+  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+  
+  cormat <- cor(trainage_DE[,varlistDe],method="pearson")
+  cormat[is.na(cormat)] <- 0
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Training: After IDeA Correlation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+  diag(cormat) <- 0
+  pander::pander(max(abs(cormat)))
+
+  
+  cormat <- cor(testage_DE[,varlistDe],method="pearson")
+  cormat[is.na(cormat)] <- 0
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Testing: After IDeA Correlation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+  diag(cormat) <- 0
+  pander::pander(max(abs(cormat)))
+
+  par(op)
+
+  
+```
+
+
+## Modeling
+
+## Modeling outcome using raw set
+
+```{r results = "asis", warning = FALSE}
+outcomeModel <- LASSO_1SE(formula(paste(outcome,"~.")),trainingset);
+predOutcome <- predict(outcomeModel,testingset)
+pander::pander(as.matrix(outcomeModel$coef))
+
+```
+
+### Modeling body fat using decorrelated set
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+outcomeModel_DE <- LASSO_1SE(formula(paste(outcome,"~.")),trainage_DE);
+predOutcome_DE <- predict(outcomeModel_DE,testage_DE)
+
+pander::pander(as.matrix(outcomeModel_DE$coef),caption="IDeA Coef")
+obsCoef <- getObservedCoef(decormat,outcomeModel_DE$coef)
+pander::pander(as.matrix(obsCoef),caption="IDeA Modeling")
+
+
+pander::pander(cor.test(predOutcome,testingset[,outcome]),caption="Raw Model")
+pander::pander(cor.test(predOutcome_DE,testage_DE[,outcome]),caption="IDeA-based Model")
+
+```
+
+### Univariate t-test
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+tvals <- function(x,target)
+{
+  lmt <- lm(target~x)
+  sm <- summary(lmt)
+  return(sm$coefficients[2,3])
+}
+
+rawunittvalues <- apply(testingset[,names(outcomeModel$coef)[-1]],2,tvals,testingset[,outcome])
+deunittvalues <- apply(testage_DE[,names(outcomeModel_DE$coef)[-1]],2,tvals,testingset[,outcome])
+```
+
+
+### Comparing summaries
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 7.0}
+
+psig <- 0.1/(ncol(testingset)-1)
+lmod <- lm(paste(outcome,"~."),testingset[,c(outcome,names(outcomeModel$coef)[-1])])
+sm <- summary(lmod)
+if (length(lmod$coef)>10)
+{
+  sm$coefficients[1,4] <- 1.0
+  gcoef <- lmod$coef[sm$coefficients[,4]<psig]
+  lmod <- lm(paste(outcome,"~."),testingset[,c(outcome,names(gcoef))])
+}
+
+sm <- summary(lmod)
+smcoef <- as.data.frame(sm$coefficients)
+smcoef <- smcoef[order(-abs(smcoef[,3])),]
+smcoef$Uni_t_values <- rawunittvalues[rownames(smcoef)]
+smcoef <- smcoef[!is.na(smcoef$Uni_t_values),]
+if (nrow(smcoef)>10) smcoef <- smcoef[smcoef[,4]<psig,]
+
+pander::pander(smcoef)
+pander::pander(t(c(R2=sm$r.squared,adj_R2=sm$adj.r.squared)))
+pander::pander(c(numvar=nrow(smcoef)))
+
+
+lmod_DE <- lm(paste(outcome,"~."),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])
+sm <- summary(lmod_DE)
+if (length(lmod_DE$coef)>10)
+{
+  sm$coefficients[1,4] <- 1.0
+  gcoef <- lmod_DE$coef[sm$coefficients[,4]<psig]
+  lmod_DE <- lm(paste(outcome,"~."),testage_DE[,c(outcome,names(gcoef))])
+}
+
+sm <- summary(lmod_DE)
+lacoef <- as.data.frame(sm$coefficients)
+lacoef <- lacoef[order(-abs(lacoef[,3])),]
+lacoef$Uni_t_values <- deunittvalues[rownames(lacoef)]
+lacoef <- lacoef[!is.na(lacoef$Uni_t_values),]
+if (nrow(lacoef)>10) lacoef <- lacoef[lacoef[,4]<psig,]
+
+lacoef$formula <- theCharformulas[rownames(lacoef)]
+pander::pander(lacoef)
+pander::pander(t(c(R2=sm$r.squared,adj_R2=sm$adj.r.squared)))
+pander::pander(c(numvar=nrow(lacoef)))
+
+
+xvals <-c(min(c(deunittvalues,rawunittvalues))-3,max(c(deunittvalues,rawunittvalues))+3)
+
+par(mfrow=c(1,2),cex=0.5)
+
+plot(smcoef[,c(3,5)],
+     main="Raw: Univariate t-values vs regression t-values",
+     xlim=xvals,
+     ylim=xvals
+     )
+
+lmtvals <- lm(smcoef[,5]~smcoef[,3])
+pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
+lines(x=xvals,y=pred,col="red")
+text(xvals[1]+(xvals[2]-xvals[1])/2,xvals[2]-1,sprintf("Slope= %.2f",lmtvals$coefficients[2]))
+
+
+plot(lacoef[-1,c(3,5)],
+     main="IDeA: Univariate t-values vs regression t-values",
+     xlim=xvals,
+     ylim=xvals
+     )
+
+lmtvals <- lm(lacoef[,5]~lacoef[,3])
+pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
+lines(x=xvals,y=pred,col="red")
+text(xvals[1]+(xvals[2]-xvals[1])/2,xvals[2]-1,sprintf("Slope= %.2f",lmtvals$coefficients[2]))
+
+#pander::pander(summary(lmtvals))
+
+
+pander::pander(cor.test(smcoef[,3],smcoef[,5]))
+
+pander::pander(cor.test(lacoef[,3],lacoef[,5]))
+
+par(op)
+
+
+
+
+```
+
+### Ploting predictions
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.0, fig.width= 7.0}
+par(mfrow=c(1,3),cex=0.5)
+plot(lmod$fitted.values,predOutcome,main="Raw: lm train predict vs. test predict",xlab="Train",ylab="Test")
+plot(lmod_DE$fitted.values,predOutcome_DE,main="IDeA: lm train predict vs. test predict",xlab="Train",ylab="Test")
+
+plot(predOutcome,predOutcome_DE,xlab="Raw Predicted",ylab="IDeA Predicted",main="Raw vs. IDeA")
+
+par(op)
+
+```
+

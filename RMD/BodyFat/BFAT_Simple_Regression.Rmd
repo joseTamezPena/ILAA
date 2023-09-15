@@ -84,8 +84,8 @@ dataframe <- body_fat
 outcome <- "BodyFat"
 
 thro <- 0.35
-cexheat = 0.75
-
+cexheat <- 0.75
+loops  <- 30
 ```
 
 ## Generaring the report
@@ -102,3 +102,5 @@ plot(predOutcome,testingset[,outcome],xlab="Raw Predicted",ylab=outcome,main="Ra
 plot(predOutcome_DE,testingset[,outcome],xlab="IDeA Predicted",ylab=outcome,main="IDeA Fat Prediction")
 
 ```
+
+

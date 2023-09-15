@@ -78,7 +78,8 @@ dataframe <- BigData
 outcome <- "age"
 
 thro <- 0.20
-cexheat = 0.25
+cexheat <- 0.25
+loops <- 30
 
 ```
 

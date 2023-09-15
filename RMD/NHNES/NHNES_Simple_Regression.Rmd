@@ -193,7 +193,9 @@ dataframe <- NHNESDep
 outcome <- "RIDAGEYR"
 
 thro <- 0.40
-cexheat = 0.35
+cexheat <- 0.35
+loops <- 30
+
 
 ```
 
