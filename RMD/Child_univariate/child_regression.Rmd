@@ -308,6 +308,8 @@ vioplot(list(raw=corresults$testRawCorrelations,IDeA=corresults$testDeCorrelatio
         ylab="Pearson Correlation",
         main="Test Correlations")
 
+pander::pander(t.test(corresults$testDeCorrelations,corresults$testRawCorrelations,paired=TRUE))
+
 ```
 
 ### The t-values
