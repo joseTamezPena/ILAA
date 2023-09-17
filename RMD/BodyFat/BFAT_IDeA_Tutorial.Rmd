@@ -153,7 +153,7 @@ pander::pander(as.matrix(charFormulas))
 ```
 
 
-### Formulas Interpretation
+### Latent Formulas Interpretation
 ```{r warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 Ageformula <- LatentFormulas[["La_Age"]]
@@ -199,13 +199,14 @@ modelBodyFat <- LASSO_1SE(BodyFat~.,body_fat_Decorrelated_train)
 
 ```
 
-### The model coefficients in both spaces
+### The model coefficients in the observed space
 ```{r  results = "asis", warning = FALSE}
 pander::pander(as.matrix(modelBodyFat$coef))
 
 # Get the coefficients in the observed space
 observedCoef <- getObservedCoef(body_fat_Decorrelated_train,modelBodyFat$coef)
 pander::pander(as.matrix(observedCoef))
+
 
 ```
 
@@ -220,15 +221,19 @@ pander::pander(cor.test(predicBodyFat,testingset$BodyFat))
 
 ```
 
-### Prediction using the observed data set
+### Prediction using the observed features
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 predicBodyFatObst <- as.matrix(testingset[,names(observedCoef)[-1]]) %*% observedCoef[-1] + observedCoef[1]
+
+
 plot(testingset$BodyFat,predicBodyFatObst,xlab="True Body Fat",ylab="Predicted Body Fat",main="Predicted Body Fat")
 pander::pander(cor.test(predicBodyFat,testingset$BodyFat))
 
 plot(predicBodyFatObst,predicBodyFat,xlab="Observed",ylab="Latent",main="Observed vs Latent")
+
+
 
 ```
 
