@@ -171,8 +171,8 @@ outcomeModel_DE <- LASSO_1SE(formula(paste(outcome,"~.")),trainage_DE);
 predOutcome_DE <- predict(outcomeModel_DE,testage_DE)
 
 pander::pander(as.matrix(outcomeModel_DE$coef),caption="IDeA Coef")
-obsCoef <- getObservedCoef(decormat,outcomeModel_DE$coef)
-pander::pander(as.matrix(obsCoef),caption="IDeA Modeling")
+obsCoef <- getObservedCoef(decormat,outcomeModel_DE)
+pander::pander(as.matrix(obsCoef$coef),caption="IDeA Modeling")
 
 
 pander::pander(cor.test(predOutcome,testingset[,outcome]),caption="Raw Model")

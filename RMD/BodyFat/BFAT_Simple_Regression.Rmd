@@ -83,9 +83,9 @@ studyName <- "Body_Fat"
 dataframe <- body_fat
 outcome <- "BodyFat"
 
-thro <- 0.35
+thro <- 0.40
 cexheat <- 0.75
-loops  <- 30
+loops  <- 100
 ```
 
 ## Generaring the report

@@ -66,8 +66,6 @@ studyName <- "Arcene"
 dataframe <- wholeArceneSet
 outcome <- "Labels"
 
-
-
 nLoops <- 30
 
 needScaling <- TRUE

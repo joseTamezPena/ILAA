@@ -74,15 +74,17 @@ body_fat <- body_fat[body_fat$BMI<=50,]
 
 ```
 
-## IDeA Totally unsupervised processing
+## IDeA unsupervised processing
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-body_fat_Decorrelated <- IDeA(body_fat,thr=0.2)
+body_fat_Decorrelated <- IDeA(body_fat,thr=0.2,verbose=TRUE)
 
 ```
 
-### IDeA Transforms the original data into a new set of decorrelated variables
+### IDeA Transformation 
+
+the original data into a new set of decorrelated variables
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
@@ -118,7 +120,7 @@ body_fat_Decorrelated <- IDeA(body_fat,thr=0.2)
 ```
 
 
-### The transformation
+### Exploring transformation
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
@@ -154,18 +156,53 @@ pander::pander(as.matrix(charFormulas))
 
 
 ### Latent Formulas Interpretation
-```{r warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
 
+par(mfrow=c(1,2),cex=0.5)
+
+mvbmi <- mean(body_fat_Decorrelated$La_BMI)
+range <- max(body_fat$BMI)-min(body_fat$BMI)
+ylim <- c(mvbmi-range/2,mvbmi+range/2)
+plot(body_fat$BMI,body_fat_Decorrelated$La_BMI,
+     ylim=ylim,
+     ylab="Latent BMI",
+     xlab="True BMI",
+     main="IDeA Latent Variable")
 BMIformula <- LatentFormulas[["La_BMI"]]
 noBMInames <- names(BMIformula)[names(BMIformula) != "BMI"]
 predBMI <- -(as.matrix(body_fat[,noBMInames]) %*% BMIformula[noBMInames])
 plot(body_fat$BMI,predBMI,xlab="True BMI",ylab="Predicted BMI",main="IDeA Generated Predictions")
 
+mvage <- mean(body_fat_Decorrelated$La_Age)
+range <- max(body_fat$Age)-min(body_fat$Age)
+ylim <- c(mvage-range/2,mvage+range/2)
+
+
+plot(body_fat$Age,body_fat_Decorrelated$La_Age,
+     ylim=ylim,
+     ylab="Latent AGE",
+     xlab="True AGE",
+     main="IDeA Latent Variable")
 Ageformula <- LatentFormulas[["La_Age"]]
 noAgenames <- names(Ageformula)[names(Ageformula) != "Age"]
 predAge <- -(as.matrix(body_fat[,noAgenames]) %*% Ageformula[noAgenames])
 plot(body_fat$Age,predAge,xlab="True Age",ylab="Predicted Age",main="IDeA Generated Predictions")
 
+mvage <- mean(body_fat_Decorrelated$La_Forearm)
+range <- max(body_fat$Forearm)-min(body_fat$Forearm)
+ylim <- c(mvage-range/2,mvage+range/2)
+
+plot(body_fat$Forearm,body_fat_Decorrelated$La_Forearm,
+     ylim=ylim,
+     ylab="Latent Forearm",
+     xlab="True Forearm",
+     main="IDeA Latent Variable")
+Forearmformula <- LatentFormulas[["La_Forearm"]]
+noForearmnames <- names(Forearmformula)[names(Forearmformula) != "Forearm"]
+predForearm <- -(as.matrix(body_fat[,noForearmnames]) %*% Forearmformula[noForearmnames])
+plot(body_fat$Forearm,predForearm,xlab="True Forearm",ylab="Predicted Forearm",main="IDeA Generated Predictions")
+
+par(op)
 
 ```
 
@@ -176,7 +213,7 @@ plot(body_fat$Age,predAge,xlab="True Age",ylab="Predicted Age",main="IDeA Genera
 ```{r}
 
 # 75% for training 25% for testing 
-
+set.seed(1)
 trainsamples <- sample(nrow(body_fat),3*nrow(body_fat)/4)
 
 trainingset <- body_fat[trainsamples,]
@@ -190,7 +227,7 @@ testingset <- body_fat[-trainsamples,]
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 body_fat_Decorrelated_train <- IDeA(trainingset,thr=0.2,Outcome="BodyFat",drivingFeatures="NA")
-test_body_fat_Decorrelated <- predictDecorrelate(body_fat_Decorrelated_train,testingset)
+body_fat_Decorrelated_test <- predictDecorrelate(body_fat_Decorrelated_train,testingset)
 
 ```
 
@@ -199,13 +236,17 @@ test_body_fat_Decorrelated <- predictDecorrelate(body_fat_Decorrelated_train,tes
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 modelBodyFat <- LASSO_1SE(BodyFat~.,body_fat_Decorrelated_train)
+pander::pander(as.matrix(modelBodyFat$coef))
+
+bmodl <- BSWiMS.model(BodyFat~.,body_fat_Decorrelated_train,print=TRUE)
+pander::pander(as.matrix(bmodl$bagging$bagged.model$coefficients))
+sm <- summary(bmodl)
+pander::pander(sm$coefficients)
 
 ```
 
 ### The model coefficients in the observed space
 ```{r  results = "asis", warning = FALSE}
-pander::pander(as.matrix(modelBodyFat$coef))
-
 
 # Get the coefficients in the observed space
 observedCoef <- getObservedCoef(body_fat_Decorrelated_train,modelBodyFat)
@@ -219,9 +260,9 @@ pander::pander(as.matrix(observedCoef$coefficients))
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-predicBodyFat <- predict(modelBodyFat,test_body_fat_Decorrelated)
-plot(testingset$BodyFat,predicBodyFat,xlab="True Body Fat",ylab="Predicted Body Fat",main="Predicted Body Fat")
-pander::pander(cor.test(predicBodyFat,testingset$BodyFat))
+predicBodyFat <- predict(modelBodyFat,body_fat_Decorrelated_test)
+rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,predicBodyFat),"Body Fat")
+pander::pander(rmetrics)
 
 ```
 
@@ -232,18 +273,42 @@ pander::pander(cor.test(predicBodyFat,testingset$BodyFat))
 
 predicBodyFatObst <- model.matrix(formula(observedCoef$formula),testingset) %*% observedCoef$coefficients
 
-plot(testingset$BodyFat,predicBodyFatObst,xlab="True Body Fat",ylab="Predicted Body Fat",main="Predicted Body Fat")
-
-pander::pander(cor.test(predicBodyFat,testingset$BodyFat))
 plot(predicBodyFatObst,predicBodyFat,xlab="Observed",ylab="Latent",main="Observed vs Latent")
 
-rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,predicBodyFatObst),"Body Fat")
+
+```
+
+### Comparison to raw model
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+rawmodelBodyFat <- LASSO_1SE(BodyFat~.,trainingset)
+pander::pander(rawmodelBodyFat$coef)
+rawpredicBodyFat <- predict(rawmodelBodyFat,testingset)
+rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,rawpredicBodyFat),"Body Fat")
 pander::pander(rmetrics)
 
 ```
 
+### Comparing the feature significance on the model
 
-## Train a regression model for Overwight prediction
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+par(mfrow=c(2,2),cex=0.5)
+
+rawlm <- lm(BodyFat~.,trainingset[,c("BodyFat",names(rawmodelBodyFat$coef)[-1])])
+pander::pander(rawlm,add.significance.stars=TRUE)
+plot(rawlm)
+
+par(mfrow=c(2,2),cex=0.5)
+Delm <- lm(BodyFat~.,body_fat_Decorrelated_train[,c("BodyFat",names(modelBodyFat$coef)[-1])])
+pander::pander(Delm,add.significance.stars=TRUE)
+plot(Delm)
+
+par(op)
+```
+
+
+## Train a regression model for Overweight prediction
 
 ### First remove Height and Weight from training and testing sets
 
@@ -259,6 +324,7 @@ table(trainingsetBMI$Overweight)
 table(testingsetBMI$Overweight)
 
 BMI_Decorrelated_train <- IDeA(trainingsetBMI,thr=0.2,Outcome="Overweight",drivingFeatures="NA")
+
 BMI_Decorrelated_test <- predictDecorrelate(BMI_Decorrelated_train,testingsetBMI)
 
 ```
@@ -266,13 +332,13 @@ BMI_Decorrelated_test <- predictDecorrelate(BMI_Decorrelated_train,testingsetBMI
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 modelOverweight <- LASSO_1SE(Overweight~.,BMI_Decorrelated_train,family="binomial")
+pander::pander(as.matrix(modelOverweight$coef))
+
 
 ```
 
 ### The model coefficients in the observed space
 ```{r  results = "asis", warning = FALSE}
-pander::pander(as.matrix(modelOverweight$coef))
-
 
 # Get the coefficients in the observed space
 observedCoef <- getObservedCoef(BMI_Decorrelated_train,modelOverweight)
@@ -286,9 +352,9 @@ pander::pander(as.matrix(observedCoef$coefficients))
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-predicBodyFat <- predict(modelBodyFat,test_body_fat_Decorrelated)
-plot(testingset$BodyFat,predicBodyFat,xlab="True Body Fat",ylab="Predicted Body Fat",main="Predicted Body Fat")
-pander::pander(cor.test(predicBodyFat,testingset$BodyFat))
+predicOverweight <- predict(modelOverweight,BMI_Decorrelated_test)
+pr <- predictionStats_binary(cbind(BMI_Decorrelated_test$Overweight,predicOverweight),"Overweight")
+pander::pander(pr$ClassMetrics)
 
 ```
 
@@ -296,17 +362,40 @@ pander::pander(cor.test(predicBodyFat,testingset$BodyFat))
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
+predicOverweightObst <- model.matrix(formula(observedCoef$formula),testingsetBMI) %*% observedCoef$coefficients
+#predicOverweightObst <- 1.0/(1.0 + exp(-predicOverweightObst));
 
-predicBodyFatObst <- model.matrix(formula(observedCoef$formula),testingset) %*% observedCoef$coefficients
+plot(predicOverweightObst,predicOverweight,xlab="Observed",ylab="Latent",main="Observed vs Latent")
 
-plot(testingset$BodyFat,predicBodyFatObst,xlab="True Body Fat",ylab="Predicted Body Fat",main="Predicted Body Fat")
-
-pander::pander(cor.test(predicBodyFat,testingset$BodyFat))
-plot(predicBodyFatObst,predicBodyFat,xlab="Observed",ylab="Latent",main="Observed vs Latent")
-
-rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,predicBodyFatObst),"Body Fat")
-pander::pander(rmetrics)
 
 ```
 
+### Comparison to raw model
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+rawmodelOverweight <- LASSO_1SE(Overweight~.,trainingsetBMI,family="binomial")
+pander::pander(rawmodelOverweight$coef)
+rawpredicOverweight <- predict(rawmodelOverweight,testingsetBMI)
+pr <- predictionStats_binary(cbind(testingsetBMI$Overweight,rawpredicOverweight),"Overweight")
+pander::pander(pr$ClassMetrics)
+
+```
+
+
+### Comparing the feature significance on the model
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+par(mfrow=c(2,2),cex=0.5)
+
+rawlm <- lm(Overweight~.,trainingsetBMI[,c("Overweight",names(rawmodelOverweight$coef)[-1])])
+pander::pander(rawlm,add.significance.stars=TRUE)
+plot(rawlm)
+
+par(mfrow=c(2,2),cex=0.5)
+Delm <- lm(Overweight~.,BMI_Decorrelated_test[,c("Overweight",names(modelOverweight$coef)[-1])])
+pander::pander(Delm,add.significance.stars=TRUE)
+plot(Delm)
+
+```
 

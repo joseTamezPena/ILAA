@@ -1,0 +1,559 @@
+---
+title: "ILAA Tutorial: Body_fat"
+author: "Jose Tamez"
+date: "`r Sys.Date()`"
+output:
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+  markdown: 
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+
+pander::panderOptions('digits', 3)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+op <- par(no.readonly = TRUE)
+
+```
+
+# ILAA Tutorial
+
+Iterative Linear Association Analysis (ILAA) is a computational method
+that creates a linear transformation from tabular data that effectively
+removes linear associations between the data-set variables. The returned
+transformation matrix can be used to:
+
+1.  Exploratory analysis of latent variables and their association to
+    all the observed variables
+
+2.  Exploratory discovery of latent variables associated with an
+    specific outcome-target
+
+3.  Address multicollarity issues in linear regression models:
+
+    1.  Better estimation and interpretation of model variables
+
+    2.  Improve linear model performance
+
+4.  Simplify the multidimensional search space aiding the creation of
+    complex ML models
+
+The objective of this tutorial is to guide users in the use of the ILAA
+to effectively accomplish the above mentioned tasks. The tutorial will
+showcase:
+
+-   Transform a data-frame affected by data multicollinearity into a new
+    data-frame with minimum data correlation among variables
+
+-   Visualize the transformation matrix
+
+-   Explore the returned formulas for each one of the returned latent
+    variables
+
+-   Understand and interpret the returned latent variables
+
+-   Use ILAA as preprocessing step to model an specific target-outcome
+    using linear models
+
+    -   Explore the model in transformed space
+
+    -   Get the corresponding model based on the observed variables.
+
+## The Libraries
+
+ILAA is a wrapper of the more general method of data decorrelation
+(IDeA) implemented in R and both are part of the FRESA.CAD 3.4.6
+package.
+
+```{r}
+## From git hub
+#install_github("joseTamezPena/FRESA.CAD")
+
+library("FRESA.CAD")
+
+```
+
+## Material and Methods
+
+For this tutorial I'll use the body-fat prediction data set. The data
+was downloaded from Kaggle:
+
+<https://www.kaggle.com/datasets/fedesoriano/body-fat-prediction-dataset>
+
+I'm coping the kaggle data disclaimer:
+
+"Source The data were generously supplied by Dr. A. Garth Fisher who
+gave permission to freely distribute the data and use for non-commercial
+purposes.
+
+Roger W. Johnson Department of Mathematics & Computer Science South
+Dakota School of Mines & Technology 501 East St. Joseph Street Rapid
+City, SD 57701
+
+email address:
+[rwjohnso\@silver.sdsmt.edu](mailto:rwjohnso@silver.sdsmt.edu){.email}
+web address: <http://silver.sdsmt.edu/~rwjohnso>"
+
+## Loading the Data
+
+The following code loads the data and removes the density information
+from the data. It aslo computes the Body Mass Index (BMI)
+
+```{r}
+body_fat <- read.csv("~/GitHub/LatentBiomarkers/Data/BodyFat/BodyFat.csv", header=TRUE)
+
+### Removing density as estimator
+body_fat$Density <- NULL
+
+body_fat$BMI <- 10000*body_fat$Weight*0.453592/((body_fat$Height*2.54)^2)
+## Removing subjects with data errors
+body_fat <- body_fat[body_fat$BMI<=50,]
+
+```
+
+## ILAA unsupervised processing
+
+The ILAA function is:
+
+``` r
+ ILAA(data=NULL,
+                thr=0.80,
+                method=c("pearson","spearman"),
+                Outcome=NULL,
+                drivingFeatures=NULL,
+                maxLoops=100,
+                verbose=FALSE,
+                ...)
+```
+
+where:
+
+-   `data`: The source data-frame
+
+-   *`thr`* : The target correlation goal.
+
+-   *`method`* : Defines the correlation measure
+
+-   `Outcome` The name of the target variable, and it is required for
+    supervised learning
+
+-   `drivingFeatures` : Defines a set of variables that are aimed to be
+    basis unaltered vectors
+
+-   `maxLoops` : The maximum number of iterations cycles
+
+-   `verbose` : Display the evolution of the algorithm.
+
+-   `…` : Parameters to be passed to the `featureAdjustment()` method
+
+By default the ILAA function will target a correlation lower to 0.8
+using the pearson correlation measure.
+
+For this example, I'll set the correlation goal to 0.2 in verbose mode:
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+# Calling ILAA to achieve a final correlation of 0.2
+body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,verbose=TRUE)
+
+```
+
+### Data Frame Attributes
+
+``` r
+  attr(dataTransformed,"UPSTM") : The transformation matrix
+  attr(dataTransformed,"fscore") : The score of each feature
+  attr(dataTransformed,"drivingFeatures") : The list of driving features
+  attr(dataTransformed,"unaltered") : The list of unaltered features
+  attr(dataTransformed,"LatentVariables") : The list of latent variables
+  attr(dataTransformed,"R.critical") : The estimated minium correlation
+  attr(dataTransformed,"IDeAEvolution") : Evolution of the algorithm
+```
+
+The main attributes is "`UPSTM`". That stores the transformation matrix
+from observed variables to the latent variable. The "`IDeAEvolution`"
+attribute can be used to verify if the algorithm achieved the target
+correlation goal, and the sparsity of the returned matrix.
+
+### Plotting the Evolution
+
+Here we will use the `attr(dataTransformed,"IDeAEvolution")` to plot the
+evolution of the correlation measure and the evolution of the matrix
+sparsity.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
+par(mfrow=c(1,2),cex=0.5)
+
+# Correlation
+yval <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
+xidx <- c(1:length(yval))
+plot(xidx,yval,
+     xlab="Iteration Cycle",
+     ylab="Max. Pearson Correlation",
+     ylim=c(0,1.0),
+     main="Evolution of the maximum Correlation")
+  lfit <-try(loess(yval~xidx,span=0.5));
+  if (!inherits(lfit,"try-error"))
+  {
+    plx <- try(predict(lfit,se=TRUE))
+    if (!inherits(plx,"try-error"))
+    {
+      lines(xidx,plx$fit,lty=1,col="red")
+    }
+  }
+
+# Sparsity  
+yval <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
+
+plot(xidx,yval,
+     xlab="Iteration Cycle",
+     ylab="Matrix Sparcity",
+     ylim=c(0,1.0),
+     main="Evolution of the Matrix Sparcity")
+  lfit <-try(loess(yval~xidx,span=0.5));
+  if (!inherits(lfit,"try-error"))
+  {
+    plx <- try(predict(lfit,se=TRUE))
+    if (!inherits(plx,"try-error"))
+    {
+      lines(xidx,plx$fit,lty=1,col="red")
+    }
+  }
+
+```
+
+### The ILAA transformed data
+
+Before exploring into more detail the properties of the `ILAA` results.
+Let us first verify that the returned matrix does not contain features
+with very high correlation among them.
+
+Here I'll plot the original correlation and the correlation of the
+returned data set.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+# The original
+  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+  cormat <- cor(body_fat,method="pearson")
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Original Correlation",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                     srtCol=30,
+                     srtRow=60,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+
+# The transformed
+  cormat <- cor(body_fat_Decorrelated,method="pearson")
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "After ILAA Correlation",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                     srtCol=30,
+                     srtRow=60,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+
+```
+
+### Exploring transformation
+
+The `attr(body_fat_Decorrelated,"UPSTM")` returns the transformation
+matrix. The `UPSTM` is sparse, here I show a heat-map of the
+transformation matrix that shows which elements are different from zero.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+  UPSTM <- attr(body_fat_Decorrelated,"UPSTM")
+  
+  gplots::heatmap.2(1.0*(abs(UPSTM)>0),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Decorrelation matrix",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                   srtCol=30,
+                   srtRow=60,
+                    key.title=NA,
+                    key.xlab="|Beta|>0",
+                    xlab="Output Feature", ylab="Input Feature")
+  
+```
+
+### The Latent Formulas
+
+The sparsity of the `UPSTM` matrix can be analyzed to get the formula
+for each on of the latent formulas. The `getLatentCoefficients()` and
+its attribute: `attr(LatentFormulas,"LatentCharFormulas")` are used to
+display the shape of the latent variables.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+# Get a list with the latent formulas' coefficients
+LatentFormulas <- getLatentCoefficients(body_fat_Decorrelated)
+
+# A string character with the formulas can be obtained by:
+charFormulas <- attr(LatentFormulas,"LatentCharFormulas")
+pander::pander(as.matrix(charFormulas))
+
+```
+
+### Latent Variable Interpretation
+
+The ILAA returns the Unit Preserving Spatial Transformation Matrix
+(UPSTM). This specific transformation is the combination of
+statistically significant linear association analysis between feature
+pairs. Each significant association is modeled by a linear equation;
+henceforth, the interpretation of each feature is as follows:
+
+-   Each discovered latent variable is the residual of the observed
+    parent variable *vs.* the model of the variables associated with the
+    parent variable. For example: $$
+    Lawrist = Wrist + 0.017BodyFat - 0.026Weight.  
+    $$
+
+    Describes that the $Wrist$ is associated with the $BodyFat$ and the
+    $Weight$, and the latent variable $Lawrist$ is the amount of
+    information in the $Wrist$ not found by $BodyFat$ nor the $Weight$.
+
+-   The model of the $Wrist$ in therefore:
+
+$$
+Wrist = -0.017BodyFat + 0.026Weight.  
+$$
+
+The following lines of code shows the association of the latent variable
+to each one of the observed parent variable, and the association of the
+parent variable to the linear model.
+
+```{r warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
+
+par(mfrow=c(1,2),cex=0.35)
+fnames <- names(charFormulas)[1]
+for (fnames in names(charFormulas))
+{
+  obsname <- str_remove(fnames,"La_")
+  menv <- mean(body_fat_Decorrelated[,fnames])
+  range <- max(body_fat[,obsname])-min(body_fat[,obsname])
+  ylim <- c(menv-range/2,menv+range/2)
+  plot(body_fat[,obsname],body_fat_Decorrelated[,fnames],
+       ylim=ylim,
+       ylab=fnames,
+       xlab=obsname,
+       main=paste("ILAA Latent Variable:",fnames))
+  deformula <- LatentFormulas[[fnames]]
+  noInames <- names(deformula)[names(deformula) != obsname]
+  predObs <- -(as.matrix(body_fat[,noInames]) %*% deformula[noInames])
+  plot(predObs,body_fat[,obsname],ylab=obsname,xlab=charFormulas[fnames],
+       main=paste("ILAA Generated Predictions of",obsname),cex.labels=0.5)
+}
+
+par(op)
+
+```
+
+## ILAA for Supervised Learning
+
+### Split into Training Testing Sets
+
+```{r}
+
+# 75% for training 25% for testing 
+set.seed(1)
+trainsamples <- sample(nrow(body_fat),3*nrow(body_fat)/4)
+
+trainingset <- body_fat[trainsamples,]
+testingset <- body_fat[-trainsamples,]
+
+```
+
+## Data decorrelation of the train set and prediction of the test set
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+body_fat_Decorrelated_train <- ILAA(trainingset,thr=0.2,Outcome="BodyFat",drivingFeatures="NA")
+body_fat_Decorrelated_test <- predictDecorrelate(body_fat_Decorrelated_train,testingset)
+
+```
+
+### Train a regression model for body fat prediction
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+modelBodyFat <- LASSO_1SE(BodyFat~.,body_fat_Decorrelated_train)
+pander::pander(as.matrix(modelBodyFat$coef))
+
+```
+
+### The model coefficients in the observed space
+
+```{r  results = "asis", warning = FALSE}
+
+# Get the coefficients in the observed space
+observedCoef <- getObservedCoef(body_fat_Decorrelated_train,modelBodyFat)
+pander::pander(as.matrix(observedCoef$coefficients))
+
+
+```
+
+### Predict using the transformed data set
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+predicBodyFat <- predict(modelBodyFat,body_fat_Decorrelated_test)
+rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,predicBodyFat),"Body Fat")
+pander::pander(rmetrics)
+
+```
+
+### Prediction using the observed features
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+
+predicBodyFatObst <- model.matrix(formula(observedCoef$formula),testingset) %*% observedCoef$coefficients
+
+plot(predicBodyFatObst,predicBodyFat,xlab="Observed",ylab="Latent",main="Observed vs Latent")
+
+
+```
+
+### Comparison to raw model
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+rawmodelBodyFat <- LASSO_1SE(BodyFat~.,trainingset)
+pander::pander(rawmodelBodyFat$coef)
+rawpredicBodyFat <- predict(rawmodelBodyFat,testingset)
+rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,rawpredicBodyFat),"Body Fat")
+pander::pander(rmetrics)
+
+```
+
+### Comparing the feature significance on the model
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+par(mfrow=c(2,2),cex=0.5)
+
+rawlm <- lm(BodyFat~.,trainingset[,c("BodyFat",names(rawmodelBodyFat$coef)[-1])])
+pander::pander(rawlm,add.significance.stars=TRUE)
+plot(rawlm)
+
+par(mfrow=c(2,2),cex=0.5)
+Delm <- lm(BodyFat~.,body_fat_Decorrelated_train[,c("BodyFat",names(modelBodyFat$coef)[-1])])
+pander::pander(Delm,add.significance.stars=TRUE)
+plot(Delm)
+
+par(op)
+```
+
+## Train a regression model for Overweight prediction
+
+### First remove Height and Weight from training and testing sets
+
+```{r}
+
+trainingsetBMI <- trainingset[,!(colnames(trainingset) %in% c("Weight","Height"))]
+testingsetBMI <- testingset[,!(colnames(trainingset) %in% c("Weight","Height"))]
+trainingsetBMI$Overweight <- 1*(trainingsetBMI$BMI>=25)
+testingsetBMI$Overweight <- 1*(testingsetBMI$BMI>=25)
+trainingsetBMI$BMI <- NULL
+testingsetBMI$BMI <- NULL
+table(trainingsetBMI$Overweight)
+table(testingsetBMI$Overweight)
+
+BMI_Decorrelated_train <- ILAA(trainingsetBMI,thr=0.2,Outcome="Overweight",drivingFeatures="NA")
+
+BMI_Decorrelated_test <- predictDecorrelate(BMI_Decorrelated_train,testingsetBMI)
+
+```
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+modelOverweight <- LASSO_1SE(Overweight~.,BMI_Decorrelated_train,family="binomial")
+pander::pander(as.matrix(modelOverweight$coef))
+
+
+```
+
+### The model coefficients in the observed space
+
+```{r  results = "asis", warning = FALSE}
+
+# Get the coefficients in the observed space
+observedCoef <- getObservedCoef(BMI_Decorrelated_train,modelOverweight)
+pander::pander(as.matrix(observedCoef$coefficients))
+
+
+```
+
+### Predict using the transformed data set
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+predicOverweight <- predict(modelOverweight,BMI_Decorrelated_test)
+pr <- predictionStats_binary(cbind(BMI_Decorrelated_test$Overweight,predicOverweight),"Overweight")
+pander::pander(pr$ClassMetrics)
+
+```
+
+### Prediction using the observed features
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+predicOverweightObst <- model.matrix(formula(observedCoef$formula),testingsetBMI) %*% observedCoef$coefficients
+#predicOverweightObst <- 1.0/(1.0 + exp(-predicOverweightObst));
+
+plot(predicOverweightObst,predicOverweight,xlab="Observed",ylab="Latent",main="Observed vs Latent")
+
+
+```
+
+### Comparison to raw model
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+rawmodelOverweight <- LASSO_1SE(Overweight~.,trainingsetBMI,family="binomial")
+pander::pander(rawmodelOverweight$coef)
+rawpredicOverweight <- predict(rawmodelOverweight,testingsetBMI)
+pr <- predictionStats_binary(cbind(testingsetBMI$Overweight,rawpredicOverweight),"Overweight")
+pander::pander(pr$ClassMetrics)
+
+```
+
+### Comparing the feature significance on the model
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+par(mfrow=c(2,2),cex=0.5)
+
+rawlm <- lm(Overweight~.,trainingsetBMI[,c("Overweight",names(rawmodelOverweight$coef)[-1])])
+pander::pander(rawlm,add.significance.stars=TRUE)
+plot(rawlm)
+
+par(mfrow=c(2,2),cex=0.5)
+Delm <- lm(Overweight~.,BMI_Decorrelated_test[,c("Overweight",names(modelOverweight$coef)[-1])])
+pander::pander(Delm,add.significance.stars=TRUE)
+plot(Delm)
+
+```
