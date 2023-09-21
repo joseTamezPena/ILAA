@@ -337,7 +337,7 @@ henceforth, the interpretation of each feature is as follows:
     $Weight$, and the latent variable $Lawrist$ is the amount of
     information in the $Wrist$ not found by $BodyFat$ nor the $Weight$.
 
--   The model of the $Wrist$ in therefore:
+-   The model of the $Wrist$ is therefore:
 
 $$
 Wrist = -0.017BodyFat + 0.026Weight.  
@@ -345,7 +345,7 @@ $$
 
 The following lines of code shows the association of the latent variable
 to each one of the observed parent variable, and the association of the
-parent variable to the linear model.
+parent variable to its linear model.
 
 ```{r warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
 
