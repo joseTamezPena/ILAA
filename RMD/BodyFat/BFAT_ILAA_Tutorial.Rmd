@@ -30,17 +30,17 @@ op <- par(no.readonly = TRUE)
 # Introduction
 
 Iterative Linear Association Analysis (ILAA) is a computational method
-that creates a linear transformation from a sample multidimensional data
-that effectively removes linear associations between the data variables.
-The returned transformation matrix can be used to:
+that creates a linear transformation from a sample of multidimensional
+data that effectively removes linear associations between data
+variables. The returned transformation matrix can be used to:
 
-1.  Do exploratory analysis of latent variables and their association to
-    all the observed variables
+1.  Do an exploratory analysis of latent variables and their association
+    to all the observed variables
 
 2.  Do exploratory discovery of latent variables associated with an
     specific outcome-target
 
-3.  Address multicollinerity issues in linear regression models:
+3.  Addressing multicollinearity issues in linear regression models
 
     1.  Better estimation and interpretation of model variables
 
@@ -48,12 +48,12 @@ The returned transformation matrix can be used to:
 
 4.  Simplify the multidimensional search space for many ML algorithms
 
-The objective of this tutorial is to guide users in the use of the ILAA
-to effectively accomplish the above mentioned tasks. The tutorial will
+The objective of this tutorial is to guide users in using the ILAA to
+effectively accomplish the aforementioned tasks. The tutorial will
 showcase:
 
--   Transform a data-frame affected by data multicollinearity into a new
-    data-frame with minimum data correlation among variables
+-   Transform a data frame affected by data multicollinearity into a new
+    a data frame with minimum data correlation among variables
 
 -   Visualize the transformation matrix
 
@@ -62,12 +62,11 @@ showcase:
 
 -   Understand and interpret the returned latent variables
 
--   Use ILAA as pre-processing step to model an specific target-outcome
+-   Use ILAA as a pre-processing step to model a specific target outcome
     using linear models
 
-    -   Explore the model in transformed space
-
-    -   Get the corresponding model based on the observed variables.
+    -   Explore the model in the transformed space
+    -   Get the observed variables coefficients.
 
 ## The Libraries
 

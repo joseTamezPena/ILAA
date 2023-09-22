@@ -419,16 +419,17 @@ Significance on the Model</a></li>
 <div id="introduction" class="section level1" number="1">
 <h1><span class="header-section-number">1</span> Introduction</h1>
 <p>Iterative Linear Association Analysis (ILAA) is a computational
-method that creates a linear transformation from a sample
+method that creates a linear transformation from a sample of
 multidimensional data that effectively removes linear associations
-between the data variables. The returned transformation matrix can be
-used to:</p>
+between data variables. The returned transformation matrix can be used
+to:</p>
 <ol style="list-style-type: decimal">
-<li><p>Do exploratory analysis of latent variables and their association
-to all the observed variables</p></li>
+<li><p>Do an exploratory analysis of latent variables and their
+association to all the observed variables</p></li>
 <li><p>Do exploratory discovery of latent variables associated with an
 specific outcome-target</p></li>
-<li><p>Address multicollinerity issues in linear regression models:</p>
+<li><p>Addressing multicollinearity issues in linear regression
+models</p>
 <ol style="list-style-type: decimal">
 <li><p>Better estimation and interpretation of model variables</p></li>
 <li><p>Improve linear model performance</p></li>
@@ -436,22 +437,21 @@ specific outcome-target</p></li>
 <li><p>Simplify the multidimensional search space for many ML
 algorithms</p></li>
 </ol>
-<p>The objective of this tutorial is to guide users in the use of the
-ILAA to effectively accomplish the above mentioned tasks. The tutorial
-will showcase:</p>
+<p>The objective of this tutorial is to guide users in using the ILAA to
+effectively accomplish the aforementioned tasks. The tutorial will
+showcase:</p>
 <ul>
-<li><p>Transform a data-frame affected by data multicollinearity into a
-new data-frame with minimum data correlation among variables</p></li>
+<li><p>Transform a data frame affected by data multicollinearity into a
+new a data frame with minimum data correlation among variables</p></li>
 <li><p>Visualize the transformation matrix</p></li>
 <li><p>Explore the returned formulas for each one of the returned latent
 variables</p></li>
 <li><p>Understand and interpret the returned latent variables</p></li>
-<li><p>Use ILAA as pre-processing step to model an specific
-target-outcome using linear models</p>
+<li><p>Use ILAA as a pre-processing step to model a specific target
+outcome using linear models</p>
 <ul>
-<li><p>Explore the model in transformed space</p></li>
-<li><p>Get the corresponding model based on the observed
-variables.</p></li>
+<li>Explore the model in the transformed space</li>
+<li>Get the observed variables coefficients.</li>
 </ul></li>
 </ul>
 <div id="the-libraries" class="section level2" number="1.1">

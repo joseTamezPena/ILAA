@@ -136,7 +136,8 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
 {
   
 #  IdeT <- IDeA(traindata,method=method,corRank=corRank,thr=thr,type=type,verbose=TRUE)
-  IdeT <- IDeA(traindata,method=method,corRank=corRank,thr=thr,type=type)
+  IdeT <- IDeA(traindata,thr=thr,method=method,corRank=corRank,type=type)
+#  cat(min(attr(IdeT,"IDeAEvolution")$Corr))
   UPLTM <- attr(IdeT,"UPLTM")
   rmat <- UPLTM
   
@@ -146,13 +147,13 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
   diag(cormat) <- 0;
   trainCorrelation <- max(cormat)
   ideac <- min(attr(IdeT,"IDeAEvolution")$Corr)
-#  cat(trainCorrelation,"|")
+#  cat(trainCorrelation,"|",ideac,"|",length(attr(IdeT,"IDeAEvolution")$Corr),"|")
   if (trainCorrelation > thr)
   {
     if (ideac < (0.95*trainCorrelation))
     {
       mcor <- apply(cormat,2,max)
-      cat("\n(",trainCorrelation,":",ideac,")\n");
+      cat("\n(",trainCorrelation,":",ideac,"|",attr(IdeT,"R.critical"),")\n");
       print(mcor[mcor==trainCorrelation])
       print(colnames(rmat))
     }
