@@ -139,9 +139,9 @@ if (!largeSet)
 
   par(cex=0.6,cex.main=0.85,cex.axis=0.7)
   
-  UPSTM <- attr(DEdataframe,"UPSTM")
+  UPLTM <- attr(DEdataframe,"UPLTM")
   
-  gplots::heatmap.2(1.0*(abs(UPSTM)>0),
+  gplots::heatmap.2(1.0*(abs(UPLTM)>0),
                     trace = "none",
                     mar = c(5,5),
                     col=rev(heat.colors(5)),

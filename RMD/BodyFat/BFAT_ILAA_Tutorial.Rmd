@@ -27,27 +27,26 @@ op <- par(no.readonly = TRUE)
 
 ```
 
-# ILAA Introduction
+# Introduction
 
 Iterative Linear Association Analysis (ILAA) is a computational method
-that creates a linear transformation from tabular data that effectively
-removes linear associations between the data-set variables. The returned
-transformation matrix can be used to:
+that creates a linear transformation from a sample multidimensional data
+that effectively removes linear associations between the data variables.
+The returned transformation matrix can be used to:
 
-1.  Exploratory analysis of latent variables and their association to
+1.  Do exploratory analysis of latent variables and their association to
     all the observed variables
 
-2.  Exploratory discovery of latent variables associated with an
+2.  Do exploratory discovery of latent variables associated with an
     specific outcome-target
 
-3.  Address multicollarity issues in linear regression models:
+3.  Address multicollinerity issues in linear regression models:
 
     1.  Better estimation and interpretation of model variables
 
     2.  Improve linear model performance
 
-4.  Simplify the multidimensional search space aiding the creation of
-    complex ML models
+4.  Simplify the multidimensional search space for many ML algorithms
 
 The objective of this tutorial is to guide users in the use of the ILAA
 to effectively accomplish the above mentioned tasks. The tutorial will
@@ -73,8 +72,8 @@ showcase:
 ## The Libraries
 
 ILAA is a wrapper of the more general method of data decorrelation
-(IDeA) implemented in R and both are part of the FRESA.CAD 3.4.6
-package.
+algorithm (IDeA) implemented in R and both are part of the FRESA.CAD
+3.4.6 package.
 
 ```{r}
 ## From git hub
@@ -91,7 +90,7 @@ was downloaded from Kaggle:
 
 <https://www.kaggle.com/datasets/fedesoriano/body-fat-prediction-dataset>
 
-The kaggle data disclaimer:
+The Kaggle data disclaimer:
 
 "Source The data were generously supplied by Dr. A. Garth Fisher who
 gave permission to freely distribute the data and use for non-commercial
@@ -171,8 +170,10 @@ body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,verbose=TRUE)
 
 ### Data Frame Attributes
 
+The returned data matrix contains the following attributes
+
 ``` r
-  attr(body_fat_Decorrelated,"UPSTM")               #The transformation matrix
+  attr(body_fat_Decorrelated,"UPLTM")               #The transformation matrix
   attr(body_fat_Decorrelated,"fscore")              #The score of each feature
   attr(body_fat_Decorrelated,"drivingFeatures")     #The list of driving features
   attr(body_fat_Decorrelated,"unaltered")           #The list of unaltered features
@@ -181,10 +182,11 @@ body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,verbose=TRUE)
   attr(body_fat_Decorrelated,"IDeAEvolution")       #Evolution of the algorithm
 ```
 
-The main attributes is "`UPSTM`". That stores the transformation matrix
-from observed variables to the latent variable. The "`IDeAEvolution`"
-attribute can be used to verify if the algorithm achieved the target
-correlation goal, and the sparsity of the returned matrix.
+The main attributes is "`UPLTM`". That stores the linear transformation
+matrix from observed variables to the latent variable. The
+"`IDeAEvolution`" attribute can be used to verify if the algorithm
+achieved the target correlation goal, and the sparsity of the returned
+matrix.
 
 ### Plotting the Evolution
 
@@ -279,15 +281,15 @@ returned data set.
 
 ### Exploring transformation
 
-The `attr(body_fat_Decorrelated,"UPSTM")` returns the transformation
-matrix. The `UPSTM` is sparse, here I show a heat-map of the
+The `attr(body_fat_Decorrelated,"UPLTM")` returns the transformation
+matrix. The `UPLTM` is sparse, here I show a heat-map of the
 transformation matrix that shows which elements are different from zero.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-  UPSTM <- attr(body_fat_Decorrelated,"UPSTM")
+  UPLTM <- attr(body_fat_Decorrelated,"UPLTM")
   
-  gplots::heatmap.2(1.0*(abs(UPSTM)>0),
+  gplots::heatmap.2(1.0*(abs(UPLTM)>0),
                     trace = "none",
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
@@ -304,7 +306,7 @@ transformation matrix that shows which elements are different from zero.
 
 ### The Latent Formulas
 
-The sparsity of the `UPSTM` matrix can be analyzed to get the formula
+The sparsity of the `UPLTM` matrix can be analyzed to get the formula
 for each on of the latent formulas. The `getLatentCoefficients()` and
 its attribute: `attr(LatentFormulas,"LatentCharFormulas")` can be used
 to display the formula of the latent variables.
@@ -321,8 +323,8 @@ pander::pander(as.matrix(charFormulas))
 
 ### Latent Variable Interpretation
 
-The ILAA returns the Unit Preserving Spatial Transformation Matrix
-(UPSTM). This specific transformation is the combination of
+The ILAA returns the Unit Preserving Linear Transformation Matrix
+(UPLTM). This specific transformation is the combination of
 statistically significant linear association analysis between feature
 pairs. Each significant association is modeled by a linear equation;
 henceforth, the interpretation of each feature is as follows:
@@ -389,7 +391,7 @@ lines of code will split the data into training (75%) and testing (25%)
 ```{r}
 
 # 75% for training 25% for testing 
-set.seed(1)
+set.seed(2)
 trainsamples <- sample(nrow(body_fat),3*nrow(body_fat)/4)
 
 trainingset <- body_fat[trainsamples,]
@@ -402,12 +404,14 @@ testingset <- body_fat[-trainsamples,]
 The `predictDecorrelate()` function can be used to predict any new
 data-set from a `ILAA` transformed object. The next lines of code shows
 the process of transforming the training set and then use the returned
-object to transform the testing set. To avoid any target bias we set the
-driving features input parameter to "NA", i.e., `drivingFeatures="NA".`
+object to transform the testing set.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-body_fat_Decorrelated_train <- ILAA(trainingset,thr=0.2,Outcome="BodyFat",drivingFeatures="NA")
+#body_fat_Decorrelated_train <- ILAA(trainingset,thr=0.2,Outcome="BodyFat",drivingFeatures="BodyFat",verbose=TRUE)
+#pander::pander(attr(body_fat_Decorrelated_train,"drivingFeatures"))
+body_fat_Decorrelated_train <- ILAA(trainingset,thr=0.2,Outcome="BodyFat",verbose=TRUE)
+#pander::pander(attr(body_fat_Decorrelated_train,"drivingFeatures"))
 body_fat_Decorrelated_test <- predictDecorrelate(body_fat_Decorrelated_train,testingset)
 
 ```
@@ -553,7 +557,7 @@ testingsetBMI$BMI <- NULL
 table(trainingsetBMI$Overweight)
 table(testingsetBMI$Overweight)
 
-BMI_Decorrelated_train <- ILAA(trainingsetBMI,thr=0.2,Outcome="Overweight",drivingFeatures="NA")
+BMI_Decorrelated_train <- ILAA(trainingsetBMI,thr=0.2,Outcome="Overweight",verbose=TRUE)
 
 BMI_Decorrelated_test <- predictDecorrelate(BMI_Decorrelated_train,testingsetBMI)
 

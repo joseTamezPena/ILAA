@@ -86,7 +86,7 @@ print(syndata$rotMatrix)
 ```{r}
 
 IdeT <- IDeA(syndata$data,corRank=TRUE,thr=thr,verbose=TRUE)
-rmat <- attr(IdeT,"UPSTM")
+rmat <- attr(IdeT,"UPLTM")
 print(rmat)
 
 falsedisc <- str_detect(rownames(rmat),"R")
@@ -405,7 +405,7 @@ for (i in 1:NUmberofSimulations)
     DiscoverySen[i,cn] <- evalIDeA$DiscoverySen
     DiscoverySpe[i,cn] <- evalIDeA$DiscoverySpe
 
-    rotSparcity[i,cn] <- sum(evalIDeA$UPSTM==0)/(ncol(evalIDeA$UPSTM)^2)
+    rotSparcity[i,cn] <- sum(evalIDeA$UPLTM==0)/(ncol(evalIDeA$UPLTM)^2)
     cn <- cn + 1;
   }
 }
@@ -486,7 +486,7 @@ for (i in 1:NUmberofSimulations)
     DiscoverySen[i,cn] <- evalIDeA$DiscoverySen
     DiscoverySpe[i,cn] <- evalIDeA$DiscoverySpe
 
-    rotSparcity[i,cn] <- sum(evalIDeA$UPSTM==0)/(ncol(evalIDeA$UPSTM)^2)
+    rotSparcity[i,cn] <- sum(evalIDeA$UPLTM==0)/(ncol(evalIDeA$UPLTM)^2)
     cn <- cn + 1;
   }
 }

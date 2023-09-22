@@ -102,8 +102,8 @@ pander::pander(table(SalivaIR_Avg$class))
 studyName <- "SalivaCOVID19"
 dataframe <- SalivaIR_Avg
 outcome <- "class"
-nLoops <- 100
-needScaling <- TRUE
+nLoops <- 200
+needScaling <- FALSE
 IDSample <- FALSE
 thro <- 0.8
 

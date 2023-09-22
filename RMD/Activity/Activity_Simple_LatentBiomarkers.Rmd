@@ -22,7 +22,7 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 ```
 
 
-# Effect of UPSTM-Based Decorrelation on Feature Discovery
+# Effect of UPLTM-Based Decorrelation on Feature Discovery
 
 
 ### Loading the libraries

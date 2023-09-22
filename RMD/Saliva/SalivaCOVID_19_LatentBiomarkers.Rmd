@@ -21,9 +21,9 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 
 ```
 
-# Effect of UPSTM-Based Decorrelation on Feature Discovery
+# Effect of UPLTM-Based Decorrelation on Feature Discovery
 
-Here I showcase of to use BSWiMS feature selection/modeling function coupled with Goal Driven Sparse Transformation Matrix (UPSTM) as a pre-processing step to decorrelate highly correlated features. The aim(s) are:
+Here I showcase of to use BSWiMS feature selection/modeling function coupled with Goal Driven Sparse Transformation Matrix (UPLTM) as a pre-processing step to decorrelate highly correlated features. The aim(s) are:
 
 1.  To improve model performance by uncovering the hidden information between correlated features.
 
@@ -213,7 +213,7 @@ gplots::heatmap.2(abs(cormat),
 #                  scale = "none",
                   mar = c(5,5),
                   col=rev(heat.colors(5)),
-                  main = "COVID-19 Correlation after UPSTM",
+                  main = "COVID-19 Correlation after UPLTM",
                   cexRow = 0.35,
                   cexCol = 0.35,
                   key.title=NA,
@@ -256,12 +256,12 @@ text(datasetframe.umap$layout,labels=lnames[1+deIR$class],col=(deIR$class+1))
 
 par(cex=0.6,cex.main=0.85,cex.axis=0.7)
 
-UPSTM <- attr(deIR,"UPSTM")
+UPLTM <- attr(deIR,"UPLTM")
 fscores <- attr(deIR,"fscore")
 fscores <- fscores[order(-fscores)]
 #fscores[fscores>0]
 
-gplots::heatmap.2(log(abs(1000*UPSTM)+1),
+gplots::heatmap.2(log(abs(1000*UPLTM)+1),
                   trace = "none",
 #                  scale = "none",
                   mar = c(5,5),

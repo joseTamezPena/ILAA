@@ -95,6 +95,7 @@ thro <- 0.8
 
 ## Testing different parameters
 ```{r}
+nLoops <- 30
 
 cvData_0.9 <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.9)
 cvData_0.8 <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.8)
@@ -119,11 +120,16 @@ bpDe <- predictionStats_binary(cvData_0.6_R$DeMedTestRaw,"IDeA@0.6 CorRank")
 bpDe <- predictionStats_binary(cvData_0.5_R$DeMedTestRaw,"IDeA@0.5 CorRank")
 
 
-cvData_0.9_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.9,Outcome=outcome)
-cvData_0.8_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.8,Outcome=outcome)
-cvData_0.7_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.7,Outcome=outcome)
-cvData_0.6_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.6,Outcome=outcome)
-cvData_0.5_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,DecorPCAEFA=FALSE,thr=0.5,Outcome=outcome)
+cvData_0.9_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                       DecorPCAEFA=FALSE,thr=0.9,Outcome=outcome,drivingFeatures=outcome)
+cvData_0.8_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                       DecorPCAEFA=FALSE,thr=0.8,Outcome=outcome,drivingFeatures=outcome)
+cvData_0.7_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                       DecorPCAEFA=FALSE,thr=0.7,Outcome=outcome,drivingFeatures=outcome)
+cvData_0.6_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                       DecorPCAEFA=FALSE,thr=0.6,Outcome=outcome,drivingFeatures=outcome)
+cvData_0.5_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
+                       DecorPCAEFA=FALSE,thr=0.5,Outcome=outcome,drivingFeatures=outcome)
 bpDe <- predictionStats_binary(cvData_0.9_D$DeMedTestRaw,"IDeA@0.9 Driven")
 bpDe <- predictionStats_binary(cvData_0.8_D$DeMedTestRaw,"IDeA@0.8 Driven")
 bpDe <- predictionStats_binary(cvData_0.7_D$DeMedTestRaw,"IDeA@0.7 Driven")
@@ -142,15 +148,15 @@ bpDe <- predictionStats_binary(cvData_0.6_S$DeMedTestRaw,"IDeA@0.6 Spearman")
 bpDe <- predictionStats_binary(cvData_0.5_S$DeMedTestRaw,"IDeA@0.5 Spearman")
 
 cvData_0.9_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
-                         DecorPCAEFA=FALSE,thr=0.9,Outcome=outcome,method="spearman")
+                         DecorPCAEFA=FALSE,thr=0.9,method="spearman",Outcome=outcome,drivingFeatures=outcome)
 cvData_0.8_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
-                         DecorPCAEFA=FALSE,thr=0.8,Outcome=outcome,method="spearman")
+                         DecorPCAEFA=FALSE,thr=0.8,method="spearman",Outcome=outcome,drivingFeatures=outcome)
 cvData_0.7_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
-                         DecorPCAEFA=FALSE,thr=0.7,Outcome=outcome,method="spearman")
+                         DecorPCAEFA=FALSE,thr=0.7,method="spearman",Outcome=outcome,drivingFeatures=outcome)
 cvData_0.6_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
-                         DecorPCAEFA=FALSE,thr=0.6,Outcome=outcome,method="spearman")
+                         DecorPCAEFA=FALSE,thr=0.6,method="spearman",Outcome=outcome,drivingFeatures=outcome)
 cvData_0.5_S_D <- CV_TDR(dataframe,outcome,loops=nLoops,IDSample=IDSample,scale=FALSE,
-                         DecorPCAEFA=FALSE,thr=0.5,Outcome=outcome,method="spearman")
+                         DecorPCAEFA=FALSE,thr=0.5,method="spearman",Outcome=outcome,drivingFeatures=outcome)
 bpDe <- predictionStats_binary(cvData_0.9_S_D$DeMedTestRaw,"IDeA@0.9 Spearman Driven")
 bpDe <- predictionStats_binary(cvData_0.8_S_D$DeMedTestRaw,"IDeA@0.8 Spearman Driven")
 bpDe <- predictionStats_binary(cvData_0.7_S_D$DeMedTestRaw,"IDeA@0.7 Spearman Driven")

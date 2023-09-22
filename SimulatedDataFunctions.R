@@ -129,7 +129,7 @@ SyntheticData <- function(NumOfObs=1000,NumOfCorFeatures=30,randomToCorrelRatio=
 ## Accuracy
 ## Correlation on test set
 ## detectedFeatures
-## UPSTM
+## UPLTM
 ##rcrit
 ####################
 IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank=corRank,thr=thr,type=type)
@@ -137,8 +137,8 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
   
 #  IdeT <- IDeA(traindata,method=method,corRank=corRank,thr=thr,type=type,verbose=TRUE)
   IdeT <- IDeA(traindata,method=method,corRank=corRank,thr=thr,type=type)
-  UPSTM <- attr(IdeT,"UPSTM")
-  rmat <- UPSTM
+  UPLTM <- attr(IdeT,"UPLTM")
+  rmat <- UPLTM
   
   if (method=="fast") method="pearson"
   cormat <- abs(cor(IdeT,method=method));
@@ -232,7 +232,7 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
                  DiscoverySen=sen,
                  DiscoverySpe=spe,
                  detectedFeatures=detectedFeatures,
-                 UPSTM=fullRot,
+                 UPLTM=fullRot,
                  UsedBetas=1*(fullRot != 0),
                  rcrit=attr(IdeT,"R.critical")
                  )
