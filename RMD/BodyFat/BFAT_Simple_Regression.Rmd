@@ -94,7 +94,9 @@ loops  <- 100
 ```
 
 
-### The Body Fat plots
+## The Body Fat plots
+
+Final plots
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 

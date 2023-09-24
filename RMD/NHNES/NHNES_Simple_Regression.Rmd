@@ -204,7 +204,7 @@ loops <- 30
 ```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/child_regression.Rmd")}
 ```
 
-### The Age plots
+## The Age plots
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 

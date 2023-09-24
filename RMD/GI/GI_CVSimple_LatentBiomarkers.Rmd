@@ -28,6 +28,7 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 ### Loading the libraries
 
 ```{r}
+
 library("FRESA.CAD")
 library(readxl)
 library(igraph)

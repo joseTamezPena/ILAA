@@ -1,0 +1,11 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+hostUrl: rpubs.com
+appId: https://api.rpubs.com/api/v1/document/1086267/fdf2cbbf8fda4d02b4cf8b777ca3ad25
+bundleId: https://api.rpubs.com/api/v1/document/1086267/fdf2cbbf8fda4d02b4cf8b777ca3ad25
+url: http://rpubs.com/J_Tamez/1086267
+when: 1695514300.91962
+lastSyncTime: 1695514300.91963

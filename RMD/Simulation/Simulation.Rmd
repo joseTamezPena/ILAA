@@ -83,7 +83,7 @@ print(syndata$rotMatrix)
 
 ### IDeA
 
-```{r}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 IdeT <- IDeA(syndata$data,corRank=TRUE,thr=thr,verbose=TRUE)
 rmat <- attr(IdeT,"UPLTM")
@@ -144,7 +144,7 @@ pander::pander(c(Accuracy=acc,Sensitivity=sen,Specificity=spe))
 
 ### Heat map
 
-```{r}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 rawCor <- cor(syndata$onlyRotatedData)
 
@@ -167,7 +167,7 @@ rawCor <- cor(syndata$onlyRotatedData)
 
 ### Heat map true rotation
 
-```{r}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 gplots::heatmap.2(trueUsedFeatures,
                     trace = "none",
@@ -187,7 +187,7 @@ gplots::heatmap.2(trueUsedFeatures,
 
 ### Heat map estimated rotation
 
-```{r}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 gplots::heatmap.2(detectedFeatures,
                     trace = "none",
@@ -208,7 +208,8 @@ gplots::heatmap.2(detectedFeatures,
 ## Lets run simulations
 
 ### Testing the differences in parameters
-```{r}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
 
 
 falseDiscoveryT <- numeric(NUmberofSimulations)
@@ -326,6 +327,7 @@ for (i in 1:NUmberofSimulations)
   overlapFSF[i] <- sum(evalIDeAFALSE$UsedBetas == evalIDeASpearmanF$UsedBetas)/sizeMat
   
 }
+par(cex=0.8,cex.main=0.85,cex.axis=0.9)
 
 boxplot(list(Pearson_1=DiscoveryAccuracyT,Pearson_2=DiscoveryAccuracyF,Spearman_1=DiscoveryAccuracyST,Spearman_2=DiscoveryAccuracySF),
         main="Accuracy",ylab="Accuracy")
@@ -354,7 +356,7 @@ boxplot(list(Pearson_1=testCorT,Pearson_2=testCorF,Spearman_1=testCorST,Spearman
 
 
 ### Testing the effect of the threshold
-```{r}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 thrvals <- c(0.10,0.20,0.30,0.40,0.50,0.60,0.70,0.80,0.90)
 
@@ -428,6 +430,8 @@ rotSparcity <- as.data.frame(rotSparcity)
 colnames(rotSparcity) <- colnames(DiscoveryAccuracy)
 rotSparcity <- cbind(rotSparcity,True=trueSpacity)
 
+par(cex=0.8,cex.main=0.85,cex.axis=0.9)
+
 boxplot(DiscoveryAccuracy,main="Accuracy",ylab="Accuracy")
 boxplot(DiscoverySen,main="Sensitivity",ylab="Sensitivity")
 boxplot(DiscoverySpe,main="Specificity",ylab="Specificity")
@@ -443,7 +447,7 @@ lines(c(1,length(thrvals)),ylim)
 
 
 ### Testing the effect of the threshold
-```{r}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 
 falseDiscovery <- matrix(0,nrow=NUmberofSimulations,ncol=length(thrvals))
@@ -508,6 +512,7 @@ colnames(falseDiscovery) <- colnames(DiscoveryAccuracy)
 rotSparcity <- as.data.frame(rotSparcity)
 colnames(rotSparcity) <- colnames(DiscoveryAccuracy)
 rotSparcity <- cbind(rotSparcity,True=trueSpacity)
+par(cex=0.8,cex.main=0.85,cex.axis=0.9)
 
 boxplot(DiscoveryAccuracy,main="Accuracy",ylab="Accuracy")
 boxplot(DiscoverySen,main="Sensitivity",ylab="Sensitivity")
@@ -522,7 +527,7 @@ boxplot(rotSparcity,main="Rotation Matrix Sparcity",ylab="Sparcity")
 
 
 ### Testing the effect of the number of random features
-```{r}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 
 randomToCorrelRatios <- c(1,10,100)
@@ -585,6 +590,7 @@ colnames(testCorR) <- colnames(DiscoveryAccuracyR)
 falseDiscoveryR <- as.data.frame(falseDiscoveryR)
 colnames(falseDiscoveryR) <- colnames(DiscoveryAccuracyR)
 
+par(cex=0.8,cex.main=0.85,cex.axis=0.9)
 
 boxplot(DiscoveryAccuracyR,main="Accuracy",ylab="Accuracy")
 boxplot(DiscoverySenR,main="Sensitivity",ylab="Sensitivity")
