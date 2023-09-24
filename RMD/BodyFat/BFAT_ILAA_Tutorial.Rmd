@@ -86,7 +86,7 @@ library(igraph)
 
 ```
 
-## Material and Methods
+# Material and Methods
 
 For this tutorial I'll use the body-fat prediction data set. The data
 was downloaded from Kaggle:
@@ -322,6 +322,9 @@ transformation matrix that shows which elements are different from zero.
                     trace = "none",
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
+                    Rowv=NULL,
+                    Colv="Rowv",
+                    dendrogram="none",
                     main = "Transformation matrix",
                     cexRow = 0.75,
                     cexCol = 0.75,
@@ -355,7 +358,7 @@ pander::pander(as.matrix(charFormulas))
 The `graph_from_adjacency_matrix()` function from `igraph` can be used
 to visualize the association between variables.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 par(op)
 
 transform <- log(abs(attr(body_fat_Decorrelated,"UPLTM"))+1.0)
@@ -363,7 +366,7 @@ colnames(transform) <- str_remove_all(colnames(transform),"La_")
 
 
 VertexSize <- apply(transform,2,mean)
-VertexSize <- 5*VertexSize/max(VertexSize)
+VertexSize <- 10*VertexSize/max(VertexSize)
 
 
 gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
@@ -371,16 +374,70 @@ gr$layout <- layout_with_fr
 
 fc <- cluster_optimal(gr)
 plot(fc, gr,
-     edge.width=3*E(gr)$weight,
-     edge.arrow.size=0.65,
-     edge.arrow.width=0.65,
+     edge.width=E(gr)$weight,
+     edge.arrow.size=0.5,
+     edge.arrow.width=0.5,
      vertex.size=VertexSize,
-     vertex.label.cex=0.75,
-     vertex.label.dist=1,
+     vertex.label.cex=0.85,
+     vertex.label.dist=2,
      main="Feature Association")
 par(op)
 
 
+```
+
+### ILAA Solution is Data Dependent
+
+I'll generate 100 solutions of the UPLTM and aggregate the non-zero coefficients.
+Then, I'll plot the graph followed by the heat map of the frequency of hits
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+par(op)
+
+dsize <- nrow(body_fat);
+taccmatrix <- cor(body_fat)*0;
+for (lp in c(1:100))
+{
+  dmat <- ILAA(body_fat[sample(dsize,0.8*dsize),],thr=0.2)
+  transform <- attr(dmat,"UPLTM") !=0 
+  colnames(transform) <- str_remove_all(colnames(transform),"La_")
+  taccmatrix[,colnames(transform)] <- taccmatrix[,colnames(transform)] + transform
+}
+taccmatrix <- taccmatrix/100;
+VertexSize <- apply(taccmatrix,2,mean)
+VertexSize <- 10*VertexSize/max(VertexSize)
+
+
+gr <- graph_from_adjacency_matrix(taccmatrix,mode = "directed",diag = FALSE,weighted=TRUE)
+gr$layout <- layout_with_fr
+
+fc <- cluster_optimal(gr)
+plot(fc, gr,
+     edge.width=E(gr)$weight,
+     edge.arrow.size=0.5,
+     edge.arrow.width=0.5,
+     vertex.size=VertexSize,
+     vertex.label.cex=0.85,
+     vertex.label.dist=2.0,
+     main="Feature Association")
+par(op)
+
+  gplots::heatmap.2(taccmatrix,
+                    trace = "none",
+                    mar = c(5,5),
+                    Rowv=NULL,
+                    Colv="Rowv",
+                    dendrogram="none",
+                    col=rev(heat.colors(5)),
+                    main = "Hit Percentage",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                   srtCol=30,
+                   srtRow=60,
+                    key.title=NA,
+                    key.xlab="|Beta|>0",
+                    xlab="Output Feature", ylab="Input Feature")
+  
 ```
 
 ### Latent Variable Interpretation
@@ -448,13 +505,13 @@ latent variables are not associated with the original parent variable,
 but their model is fully correlated to the observed parent variable. A
 clear example is BMI (The last plot in the above figure).
 
-## ILAA for Supervised Learning
+#ILAA for Supervised Learning
 
 The rerecorded use of ILAA transformation in supervised learning is to
 split the data into training and validation sets. Henceforth, the next
 lines of code will split the data into training (75%) and testing (25%)
 
-### Split into Training Testing Sets
+## Split into Training Testing Sets
 
 ```{r}
 
@@ -845,7 +902,7 @@ plot(Delm)
 
 ```
 
-## Conclusion
+# Conclusion
 
 In conclusion, ILAA (Iterative Linear Association Analysis), stands as
 an unsupervised computer-based methodology adept at estimating linear
