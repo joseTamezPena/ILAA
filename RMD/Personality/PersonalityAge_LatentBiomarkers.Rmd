@@ -25,7 +25,7 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 # Effect of UPSTM-Based Decorrelation on Feature Discovery
 
 
-### Loading the libraries
+## Loading the libraries
 
 ```{r}
 library("FRESA.CAD")
@@ -43,7 +43,7 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 ```
 
 
-## Material and Methods
+## Material 
 
 Data Source 
 https://quantdev.ssri.psu.edu/tutorials/intro-basic-exploratory-factor-analysis
@@ -70,7 +70,7 @@ BigData$age <- log10(BigData$age)
 
 ```
 
-#### Standarize the names for the reporting
+### Standarize the names for the reporting
 
 ```{r results = "asis"}
 studyName <- "PersonalityAge"

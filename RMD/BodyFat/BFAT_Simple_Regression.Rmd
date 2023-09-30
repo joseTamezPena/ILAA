@@ -46,7 +46,7 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 
 ```
 
-## Material and Methods
+## Material
 
 Data Source 
 https://www.kaggle.com/datasets/fedesoriano/body-fat-prediction-dataset
@@ -76,7 +76,7 @@ body_fat$Density <- NULL
 #par(cex=0.5)
 ```
 
-#### Standarize the names for the reporting
+### Standarize the names for the reporting
 
 ```{r results = "asis"}
 studyName <- "Body_Fat"

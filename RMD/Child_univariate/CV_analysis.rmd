@@ -72,7 +72,7 @@ vioplot(cbind(RAW=FSRaw,IDeA=FSDe,PCA=FSPCA,EFA=FSEFA),
 
 
 bpRaw <- predictionStats_binary(cvDataFS$medTestRaw,"Raw")
-bpDe <- predictionStats_binary(cvDataFS$DeMedTestRaw,"IDeA")
+bpDe <- predictionStats_binary(cvDataFS$DeMedTestRaw,"ILAA")
 bpPCA <- predictionStats_binary(cvDataFS$PCAMedTestRaw,"PCA")
 bpEFA <- predictionStats_binary(cvDataFS$EFAMedTestRaw,"EFA")
 

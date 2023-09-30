@@ -48,14 +48,13 @@ source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
 ## The Data
 
 ```{r}
+
 trainLabeled <- read.delim("~/GitHub/FCA/Data/trainSet.txt")
 validLabeled <- read.delim("~/GitHub/FCA/Data/arcene_valid.txt")
 wholeArceneSet <- rbind(trainLabeled,validLabeled)
 
-
 wholeArceneSet$Labels <-  1*(wholeArceneSet$Labels > 0)
 wholeArceneSet[,1:ncol(trainLabeled)] <- sapply(wholeArceneSet,as.double)
-
 
 ```
 

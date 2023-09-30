@@ -133,8 +133,8 @@ colnames(reldifLeftRight) <- paste("RD",colnames(reldifLeftRight),sep="_")
 
 validBaselineTadpole <- validBaselineTadpole[,!(colnames(validBaselineTadpole) %in% 
                                                c(LeftFields,RightFields))]
-validBaselineTadpole <- cbind(validBaselineTadpole,meanLeftRight,difLeftRight,reldifLeftRight)
-#validBaselineTadpole <- cbind(validBaselineTadpole,meanLeftRight,difLeftRight)
+#validBaselineTadpole <- cbind(validBaselineTadpole,meanLeftRight,difLeftRight,reldifLeftRight)
+validBaselineTadpole <- cbind(validBaselineTadpole,meanLeftRight,difLeftRight)
 #validBaselineTadpole <- cbind(validBaselineTadpole,leftData,RightData)
 
 ## Remove columns with too many NA more than %15 of NA

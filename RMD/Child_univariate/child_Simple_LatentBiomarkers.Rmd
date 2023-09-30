@@ -155,7 +155,95 @@ if (!largeSet)
                     xlab="Output Feature", ylab="Input Feature")
   
   par(op)
+  
+  
+  
 }
+
+```
+
+### Formulas Network
+
+Displaying the features associations
+
+```{r  warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
+par(op)
+
+if ((ncol(dataframe) < 1000) && (ncol(dataframe)>10))
+{
+
+  DEdataframeB <- ILAA(dataframe,verbose=TRUE,thr=thro,bootstrap=30)
+
+  transform <- 1*(attr(DEdataframeB,"UPLTM") != 0)
+  print(ncol(transform))
+  thrcol <- 1 + 0.025*nrow(transform)
+  rsum <- apply(1*(transform !=0),1,sum) > 2
+  csum <- apply(1*(transform !=0),2,sum) > thrcol | rsum
+  transform <- transform[csum,csum]
+  csum <- (apply(1*(transform !=0),2,sum) > 1) & (apply(1*(transform !=0),1,sum) > 1)
+  transform <- transform[csum,csum]
+  print(ncol(transform))
+  if (ncol(transform)>100)
+  {
+    thrcol <- 1 + 0.10*nrow(transform)
+    rsum <- apply(1*(transform !=0),1,sum) > 4
+    csum <- apply(1*(transform !=0),2,sum) > thrcol | rsum
+    transform <- transform[csum,csum]
+    csum <- (apply(1*(transform !=0),2,sum) > 3) & (apply(1*(transform !=0),1,sum) > 3)
+    transform <- transform[csum,csum]
+  }
+  print(ncol(transform))
+  if (ncol(transform)>100)
+  {
+    thrcol <- 1 + 0.20*nrow(transform)
+    rsum <- apply(1*(transform !=0),1,sum) > 8
+    csum <- apply(1*(transform !=0),2,sum) > thrcol | rsum
+    transform <- transform[csum,csum]
+    csum <- (apply(1*(transform !=0),2,sum) > 7) & (apply(1*(transform !=0),1,sum) > 7)
+    transform <- transform[csum,csum]
+  }
+  print(ncol(transform))
+
+  if ((ncol(transform) > 10) && (ncol(transform) < 150))
+  {
+    
+      gplots::heatmap.2(transform,
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Red Decorrelation matrix",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Beta|>0",
+                    xlab="Output Feature", ylab="Input Feature")
+  
+      par(op)
+
+    
+    colnames(transform) <- str_remove_all(colnames(transform),"La_")
+    
+    VertexSize <- apply(transform,2,mean)
+    VertexSize <- 5*VertexSize/max(VertexSize)
+    
+    gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
+    gr$layout <- layout_with_fr
+    
+    fc <- cluster_optimal(gr)
+    plot(fc, gr,
+         edge.width = 0.5*E(gr)$weight,
+         vertex.size=VertexSize,
+         edge.arrow.size=0.5,
+         edge.arrow.width=0.5,
+         vertex.label.cex=0.65,
+         vertex.label.dist=1,
+         main="Feature Association")
+  }
+}
+
+par(op)
 
 ```
 
@@ -196,7 +284,7 @@ if (!largeSet)
                     trace = "none",
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
-                    main = "Correlation after IDeA",
+                    main = "Correlation after ILAA",
                     cexRow = cexheat,
                     cexCol = cexheat,
                      srtCol=45,
@@ -238,7 +326,7 @@ if (nrow(dataframe) < 1000)
 {
 
   datasetframe.umap = umap(scale(DEdataframe[1:numsub,varlistc]),n_components=2)
-  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: After IDeA",t='n')
+  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: After ILAA",t='n')
   text(datasetframe.umap$layout,labels=DEdataframe[1:numsub,outcome],col=raincolors[DEdataframe[1:numsub,outcome]+1])
 }
 
@@ -316,7 +404,7 @@ pander::pander(finalTable[,Final_Columns])
 
 
 
-## Comparing IDeA vs PCA vs EFA
+## Comparing ILAA vs PCA vs EFA
 
 
 ### PCA
@@ -420,7 +508,7 @@ pr <- predict(IDeAmodel,DEdataframe,type = "class")
   ptab <- list(er="Error",detail=matrix(nrow=6,ncol=1))
   if (length(unique(pr))>1)
   {
-    plot(IDeAmodel,main="IDeA",branch=0.5,uniform = TRUE,compress = TRUE,margin=0.1)
+    plot(IDeAmodel,main="ILAA",branch=0.5,uniform = TRUE,compress = TRUE,margin=0.1)
     text(IDeAmodel, use.n = TRUE,cex=0.75)
     ptab <- epiR::epi.tests(table(pr==0,DEdataframe[,outcome]==0))
   }

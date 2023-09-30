@@ -26,7 +26,7 @@ varlist <- varlist[varlist != outcome]
 ```
 
 
-## Training and testing sets
+### Training and testing sets
 
 ```{r results = "asis", warning = FALSE}
 trainsamples <- sample(nrow(dataframe),2*nrow(dataframe)/3)
@@ -71,7 +71,7 @@ The heat map of the data
 
 
 
-##  Decorrelating using IDeA
+###  Decorrelating using ILAA
 
 ```{r results = "asis", warning = FALSE}
 decormat <- IDeA(trainingset[,colnames(trainingset) != outcome],thr=thro)
@@ -100,7 +100,7 @@ pander::pander(as.matrix(theCharformulas))
 
 #### Correlation Matrix of the Data
 
-The heat map of the IDeA transformed data
+The heat map of the ILAA transformed data
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
@@ -115,7 +115,7 @@ varlistDe <- varlistDe[varlistDe != outcome]
                     trace = "none",
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
-                    main = "Training: After IDeA Correlation",
+                    main = "Training: After ILAA Correlation",
                     cexRow = cexheat,
                     cexCol = cexheat,
                      srtCol=45,
@@ -133,7 +133,7 @@ varlistDe <- varlistDe[varlistDe != outcome]
                     trace = "none",
                     mar = c(5,5),
                     col=rev(heat.colors(5)),
-                    main = "Testing: After IDeA Correlation",
+                    main = "Testing: After ILAA Correlation",
                     cexRow = cexheat,
                     cexCol = cexheat,
                      srtCol=45,
@@ -150,9 +150,9 @@ varlistDe <- varlistDe[varlistDe != outcome]
 ```
 
 
-## Modeling
+### Modeling
 
-## Modeling outcome using raw set
+### Modeling outcome using raw set
 
 ```{r results = "asis", warning = FALSE}
 outcomeModel <- LASSO_1SE(formula(paste(outcome,"~.")),trainingset);
@@ -161,23 +161,23 @@ pander::pander(as.matrix(outcomeModel$coef))
 
 ```
 
-### Modeling body fat using decorrelated set
+#### Modeling body fat using decorrelated set
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 outcomeModel_DE <- LASSO_1SE(formula(paste(outcome,"~.")),trainage_DE);
 predOutcome_DE <- predict(outcomeModel_DE,testage_DE)
 
-pander::pander(as.matrix(outcomeModel_DE$coef),caption="IDeA Coef")
+pander::pander(as.matrix(outcomeModel_DE$coef),caption="ILAA Coef")
 obsCoef <- getObservedCoef(decormat,outcomeModel_DE$coef)
-pander::pander(as.matrix(obsCoef),caption="IDeA Modeling")
+pander::pander(as.matrix(obsCoef),caption="ILAA Modeling")
 
 
 pander::pander(cor.test(predOutcome,testingset[,outcome]),caption="Raw Model")
-pander::pander(cor.test(predOutcome_DE,testage_DE[,outcome]),caption="IDeA-based Model")
+pander::pander(cor.test(predOutcome_DE,testage_DE[,outcome]),caption="ILAA-based Model")
 
 ```
 
-### Univariate t-test
+#### Univariate t-test
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
@@ -193,7 +193,7 @@ deunittvalues <- apply(testage_DE[,names(outcomeModel_DE$coef)[-1]],2,tvals,test
 ```
 
 
-### Comparing summaries
+#### Comparing summaries
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 7.0}
 
@@ -258,7 +258,7 @@ text(xvals[1]+(xvals[2]-xvals[1])/2,xvals[2]-1,sprintf("Slope= %.2f",lmtvals$coe
 
 
 plot(lacoef[-1,c(3,5)],
-     main="IDeA: Univariate t-values vs regression t-values",
+     main="ILAA: Univariate t-values vs regression t-values",
      xlim=xvals,
      ylim=xvals
      )
@@ -287,9 +287,9 @@ par(op)
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.0, fig.width= 7.0}
 par(mfrow=c(1,3),cex=0.5)
 plot(lmod$fitted.values,predOutcome,main="Raw: lm train predict vs. test predict",xlab="Train",ylab="Test")
-plot(lmod_DE$fitted.values,predOutcome_DE,main="IDeA: lm train predict vs. test predict",xlab="Train",ylab="Test")
+plot(lmod_DE$fitted.values,predOutcome_DE,main="ILAA: lm train predict vs. test predict",xlab="Train",ylab="Test")
 
-plot(predOutcome,predOutcome_DE,xlab="Raw Predicted",ylab="IDeA Predicted",main="Raw vs. IDeA")
+plot(predOutcome,predOutcome_DE,xlab="Raw Predicted",ylab="ILAA Predicted",main="Raw vs. ILAA")
 
 par(op)
 

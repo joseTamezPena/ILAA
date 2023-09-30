@@ -241,3 +241,100 @@ IDeAEvaluation <- function(traindata,testdata,trueRotation,method=method,corRank
 }
   
   
+ILAAEvaluation <- function(traindata,testdata,trueRotation,method=method,Bootstrap=0,thr=thr)
+{
+  
+  IdeT <- ILAA(traindata,thr=thr,method=method,bootstrap=Bootstrap)
+  #  cat(min(attr(IdeT,"IDeAEvolution")$Corr))
+  UPLTM <- attr(IdeT,"UPLTM")
+  rmat <- UPLTM
+  
+  if (method=="fast") method="pearson"
+  cormat <- abs(cor(IdeT,method=method));
+  cormat[is.na(cormat)] <- 0;
+  diag(cormat) <- 0;
+  trainCorrelation <- max(cormat)
+  ideac <- min(attr(IdeT,"IDeAEvolution")$Corr)
+
+#  if (trainCorrelation > thr)
+#  {
+#    if (ideac < (0.95*trainCorrelation))
+#    {
+#      mcor <- apply(cormat,2,max)
+#      cat("\n(",trainCorrelation,":",ideac,"|",attr(IdeT,"R.critical"),")\n");
+#      print(mcor[mcor==trainCorrelation])
+#      print(colnames(rmat))
+#    }
+#  }
+  cormat <- cor(predictDecorrelate(IdeT,testdata),method=method);
+  cormat[is.na(cormat)] <- 0;
+  diag(cormat) <- 0;
+  testCorrelation <- max(abs(cormat))
+  falsedisc <- str_detect(rownames(rmat),"R")
+  rmat <- rmat[!falsedisc,]
+  falsedisc <- str_detect(colnames(rmat),"R")
+  rmat <- rmat[,!falsedisc]
+  falseDiscovery <- sum(falsedisc)
+  
+  rnrotmat <- trueRotation
+  colnames(rnrotmat) <- str_remove_all(colnames(rnrotmat),"La_")
+  trueUsedFeatures <- rnrotmat != 0
+  trueUsedFeatures <- 1*(trueUsedFeatures | t(trueUsedFeatures))
+  
+  rnrmat <- rmat
+  colnames(rnrmat) <- str_remove_all(colnames(rnrmat),"La_")
+  detectedFeatures <- rnrmat != 0
+  detectedFeatures <- 1*(detectedFeatures | t(detectedFeatures))
+  
+  
+  aux <- detectedFeatures
+  detectedFeatures <- 0*trueUsedFeatures
+  fullRot <- detectedFeatures
+  for (rn in rownames(aux))
+  {
+    for (cn in colnames(aux))
+    {
+      detectedFeatures[rn,cn] <- aux[rn,cn];
+    }
+  }
+  diag(detectedFeatures) <- 1
+  for (rn in rownames(rnrmat))
+  {
+    for (cn in colnames(rnrmat))
+    {
+      fullRot[rn,cn] <- rnrmat[rn,cn];
+    }
+  }
+  diag(fullRot) <- 1
+  
+  
+  pairAsosTable <- NULL
+  for (rn in c(1:(nrow(trueUsedFeatures)-1)))
+  {
+    for (cn in c((rn+1):ncol(trueUsedFeatures)))
+    {
+      pairAsosTable <- rbind(pairAsosTable,c(detectedFeatures[rn,cn],trueUsedFeatures[rn,cn]))
+    }
+  }
+  colnames(pairAsosTable) <- c("Estimated","True")
+  pairAsosTable <- as.data.frame(pairAsosTable)
+  pairTable <- table(pairAsosTable)
+  sen <- sum((pairAsosTable$Estimated==pairAsosTable$True)&pairAsosTable$True)/sum(pairAsosTable$True)
+  spe <- sum((pairAsosTable$Estimated==pairAsosTable$True)&(pairAsosTable$True==0))/sum(pairAsosTable$True==0)
+  acc <- sum(pairAsosTable$Estimated==pairAsosTable$True)/nrow(pairAsosTable)
+
+  
+  result <- list(trainCorrelation=trainCorrelation,
+                 testCorrelation=testCorrelation,
+                 falseDiscovery=falseDiscovery,
+                 pairTable=pairTable,
+                 DiscoveryAccuracy=acc,
+                 DiscoverySen=sen,
+                 DiscoverySpe=spe,
+                 detectedFeatures=detectedFeatures,
+                 UPLTM=fullRot,
+                 UsedBetas=1*(fullRot != 0),
+                 rcrit=attr(IdeT,"R.critical")
+  )
+  return(result)
+}

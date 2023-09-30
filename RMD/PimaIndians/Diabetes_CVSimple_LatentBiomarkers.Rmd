@@ -53,9 +53,23 @@ Newman, D.J. & Hettich, S. & Blake, C.L. & Merz, C.J. (1998). UCI Repository of 
 ## The Data
 
 ```{r}
-data(PimaIndiansDiabetes)
+data("PimaIndiansDiabetes2", package = "mlbench")
+PimaIndiansDiabetes  <- PimaIndiansDiabetes2[complete.cases(PimaIndiansDiabetes2),]
+
+
+#data(PimaIndiansDiabetes)
+#PimaIndiansDiabetes  <- PimaIndiansDiabetes[complete.cases(PimaIndiansDiabetes),]
+
+
+PimaIndiansDiabetes_mat <- as.data.frame(model.matrix(diabetes~.*.*.,PimaIndiansDiabetes)[,-1])
+fnames <- colnames(PimaIndiansDiabetes_mat)
+fnames <- str_replace_all(fnames," ","_")
+fnames <- str_replace_all(fnames,"/","_")
+fnames <- str_replace_all(fnames,":","_x_")
+colnames(PimaIndiansDiabetes_mat) <- fnames
+
 pander::pander(table(PimaIndiansDiabetes$diabetes))
-PimaIndiansDiabetes$diabetes <- 1*(PimaIndiansDiabetes$diabetes=="pos")
+PimaIndiansDiabetes_mat$diabetes <- 1*(PimaIndiansDiabetes$diabetes=="pos")
 
 ```
 
@@ -65,7 +79,7 @@ PimaIndiansDiabetes$diabetes <- 1*(PimaIndiansDiabetes$diabetes=="pos")
 
 ```{r results = "asis"}
 studyName <- "Diabetes"
-dataframe <- PimaIndiansDiabetes
+dataframe <- PimaIndiansDiabetes_mat
 outcome <- "diabetes"
 
 
@@ -73,7 +87,7 @@ nLoops <- 100
 
 needScaling <- TRUE
 IDSample <- FALSE
-thro <- 0.25
+thro <- 0.8
 
 ```
 

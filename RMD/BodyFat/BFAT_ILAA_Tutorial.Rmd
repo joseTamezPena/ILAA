@@ -76,6 +76,8 @@ algorithm (IDeA) implemented in R, and both are part of the FRESA.CAD
 
 ```{r}
 ## From git hub
+#First install package devtools
+#library(devtools)
 #install_github("joseTamezPena/FRESA.CAD")
 
 ## For ILAA
@@ -86,7 +88,7 @@ library(igraph)
 
 ```
 
-# Material and Methods
+# Test Data
 
 For this tutorial I'll use the body-fat prediction data set. The data
 was downloaded from Kaggle:
@@ -124,7 +126,7 @@ body_fat <- body_fat[body_fat$BMI<=50,]
 
 ```
 
-## ILAA Unsupervised Processing
+# ILAA Unsupervised Processing
 
 The ILAA function is:
 
@@ -135,7 +137,8 @@ The ILAA function is:
                 Outcome=NULL,
                 drivingFeatures=NULL,
                 maxLoops=100,
-                verbose=FALSE
+                verbose=FALSE,
+                bootstrap=0
       )
 ```
 
@@ -156,6 +159,8 @@ where:
 -   `maxLoops` : The maximum number of iterations cycles
 
 -   `verbose` : Display the evolution of the algorithm.
+
+-   `bootstrap` : The number of bootstrap estimations.
 
 By default, the ILAA function will target a correlation lower than 0.8
 using the Pearson correlation measure. But user has the freedom to chose
@@ -187,8 +192,8 @@ pander::pander(colnames(attr(body_fat_Decorrelated,"UPLTM")))
 
 ```
 
-I'll set the correlation goal to 0.2 in verbose mode. Then I'll continue
-the tutorial using this output.
+For the rest of the tutorial I'll set the correlation goal to 0.2 in
+verbose mode.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
@@ -197,7 +202,7 @@ body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,verbose=TRUE)
 
 ```
 
-### Data Frame Attributes
+## Data Frame Attributes
 
 The returned data matrix contains the following attributes
 
@@ -207,7 +212,7 @@ The returned data matrix contains the following attributes
   attr(body_fat_Decorrelated,"drivingFeatures")  #The list of driving features
   attr(body_fat_Decorrelated,"unaltered")        #The list of unaltered features
   attr(body_fat_Decorrelated,"LatentVariables")  #The list of latent variables
-  attr(body_fat_Decorrelated,"R.critical")       #The estimated minium correlation
+  attr(body_fat_Decorrelated,"R.critical")       #The estimated achieviable correlation
   attr(body_fat_Decorrelated,"IDeAEvolution")    #Evolution of the algorithm
 ```
 
@@ -217,7 +222,7 @@ The "`IDeAEvolution`" attribute can be used to verify if the algorithm
 achieved the target correlation goal, and the sparsity of the returned
 matrix.
 
-### Plotting the Evolution
+## Plotting the Evolution
 
 Here we will use the `attr(dataTransformed,"IDeAEvolution")` to plot the
 evolution of the correlation measure and the evolution of the matrix
@@ -264,7 +269,7 @@ plot(xidx,yval,
 
 ```
 
-### The ILAA Transformed Data
+## The ILAA Transformed Data
 
 Before exploring into more detail, the properties of the `ILAA` results.
 Let us first verify that the returned matrix does not contain features
@@ -281,7 +286,7 @@ returned data set.
   gplots::heatmap.2(abs(cormat),
                     trace = "none",
                     mar = c(5,5),
-                    col=rev(heat.colors(5)),
+                    col=rev(heat.colors(11)),
                     main = "Original Correlation",
                     cexRow = 0.75,
                     cexCol = 0.75,
@@ -296,7 +301,7 @@ returned data set.
   gplots::heatmap.2(abs(cormat),
                     trace = "none",
                     mar = c(5,5),
-                    col=rev(heat.colors(5)),
+                    col=rev(heat.colors(11)),
                     main = "Correlation After ILAA",
                     cexRow = 0.75,
                     cexCol = 0.75,
@@ -308,7 +313,7 @@ returned data set.
 
 ```
 
-### Exploring the Transformation
+## Exploring the Transformation
 
 The `attr(body_fat_Decorrelated,"UPLTM")` returns the transformation
 matrix. The `UPLTM` is sparse, here I show a heat map of the
@@ -321,7 +326,7 @@ transformation matrix that shows which elements are different from zero.
   gplots::heatmap.2(1.0*(abs(UPLTM)>0),
                     trace = "none",
                     mar = c(5,5),
-                    col=rev(heat.colors(5)),
+                    col=rev(heat.colors(2)),
                     Rowv=NULL,
                     Colv="Rowv",
                     dendrogram="none",
@@ -336,7 +341,7 @@ transformation matrix that shows which elements are different from zero.
   
 ```
 
-### The Latent Formulas
+## The Latent Formulas
 
 The sparsity of the `UPLTM` matrix can be analyzed to get the formula
 for each one of the latent formulas. The `getLatentCoefficients()` and
@@ -353,7 +358,31 @@ pander::pander(as.matrix(charFormulas))
 
 ```
 
-### The Formula Network
+## Latent Variable Interpretation
+
+The ILAA returns the Unit Preserving Linear Transformation Matrix
+(UPLTM). This specific transformation is the combination of
+statistically significant linear association analysis between feature
+pairs. Each significant association is modeled by a linear equation;
+henceforth, the interpretation of each feature is as follows:
+
+-   Each discovered latent variable is the residual of the observed
+    parent variable *vs.* the suitable model of the variables associated
+    with the parent variable. For example: $$
+    LaWrist= Wrist - 0.012Weight - 0.165Neck.  
+    $$
+
+    Describes that the $Wrist$ is associated with the
+    $Weight$ and $Neck$. The latent variable $LaWrist$ is the amount of
+    information in the $Wrist$ not found by $Weight$ nor the $Neck$.
+
+-   The model of the $Wrist$ is therefore:
+
+$$
+Wrist = +0.012Weight + 0.165Neck.  
+$$ 
+
+## The Formula Network
 
 The `graph_from_adjacency_matrix()` function from `igraph` can be used
 to visualize the association between variables.
@@ -388,8 +417,8 @@ par(op)
 
 ### ILAA Solution is Data Dependent
 
-I'll generate 100 solutions of the UPLTM and aggregate the non-zero coefficients.
-Then, I'll plot the graph followed by the heat map of the frequency of hits
+I'll generate 100 solutions of the UPLTM and aggregate the non-zero
+coefficients. Then, I'll plot the heat map of the frequency of hits
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 par(op)
@@ -398,17 +427,59 @@ dsize <- nrow(body_fat);
 taccmatrix <- cor(body_fat)*0;
 for (lp in c(1:100))
 {
-  dmat <- ILAA(body_fat[sample(dsize,0.8*dsize),],thr=0.2)
-  transform <- attr(dmat,"UPLTM") !=0 
+  dmat <- ILAA(body_fat[sample(dsize,dsize,replace = TRUE),],thr=0.2)
+  transform <- attr(dmat,"UPLTM") != 0 
   colnames(transform) <- str_remove_all(colnames(transform),"La_")
   taccmatrix[,colnames(transform)] <- taccmatrix[,colnames(transform)] + transform
 }
-taccmatrix <- taccmatrix/100;
-VertexSize <- apply(taccmatrix,2,mean)
+
+gplots::heatmap.2(taccmatrix,
+                    trace = "none",
+                    mar = c(5,5),
+                    Rowv=NULL,
+                    Colv="Rowv",
+                    dendrogram="none",
+                    col=rev(heat.colors(11)),
+                    main = "Transform Hits",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                   srtCol=30,
+                   srtRow=60,
+                    key.title=NA,
+                    key.xlab="|Beta|>0",
+                    xlab="Output Feature", ylab="Input Feature")
+
+  par(op)
+  
+```
+
+### Bootstrapping ILLA
+
+To handle data sensitivity, ILAA allows for bootstrapping estimation of the transformation matrix.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+body_fat_Decorrelated <-  ILAA(body_fat,thr=0.2,verbose=TRUE,bootstrap=100)
+
+
+attr(body_fat_Decorrelated,"LatentVariables")
+attr(body_fat_Decorrelated,"fscore")
+
+LatentFormulas <- getLatentCoefficients(body_fat_Decorrelated)
+charFormulas <- attr(LatentFormulas,"LatentCharFormulas")
+pander::pander(as.matrix(charFormulas))
+
+
+transform <- log(abs(attr(body_fat_Decorrelated,"UPLTM"))+1.0)
+colnames(transform) <- str_remove_all(colnames(transform),"La_")
+
+
+VertexSize <- apply(transform,2,mean)
 VertexSize <- 10*VertexSize/max(VertexSize)
+par(op)
 
 
-gr <- graph_from_adjacency_matrix(taccmatrix,mode = "directed",diag = FALSE,weighted=TRUE)
+gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
 gr$layout <- layout_with_fr
 
 fc <- cluster_optimal(gr)
@@ -418,82 +489,81 @@ plot(fc, gr,
      edge.arrow.width=0.5,
      vertex.size=VertexSize,
      vertex.label.cex=0.85,
-     vertex.label.dist=2.0,
-     main="Feature Association")
+     vertex.label.dist=2,
+     main="Bootstrap: Feature Association")
 par(op)
 
-  gplots::heatmap.2(taccmatrix,
+
+  cormat <- cor(body_fat_Decorrelated,method="pearson")
+  gplots::heatmap.2(abs(cormat),
                     trace = "none",
                     mar = c(5,5),
-                    Rowv=NULL,
-                    Colv="Rowv",
-                    dendrogram="none",
-                    col=rev(heat.colors(5)),
-                    main = "Hit Percentage",
+                    col=rev(heat.colors(11)),
+                    main = "Correlation After ILAA",
                     cexRow = 0.75,
                     cexCol = 0.75,
-                   srtCol=30,
-                   srtRow=60,
+                     srtCol=30,
+                     srtRow=60,
                     key.title=NA,
-                    key.xlab="|Beta|>0",
-                    xlab="Output Feature", ylab="Input Feature")
-  
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+
+par(op)
+diag(cormat) <- 0
+pander::pander(max(abs(cormat)))
+
 ```
 
-### Latent Variable Interpretation
-
-The ILAA returns the Unit Preserving Linear Transformation Matrix
-(UPLTM). This specific transformation is the combination of
-statistically significant linear association analysis between feature
-pairs. Each significant association is modeled by a linear equation;
-henceforth, the interpretation of each feature is as follows:
-
--   Each discovered latent variable is the residual of the observed
-    parent variable *vs.* the suitable model of the variables associated
-    with the parent variable. For example: $$
-    Lawrist = Wrist + 0.017BodyFat - 0.026Weight.  
-    $$
-
-    Describes that the $Wrist$ is associated with the $BodyFat$ and the
-    $Weight$, and the latent variable $Lawrist$ is the amount of
-    information in the $Wrist$ not found by $BodyFat$ nor the $Weight$.
-
--   The model of the $Wrist$ is therefore:
-
-$$
-Wrist = -0.017BodyFat + 0.026Weight.  
-$$
 
 The following code shows the association of the latent variable to each
 one of the observed parent variable, and the association of the parent
 variables to its linear model.
 
-```{r warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
 
-par(mfrow=c(1,2),cex=0.35)
+par(mfrow=c(1,2),cex=0.45)
 fnames <- names(charFormulas)[1]
+
 for (fnames in names(charFormulas))
 {
+  print(fnames)
   obsname <- str_remove(fnames,"La_")
   menv <- mean(body_fat_Decorrelated[,fnames])
   range <- max(body_fat[,obsname])-min(body_fat[,obsname])
   ylim <- c(menv-range/2,menv+range/2)
+  xvals <- c(min(body_fat[,obsname]),max(body_fat[,obsname]))
   plot(body_fat[,obsname],
        body_fat_Decorrelated[,fnames],
        ylim=ylim,
        ylab=fnames,
        xlab=obsname,
        main=paste("ILAA Latent Variable:",fnames))
+
+  lmtvals <- lm(body_fat_Decorrelated[,fnames]~body_fat[,obsname])
+  pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
+  lines(x=xvals,y=pred,col="red")
+  text(xvals[1]+(xvals[2]-xvals[1])/2,0.95*(ylim[2]-ylim[1])+ylim[1],sprintf("Slope= %.2f",lmtvals$coefficients[2]))
+
   
+    
   deformula <- LatentFormulas[[fnames]]
   noInames <- names(deformula)[names(deformula) != obsname]
   predObs <- -(as.matrix(body_fat[,noInames]) %*% deformula[noInames])
+  xvals <- c(min(predObs),max(predObs))
   plot(predObs,
        body_fat[,obsname],
        ylab=obsname,
-       xlab=charFormulas[fnames],
-       main=paste("ILAA Generated Predictions of",obsname),
-       cex.labels=0.5)
+       xlab=paste("Model:",obsname),
+       main=paste("ILAA Generated Predictions of",obsname)
+       )
+  
+  lmtvals <- lm(body_fat[,obsname]~predObs)
+  pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
+  lines(x=xvals,y=pred,col="red")
+  ylim <- c(min(body_fat[,obsname]),max(body_fat[,obsname]))
+
+  text(xvals[1]+(xvals[2]-xvals[1])/2,0.95*(ylim[2]-ylim[1])+ylim[1],sprintf("Slope= %.2f",lmtvals$coefficients[2]))
+
 }
 
 par(op)
@@ -505,7 +575,7 @@ latent variables are not associated with the original parent variable,
 but their model is fully correlated to the observed parent variable. A
 clear example is BMI (The last plot in the above figure).
 
-#ILAA for Supervised Learning
+# ILAA for Supervised Learning
 
 The rerecorded use of ILAA transformation in supervised learning is to
 split the data into training and validation sets. Henceforth, the next
@@ -565,7 +635,7 @@ body_fat_Decorrelated_testD <- predictDecorrelate(body_fat_Decorrelated_trainD
 
 ```
 
-### Train a Regression Model for Body Fat Prediction
+## Train a Regression Model for Body Fat Prediction
 
 Once we have a transformed training and testing set, we can proceed to
 train a linear model of the body fat content. For this example we will

@@ -31,7 +31,7 @@ largeSet <- length(varlist) > 1500
 
 ```{r results = "asis", warning = FALSE}
 set.seed(1)
-trainsamples <- sample(nrow(dataframe),2*nrow(dataframe)/3)
+trainsamples <- sample(nrow(dataframe),3*nrow(dataframe)/4)
 
 trainingset <- dataframe[trainsamples,]
 testingset <- dataframe[-trainsamples,]
@@ -74,12 +74,12 @@ par(op)
 ```
 
 
-##  Decorrelating using ILAA
+###  Decorrelating using ILAA
 
-ILAA train and test
+ILAA bootstrapped training and testing sets
 
 ```{r results = "asis", warning = FALSE}
-trainage_DE <- ILAA(trainingset,thr=thro,Outcome=outcome)
+trainage_DE <- ILAA(trainingset,thr=thro,Outcome=outcome,verbose=TRUE,bootstrap=30)
 
 testage_DE <- predictDecorrelate(trainage_DE,testingset)
 
@@ -90,7 +90,7 @@ testage_DE <- predictDecorrelate(trainage_DE,testingset)
 
 Generating the formulas
 
-```{r}
+```{r results = "asis", warning = FALSE}
 
 theLaFormulas <- getLatentCoefficients(trainage_DE)
 
@@ -112,20 +112,18 @@ par(op)
   colnames(transform) <- str_remove_all(colnames(transform),"La_")
   
   VertexSize <- apply(transform,2,mean)
-  VertexSize <- 7*VertexSize/max(VertexSize)
+  VertexSize <- 5*VertexSize/max(VertexSize)
   
-  
-  #gr <- graph_from_adjacency_matrix(transform,mode = "undirected",diag = FALSE,weighted=TRUE)
   gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
   gr$layout <- layout_with_fr
   
   fc <- cluster_optimal(gr)
   plot(fc, gr,
-       edge.width = E(gr)$weight,
+       edge.width = 0.5*E(gr)$weight,
        vertex.size=VertexSize,
-       edge.arrow.size=0.65,
-       edge.arrow.width=0.65,
-       vertex.label.cex=0.45,
+       edge.arrow.size=0.5,
+       edge.arrow.width=0.5,
+       vertex.label.cex=0.5,
        vertex.label.dist=1,
        main="Feature Association")
 
@@ -189,9 +187,9 @@ varlistDe <- varlistDe[varlistDe != outcome]
 ```
 
 
-## Modeling
+### Modeling
 
-### Modeling outcome using raw set
+#### Modeling outcome using raw set
 
 ```{r results = "asis", warning = FALSE}
 outcomeModel <- LASSO_1SE(formula(paste(outcome,"~.")),trainingset);
@@ -200,7 +198,7 @@ pander::pander(as.matrix(outcomeModel$coef))
 
 ```
 
-### Modeling body fat using decorrelated set
+#### Modeling body fat using decorrelated set
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 outcomeModel_DE <- LASSO_1SE(formula(paste(outcome,"~.")),trainage_DE);
@@ -216,7 +214,7 @@ pander::pander(cor.test(predOutcome_DE,testage_DE[,outcome]),caption="ILAA-based
 
 ```
 
-### Univariate t-test
+#### Univariate t-test
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
@@ -227,7 +225,7 @@ deunittvalues <- apply(testage_DE[,names(outcomeModel_DE$coef)[-1]],2,tvals,test
 ```
 
 
-### Comparing summaries
+#### Comparing summaries
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.0, fig.width= 7.0}
 
@@ -316,7 +314,7 @@ par(op)
 
 ```
 
-### Ploting predictions
+#### Ploting predictions
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.0, fig.width= 7.0}
 par(mfrow=c(1,3),cex=0.5)
@@ -330,9 +328,9 @@ par(op)
 ```
 
 
-## CV 
+### CV 
 
-### test Correlations
+#### test Correlations
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 7.0}
 par(op)

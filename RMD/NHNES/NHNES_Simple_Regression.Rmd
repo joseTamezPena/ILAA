@@ -43,10 +43,8 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 ```
 
 
-## Material and Methods
+## Material
 
-
-## The Data
 
 Data source:
 

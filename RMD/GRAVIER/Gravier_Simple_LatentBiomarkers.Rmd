@@ -51,8 +51,13 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 
 
 ```{r}
-data('gravier', package = 'datamicroarray')
-table(gravier$y)
+
+
+#data('gravier', package = 'datamicroarray')
+#table(gravier$y)
+
+load("~/GitHub/datamicroarray/data/gravier.RData")
+
 
 gravierset <- as.data.frame(cbind(class=1*(gravier$y=="poor"),gravier$x))
 

@@ -10,7 +10,6 @@ tvals <- function(x,target)
   return(tval)
 }
 
-data <- dataframe
 CV_IDeA <- function(data,outcome,loops=50,...)
 {
   varlist <- colnames(data)
@@ -26,7 +25,7 @@ CV_IDeA <- function(data,outcome,loops=50,...)
     cat(".")
     if (l %% 10 ==0) cat("\n")
 
-    trainsamples <- sample(nrow(data),nrow(data)/2)
+    trainsamples <- sample(nrow(data),3*nrow(data)/4)
     
     trainingset <- data[trainsamples,]
     testingset <- data[-trainsamples,]

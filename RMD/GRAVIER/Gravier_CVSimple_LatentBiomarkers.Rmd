@@ -49,8 +49,10 @@ source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
 
 
 ```{r}
-data('gravier', package = 'datamicroarray')
-table(gravier$y)
+
+#data('gravier', package = 'datamicroarray')
+#table(gravier$y)
+load("~/GitHub/datamicroarray/data/gravier.RData")
 
 gravierset <- as.data.frame(cbind(class=1*(gravier$y=="poor"),gravier$x))
 

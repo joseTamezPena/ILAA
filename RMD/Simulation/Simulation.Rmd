@@ -1,5 +1,5 @@
 ---
-title: "Simulation_Transform"
+title: "Simulation_TranSBorm"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
@@ -22,11 +22,11 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 
 
 
-# Validating IDeA as metod to recover the transformation matrix structure
+# Validating ILAA as metod to recover the tranSBormation matrix structure
 
-We will simulate a set of sparse random transformations, and we test if IDeA is able to recover the inverse transformation
+We will simulate a set of sparse random tranSBormations, and we test if ILAA is able to recover the inverse tranSBormation
 The data will consist of a set of N random variables half Gaussian, half with uniform distribution.
-The transformation matrix will only create a set of 10 correlated variables
+The tranSBormation matrix will only create a set of 10 correlated variables
 
 ### Loading the libraries
 
@@ -54,11 +54,11 @@ NUmberofSimulations = 100
 NumOfObs  <- 1000
 NumOfCorFeatures <- 40
 randomToCorrelRatio <- 1
-pOfnoZero <- 0.35
+pOfnoZero <- 0.25
 
-## IDeA parameters
-thr <- 0.50
-method <- "fast"
+## ILAA parameters
+thr <- 0.40
+method <- "pearson"
 type <- "LM"
 
 ```
@@ -81,11 +81,11 @@ print(syndata$rotMatrix)
 ```
 
 
-### IDeA
+### ILAA
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-IdeT <- IDeA(syndata$data,corRank=TRUE,thr=thr,verbose=TRUE)
+IdeT <- ILAA(syndata$data,thr=thr,verbose=TRUE,bootstrap=30)
 rmat <- attr(IdeT,"UPLTM")
 print(rmat)
 
@@ -175,7 +175,7 @@ gplots::heatmap.2(trueUsedFeatures,
                     Rowv = FALSE,
                     Colv = FALSE,
                     col=rev(heat.colors(5)),
-                    main = "True Transformation",
+                    main = "True TranSBormation",
                     dendrogram = "none",
                     cexRow = 0.75,
                     cexCol = 0.75,
@@ -195,7 +195,7 @@ gplots::heatmap.2(detectedFeatures,
                     Rowv = FALSE,
                     Colv = FALSE,
                     col=rev(heat.colors(5)),
-                    main = "IDeA Transformation",
+                    main = "ILAA TranSBormation",
                     dendrogram = "none",
                     cexRow = 0.75,
                     cexCol = 0.75,
@@ -219,12 +219,12 @@ DiscoverySpeT <- numeric(NUmberofSimulations)
 trainCorT <- numeric(NUmberofSimulations)
 testCorT <- numeric(NUmberofSimulations)
 
-falseDiscoveryF <- numeric(NUmberofSimulations)
-DiscoveryAccuracyF <- numeric(NUmberofSimulations)
-DiscoverySenF <- numeric(NUmberofSimulations)
-DiscoverySpeF <- numeric(NUmberofSimulations)
-trainCorF <- numeric(NUmberofSimulations)
-testCorF <- numeric(NUmberofSimulations)
+falseDiscoveryB <- numeric(NUmberofSimulations)
+DiscoveryAccuracyB <- numeric(NUmberofSimulations)
+DiscoverySenB <- numeric(NUmberofSimulations)
+DiscoverySpeB <- numeric(NUmberofSimulations)
+trainCorB <- numeric(NUmberofSimulations)
+testCorB <- numeric(NUmberofSimulations)
 
 falseDiscoveryST <- numeric(NUmberofSimulations)
 DiscoveryAccuracyST <- numeric(NUmberofSimulations)
@@ -233,19 +233,19 @@ DiscoverySpeST <- numeric(NUmberofSimulations)
 trainCorST <- numeric(NUmberofSimulations)
 testCorST <- numeric(NUmberofSimulations)
 
-falseDiscoverySF <- numeric(NUmberofSimulations)
-DiscoveryAccuracySF <- numeric(NUmberofSimulations)
-DiscoverySenSF <- numeric(NUmberofSimulations)
-DiscoverySpeSF <- numeric(NUmberofSimulations)
-trainCorSF <- numeric(NUmberofSimulations)
-testCorSF <- numeric(NUmberofSimulations)
+falseDiscoverySB <- numeric(NUmberofSimulations)
+DiscoveryAccuracySB <- numeric(NUmberofSimulations)
+DiscoverySenSB <- numeric(NUmberofSimulations)
+DiscoverySpeSB <- numeric(NUmberofSimulations)
+trainCorSB <- numeric(NUmberofSimulations)
+testCorSB <- numeric(NUmberofSimulations)
 
 overlapTF <- numeric(NUmberofSimulations)
-overlapSTSF <- numeric(NUmberofSimulations)
+overlapSTSB <- numeric(NUmberofSimulations)
 overlapTST <- numeric(NUmberofSimulations)
 overlapFST <- numeric(NUmberofSimulations)
-overlapTSF <- numeric(NUmberofSimulations)
-overlapFSF <- numeric(NUmberofSimulations)
+overlapTSB <- numeric(NUmberofSimulations)
+overlapFSB <- numeric(NUmberofSimulations)
 
 
 i = 1
@@ -253,101 +253,102 @@ for (i in 1:NUmberofSimulations)
 {
   cat(".")
   if (i %% 10 == 0) cat("\n")
-  syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=randomToCorrelRatio,pOfnoZero=pOfnoZero)
+  syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=randomToCorrelRatio,pOfnoZero=-pOfnoZero)
   
   trainSample <- sample(NumOfObs,NumOfObs/2)
   cat("T")
-  evalIDeATRUE <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+
+  evalILAAPear <- ILAAEvaluation(traindata=syndata$data[trainSample,],
                                  testdata=syndata$data[-trainSample,],
                                  trueRotation=syndata$rotMatrix,
                                  method=method,
-                                 corRank=TRUE,
-                                 thr=thr,
-                                 type=type)
-  trainCorT[i] <- evalIDeATRUE$trainCorrelation
-  testCorT[i] <- evalIDeATRUE$testCorrelation
-  falseDiscoveryT[i] <- evalIDeATRUE$falseDiscovery
-  DiscoveryAccuracyT[i] <- evalIDeATRUE$DiscoveryAccuracy
-  DiscoverySenT[i] <- evalIDeATRUE$DiscoverySen
-  DiscoverySpeT[i] <- evalIDeATRUE$DiscoverySpe
+                                 Bootstrap=0,
+                                 thr=thr)
+
+  trainCorT[i] <- evalILAAPear$trainCorrelation
+  testCorT[i] <- evalILAAPear$testCorrelation
+  falseDiscoveryT[i] <- evalILAAPear$falseDiscovery
+  DiscoveryAccuracyT[i] <- evalILAAPear$DiscoveryAccuracy
+  DiscoverySenT[i] <- evalILAAPear$DiscoverySen
+  DiscoverySpeT[i] <- evalILAAPear$DiscoverySpe
   
 
   cat("F")
-  evalIDeAFALSE <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+  evalILAABoot <- ILAAEvaluation(traindata=syndata$data[trainSample,],
                                  testdata=syndata$data[-trainSample,],
                                  trueRotation=syndata$rotMatrix,
                                  method=method,
-                                 corRank=FALSE,
-                                 thr=thr,
-                                 type=type)
-  trainCorF[i] <- evalIDeAFALSE$trainCorrelation
-  testCorF[i] <- evalIDeAFALSE$testCorrelation
-  falseDiscoveryF[i] <- evalIDeAFALSE$falseDiscovery
-  DiscoveryAccuracyF[i] <- evalIDeAFALSE$DiscoveryAccuracy
-  DiscoverySenF[i] <- evalIDeAFALSE$DiscoverySen
-  DiscoverySpeF[i] <- evalIDeAFALSE$DiscoverySpe
+                                 Bootstrap=30,
+                                 thr=thr)
+  
+  trainCorB[i] <- evalILAABoot$trainCorrelation
+  testCorB[i] <- evalILAABoot$testCorrelation
+  falseDiscoveryB[i] <- evalILAABoot$falseDiscovery
+  DiscoveryAccuracyB[i] <- evalILAABoot$DiscoveryAccuracy
+  DiscoverySenB[i] <- evalILAABoot$DiscoverySen
+  DiscoverySpeB[i] <- evalILAABoot$DiscoverySpe
   
   cat("t")
-  evalIDeASpearmanT <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+  evalILAASpearman <- ILAAEvaluation(traindata=syndata$data[trainSample,],
                                  testdata=syndata$data[-trainSample,],
                                  trueRotation=syndata$rotMatrix,
                                  method="spearman",
-                                 corRank=TRUE,
-                                 thr=thr,
-                                 type="RLM")
-  trainCorST[i] <- evalIDeASpearmanT$trainCorrelation
-  testCorST[i] <- evalIDeASpearmanT$testCorrelation
-  falseDiscoveryST[i] <- evalIDeASpearmanT$falseDiscovery
-  DiscoveryAccuracyST[i] <- evalIDeASpearmanT$DiscoveryAccuracy
-  DiscoverySenST[i] <- evalIDeASpearmanT$DiscoverySen
-  DiscoverySpeST[i] <- evalIDeASpearmanT$DiscoverySpe
+                                 Bootstrap=0,
+                                 thr=thr)
+  
+  trainCorST[i] <- evalILAASpearman$trainCorrelation
+  testCorST[i] <- evalILAASpearman$testCorrelation
+  falseDiscoveryST[i] <- evalILAASpearman$falseDiscovery
+  DiscoveryAccuracyST[i] <- evalILAASpearman$DiscoveryAccuracy
+  DiscoverySenST[i] <- evalILAASpearman$DiscoverySen
+  DiscoverySpeST[i] <- evalILAASpearman$DiscoverySpe
 
   cat("f")
-  evalIDeASpearmanF <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+  evalILAASpearmanBoot <- ILAAEvaluation(traindata=syndata$data[trainSample,],
                                  testdata=syndata$data[-trainSample,],
                                  trueRotation=syndata$rotMatrix,
                                  method="spearman",
-                                 corRank=FALSE,
-                                 thr=thr,
-                                 type="RLM")
-  trainCorSF[i] <- evalIDeASpearmanF$trainCorrelation
-  testCorSF[i] <- evalIDeASpearmanF$testCorrelation
-  falseDiscoverySF[i] <- evalIDeASpearmanF$falseDiscovery
-  DiscoveryAccuracySF[i] <- evalIDeASpearmanF$DiscoveryAccuracy
-  DiscoverySenSF[i] <- evalIDeASpearmanF$DiscoverySen
-  DiscoverySpeSF[i] <- evalIDeASpearmanF$DiscoverySpe
+                                 Bootstrap=5,
+                                 thr=thr)
+  
+  trainCorSB[i] <- evalILAASpearmanBoot$trainCorrelation
+  testCorSB[i] <- evalILAASpearmanBoot$testCorrelation
+  falseDiscoverySB[i] <- evalILAASpearmanBoot$falseDiscovery
+  DiscoveryAccuracySB[i] <- evalILAASpearmanBoot$DiscoveryAccuracy
+  DiscoverySenSB[i] <- evalILAASpearmanBoot$DiscoverySen
+  DiscoverySpeSB[i] <- evalILAASpearmanBoot$DiscoverySpe
 
 
-  sizeMat <- nrow(evalIDeATRUE$UsedBetas)^2
-  overlapTF[i] <- sum(evalIDeATRUE$UsedBetas == evalIDeAFALSE$UsedBetas)/sizeMat
-  overlapSTSF[i] <- sum(evalIDeASpearmanT$UsedBetas == evalIDeASpearmanF$UsedBetas)/sizeMat
-  overlapTST[i] <- sum(evalIDeATRUE$UsedBetas == evalIDeASpearmanT$UsedBetas)/sizeMat
-  overlapFST[i] <- sum(evalIDeAFALSE$UsedBetas == evalIDeASpearmanT$UsedBetas)/sizeMat
-  overlapTSF[i] <- sum(evalIDeATRUE$UsedBetas == evalIDeASpearmanF$UsedBetas)/sizeMat
-  overlapFSF[i] <- sum(evalIDeAFALSE$UsedBetas == evalIDeASpearmanF$UsedBetas)/sizeMat
+  sizeMat <- nrow(evalILAAPear$UsedBetas)^2
+  overlapTF[i] <- sum(evalILAAPear$UsedBetas == evalILAABoot$UsedBetas)/sizeMat
+  overlapSTSB[i] <- sum(evalILAASpearman$UsedBetas == evalILAASpearmanBoot$UsedBetas)/sizeMat
+  overlapTST[i] <- sum(evalILAAPear$UsedBetas == evalILAASpearman$UsedBetas)/sizeMat
+  overlapFST[i] <- sum(evalILAABoot$UsedBetas == evalILAASpearman$UsedBetas)/sizeMat
+  overlapTSB[i] <- sum(evalILAAPear$UsedBetas == evalILAASpearmanBoot$UsedBetas)/sizeMat
+  overlapFSB[i] <- sum(evalILAABoot$UsedBetas == evalILAASpearmanBoot$UsedBetas)/sizeMat
   
 }
 par(cex=0.8,cex.main=0.85,cex.axis=0.9)
 
-boxplot(list(Pearson_1=DiscoveryAccuracyT,Pearson_2=DiscoveryAccuracyF,Spearman_1=DiscoveryAccuracyST,Spearman_2=DiscoveryAccuracySF),
+boxplot(list(Pearson_1=DiscoveryAccuracyT,Pearson_2=DiscoveryAccuracyB,Spearman_1=DiscoveryAccuracyST,Spearman_2=DiscoveryAccuracySB),
         main="Accuracy",ylab="Accuracy")
-boxplot(list(Pearson_1=DiscoverySenT,Pearson_2=DiscoverySenF,Spearman_1=DiscoverySenST,Spearman_2=DiscoverySenSF),
+boxplot(list(Pearson_1=DiscoverySenT,Pearson_2=DiscoverySenB,Spearman_1=DiscoverySenST,Spearman_2=DiscoverySenSB),
         main="Sensitivity",ylab="Sensitivity")
-boxplot(list(Pearson_1=DiscoverySpeT,Pearson_2=DiscoverySpeF,Spearman_1=DiscoverySpeST,Spearman_2=DiscoverySpeSF),
+boxplot(list(Pearson_1=DiscoverySpeT,Pearson_2=DiscoverySpeB,Spearman_1=DiscoverySpeST,Spearman_2=DiscoverySpeSB),
         main="Specificity",ylab="Specificity")
 boxplot(list(P1_P2=overlapTF,
-             S1_S2=overlapSTSF,
+             S1_S2=overlapSTSB,
              P1_S1=overlapTST,
              P2_S1=overlapFST,
-             P1_S2=overlapTSF,
-             P2_S2=overlapFSF),
+             P1_S2=overlapTSB,
+             P2_S2=overlapFSB),
         main="Overlap",
         ylab="Overlap"
         )
-boxplot(list(Pearson_1=trainCorT,Pearson_2=trainCorF,Spearman_1=trainCorST,Spearman_2=trainCorSF),
+boxplot(list(Pearson_1=trainCorT,Pearson_2=trainCorB,Spearman_1=trainCorST,Spearman_2=trainCorSB),
         main="Train Correlation",
         ylab="Correlation")
-boxplot(list(Pearson_1=testCorT,Pearson_2=testCorF,Spearman_1=testCorST,Spearman_2=testCorSF),
+boxplot(list(Pearson_1=testCorT,Pearson_2=testCorB,Spearman_1=testCorST,Spearman_2=testCorSB),
         main="Test Correlation",
         ylab="Correlation")
 
@@ -380,34 +381,29 @@ for (i in 1:NUmberofSimulations)
   syndata <- SyntheticData(NumOfObs=NumOfObs,
                            NumOfCorFeatures=NumOfCorFeatures,
                            randomToCorrelRatio=randomToCorrelRatio,
-                           pOfnoZero=pOfnoZero)
+                           pOfnoZero=-pOfnoZero)
   
-#  syndata <- SyntheticData(NumOfObs=NumOfObs,
-#                           NumOfCorFeatures=NumOfCorFeatures,
-#                           randomToCorrelRatio=randomToCorrelRatio,
-#                           pOfnoZero= -pOfnoZero)
-  
+
   trueSpacity[i] <- sum(syndata$rotMatrix==0)/(NumOfCorFeatures^2)
   trainSample <- sample(NumOfObs,NumOfObs/2)
   cn <- 1;
   for (thr in thrvals)
   {
     cat("T")
-    evalIDeA <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+    evalILAA <- ILAAEvaluation(traindata=syndata$data[trainSample,],
                                    testdata=syndata$data[-trainSample,],
                                    trueRotation=syndata$rotMatrix,
                                    method=method,
-                                   corRank=TRUE,
-                                   thr=thr,
-                                   type=type)
-    trainCor[i,cn] <- evalIDeA$trainCorrelation
-    testCor[i,cn] <- evalIDeA$testCorrelation
-    falseDiscovery[i,cn] <- evalIDeA$falseDiscovery
-    DiscoveryAccuracy[i,cn] <- evalIDeA$DiscoveryAccuracy
-    DiscoverySen[i,cn] <- evalIDeA$DiscoverySen
-    DiscoverySpe[i,cn] <- evalIDeA$DiscoverySpe
+                                   Bootstrap=0,
+                                   thr=thr)
+    trainCor[i,cn] <- evalILAA$trainCorrelation
+    testCor[i,cn] <- evalILAA$testCorrelation
+    falseDiscovery[i,cn] <- evalILAA$falseDiscovery
+    DiscoveryAccuracy[i,cn] <- evalILAA$DiscoveryAccuracy
+    DiscoverySen[i,cn] <- evalILAA$DiscoverySen
+    DiscoverySpe[i,cn] <- evalILAA$DiscoverySpe
 
-    rotSparcity[i,cn] <- sum(evalIDeA$UPLTM==0)/(ncol(evalIDeA$UPLTM)^2)
+    rotSparcity[i,cn] <- sum(evalILAA$UPLTM==0)/(ncol(evalILAA$UPLTM)^2)
     cn <- cn + 1;
   }
 }
@@ -446,7 +442,8 @@ lines(c(1,length(thrvals)),ylim)
 ```
 
 
-### Testing the effect of the threshold
+### Testing the effect of the threshold with bootstrap
+
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 
@@ -476,21 +473,21 @@ for (i in 1:NUmberofSimulations)
   for (thr in thrvals)
   {
     cat("T")
-    evalIDeA <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+    evalILAA <- ILAAEvaluation(traindata=syndata$data[trainSample,],
                                    testdata=syndata$data[-trainSample,],
                                    trueRotation=syndata$rotMatrix,
                                    method=method,
-                                   corRank=TRUE,
-                                   thr=thr,
-                                   type=type)
-    trainCor[i,cn] <- evalIDeA$trainCorrelation
-    testCor[i,cn] <- evalIDeA$testCorrelation
-    falseDiscovery[i,cn] <- evalIDeA$falseDiscovery
-    DiscoveryAccuracy[i,cn] <- evalIDeA$DiscoveryAccuracy
-    DiscoverySen[i,cn] <- evalIDeA$DiscoverySen
-    DiscoverySpe[i,cn] <- evalIDeA$DiscoverySpe
+                                   Bootstrap=10,
+                                   thr=thr)
+    
+    trainCor[i,cn] <- evalILAA$trainCorrelation
+    testCor[i,cn] <- evalILAA$testCorrelation
+    falseDiscovery[i,cn] <- evalILAA$falseDiscovery
+    DiscoveryAccuracy[i,cn] <- evalILAA$DiscoveryAccuracy
+    DiscoverySen[i,cn] <- evalILAA$DiscoverySen
+    DiscoverySpe[i,cn] <- evalILAA$DiscoverySpe
 
-    rotSparcity[i,cn] <- sum(evalIDeA$UPLTM==0)/(ncol(evalIDeA$UPLTM)^2)
+    rotSparcity[i,cn] <- sum(evalILAA$UPLTM==0)/(ncol(evalILAA$UPLTM)^2)
     cn <- cn + 1;
   }
 }
@@ -550,25 +547,22 @@ for (rToCRatio in randomToCorrelRatios)
   {
     cat(".")
     if (i %% 10 == 0) cat("\n")
-    syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=rToCRatio,pOfnoZero=pOfnoZero)
+    syndata <- SyntheticData(NumOfObs=NumOfObs,NumOfCorFeatures=NumOfCorFeatures,randomToCorrelRatio=rToCRatio,pOfnoZero=-pOfnoZero)
     
     trainSample <- sample(NumOfObs,NumOfObs/2)
-    evalIDeA <- IDeAEvaluation(traindata=syndata$data[trainSample,],
+    evalILAA <- ILAAEvaluation(traindata=syndata$data[trainSample,],
                                    testdata=syndata$data[-trainSample,],
                                    trueRotation=syndata$rotMatrix,
                                    method=method,
-                                   corRank=TRUE,
-                                   thr=thr,
-                                   type=type)
-#    acor <-abs(cor(syndata$data[,str_detect(colnames(syndata$data),"ER")])) 
-#    diag(acor) <- 0
-#    max(acor)
-    trainCorR[i,cn] <- evalIDeA$trainCorrelation
-    testCorR[i,cn] <- evalIDeA$testCorrelation
-    falseDiscoveryR[i,cn] <- evalIDeA$falseDiscovery
-    DiscoveryAccuracyR[i,cn] <- evalIDeA$DiscoveryAccuracy
-    DiscoverySenR[i,cn] <- evalIDeA$DiscoverySen
-    DiscoverySpeR[i,cn] <- evalIDeA$DiscoverySpe
+                                   Bootstrap=0,
+                                   thr=thr)
+    
+    trainCorR[i,cn] <- evalILAA$trainCorrelation
+    testCorR[i,cn] <- evalILAA$testCorrelation
+    falseDiscoveryR[i,cn] <- evalILAA$falseDiscovery
+    DiscoveryAccuracyR[i,cn] <- evalILAA$DiscoveryAccuracy
+    DiscoverySenR[i,cn] <- evalILAA$DiscoverySen
+    DiscoverySpeR[i,cn] <- evalILAA$DiscoverySpe
 
   }
   cn <- cn + 1;
