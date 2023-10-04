@@ -86,6 +86,10 @@ library("FRESA.CAD")
 ## For network analysis
 library(igraph)
 
+## For multicollinearity
+library(multiColl)
+library(car)
+
 ```
 
 # Test Data
@@ -131,15 +135,15 @@ body_fat <- body_fat[body_fat$BMI<=50,]
 The ILAA function is:
 
 ``` r
- ILAA(data=NULL,
-                thr=0.80,
-                method=c("pearson","spearman"),
-                Outcome=NULL,
-                drivingFeatures=NULL,
-                maxLoops=100,
-                verbose=FALSE,
-                bootstrap=0
-      )
+ decorrelatedData <- ILAA(data=NULL,
+                          thr=0.80,
+                          method=c("pearson","spearman"),
+                          Outcome=NULL,
+                          drivingFeatures=NULL,
+                          maxLoops=100,
+                          verbose=FALSE,
+                          bootstrap=0
+                          )
 ```
 
 where:
@@ -162,6 +166,28 @@ where:
 
 -   `bootstrap` : The number of bootstrap estimations.
 
+## ILLA Auxiliary Functions
+
+To help user taking advantage of the ILLA transformed object. FRESA.CAD
+provide the following auxiliary functions:
+
+``` r
+newTransformedData   <- predictDecorrelate(decorrelatedData,NewData)
+theBetaCoefficientts <- getLatentCoefficients(decorrelatedData)
+fromLatenttoObserved <- getObservedCoef(decorrelatedData,latentModel)
+```
+
+-   `predictDecorrelate()` Rotates any new data set based on the output
+    of an `ILAA` transformed data set.
+
+-   `getLatentCoefficients()` Returns a list of all the beta
+    coefficients for each one of the discovered latent variables.
+
+-   `getObservedCoef()` returns the beta coefficients on the observed
+    space of any linear model that was trained on the UPLTM space.
+
+## Sample Usage
+
 By default, the ILAA function will target a correlation lower than 0.8
 using the Pearson correlation measure. But user has the freedom to chose
 between robust fitting with Spearman correlation measure, and/or set the
@@ -172,23 +198,23 @@ snippet shows the different options.
 
 # Default call
 body_fat_Decorrelated <- ILAA(body_fat)
-pander::pander(colnames(attr(body_fat_Decorrelated,"UPLTM")))
+pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 # Explore the convergence metrics in verbose mode
 body_fat_Decorrelated <- ILAA(body_fat,verbose=TRUE)
-pander::pander(colnames(attr(body_fat_Decorrelated,"UPLTM")))
+pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
-# Robust Linear Fitting with spearman correlation measure
+# Robust Linear Fitting with the Spearman correlation measure
 body_fat_Decorrelated <- ILAA(body_fat,method="spearman",verbose=TRUE)
-pander::pander(colnames(attr(body_fat_Decorrelated,"UPLTM")))
+pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 # Lowering the threshold
 body_fat_Decorrelated <- ILAA(body_fat,thr=0.4,verbose=TRUE)
-pander::pander(colnames(attr(body_fat_Decorrelated,"UPLTM")))
+pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 # Tring to achive the maximum independence beteeen variables, i.e., thr=0.0
 body_fat_Decorrelated <- ILAA(body_fat,thr=0.0,verbose=TRUE)
-pander::pander(colnames(attr(body_fat_Decorrelated,"UPLTM")))
+pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 ```
 
@@ -199,6 +225,8 @@ verbose mode.
 
 # Calling ILAA to achieve a final correlation of 0.2
 body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,verbose=TRUE)
+pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
+
 
 ```
 
@@ -212,12 +240,19 @@ The returned data matrix contains the following attributes
   attr(body_fat_Decorrelated,"drivingFeatures")  #The list of driving features
   attr(body_fat_Decorrelated,"unaltered")        #The list of unaltered features
   attr(body_fat_Decorrelated,"LatentVariables")  #The list of latent variables
-  attr(body_fat_Decorrelated,"R.critical")       #The estimated achieviable correlation
+  attr(body_fat_Decorrelated,"R.critical")       #The estimated minimum achieviable correlation
   attr(body_fat_Decorrelated,"IDeAEvolution")    #Evolution of the algorithm
+  attr(body_fat_Decorrelated,"VarRatio")         #Variance Ratios: var(Latent)/Var(obs)
 ```
 
 The main attributes is "`UPLTM`". That stores the specific linear
 transformation matrix from observed variables to the latent variable.
+
+The next relevant attribute is the "`VarRatio"`, this attributive stores
+the fraction of the original feature variance that is still present in
+the latent variable. All non-altered variables return a "`VarRatio`" of
+1.
+
 The "`IDeAEvolution`" attribute can be used to verify if the algorithm
 achieved the target correlation goal, and the sparsity of the returned
 matrix.
@@ -372,15 +407,15 @@ henceforth, the interpretation of each feature is as follows:
     LaWrist= Wrist - 0.012Weight - 0.165Neck.  
     $$
 
-    Describes that the $Wrist$ is associated with the
-    $Weight$ and $Neck$. The latent variable $LaWrist$ is the amount of
-    information in the $Wrist$ not found by $Weight$ nor the $Neck$.
+    Describes that the $Wrist$ is associated with the $Weight$ and
+    $Neck$. The latent variable $LaWrist$ is the amount of information
+    in the $Wrist$ not found by $Weight$ nor the $Neck$.
 
 -   The model of the $Wrist$ is therefore:
 
 $$
 Wrist = +0.012Weight + 0.165Neck.  
-$$ 
+$$
 
 ## The Formula Network
 
@@ -390,12 +425,14 @@ to visualize the association between variables.
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 par(op)
 
-transform <- log(abs(attr(body_fat_Decorrelated,"UPLTM"))+1.0)
+transform <- attr(body_fat_Decorrelated,"UPLTM") != 0
 colnames(transform) <- str_remove_all(colnames(transform),"La_")
+transform <- abs(transform*cor(body_fat[,rownames(transform)])) # The weights are proportional to the observed correlation
 
 
-VertexSize <- apply(transform,2,mean)
-VertexSize <- 10*VertexSize/max(VertexSize)
+VertexSize <- attr(body_fat_Decorrelated,"fscore") # The size depends on the variable independence relevance (fscore)
+names(VertexSize) <- str_remove_all(names(VertexSize),"La_")
+VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
 
 
 gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
@@ -403,7 +440,7 @@ gr$layout <- layout_with_fr
 
 fc <- cluster_optimal(gr)
 plot(fc, gr,
-     edge.width=E(gr)$weight,
+     edge.width=2*E(gr)$weight,
      edge.arrow.size=0.5,
      edge.arrow.width=0.5,
      vertex.size=VertexSize,
@@ -455,28 +492,55 @@ gplots::heatmap.2(taccmatrix,
 
 ### Bootstrapping ILLA
 
-To handle data sensitivity, ILAA allows for bootstrapping estimation of the transformation matrix.
+To handle data sensitivity, ILAA allows for bootstrapping estimation of
+the transformation matrix.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 body_fat_Decorrelated <-  ILAA(body_fat,thr=0.2,verbose=TRUE,bootstrap=100)
 
 
-attr(body_fat_Decorrelated,"LatentVariables")
-attr(body_fat_Decorrelated,"fscore")
+pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
+## Getting the formulas
 LatentFormulas <- getLatentCoefficients(body_fat_Decorrelated)
 charFormulas <- attr(LatentFormulas,"LatentCharFormulas")
 pander::pander(as.matrix(charFormulas))
 
 
-transform <- log(abs(attr(body_fat_Decorrelated,"UPLTM"))+1.0)
-colnames(transform) <- str_remove_all(colnames(transform),"La_")
-
-
-VertexSize <- apply(transform,2,mean)
-VertexSize <- 10*VertexSize/max(VertexSize)
+## The transformation
 par(op)
+
+transform <- attr(body_fat_Decorrelated,"UPLTM") != 0 # The non-zero coefficients
+colnames(transform) <- str_remove_all(colnames(transform),"La_")  # For network analysis
+transform <- abs(transform*cor(body_fat[,rownames(transform)])) # The weights are proportional to the observed correlation
+
+
+gplots::heatmap.2(transform,
+                    trace = "none",
+                    mar = c(5,5),
+                    Rowv=NULL,
+                    Colv="Rowv",
+                    dendrogram="none",
+                    col=rev(heat.colors(11)),
+                    main = "(Transform <> 0)*Correlation",
+                    cexRow = 0.75,
+                    cexCol = 0.75,
+                   srtCol=30,
+                   srtRow=60,
+                    key.title=NA,
+                    key.xlab="|R|",
+                    xlab="Output Feature", ylab="Input Feature")
+
+  par(op)
+
+
+## Network analysis
+# The vertex size will be proportional to the fscore of the IDeA procedure.
+  
+VertexSize <- attr(body_fat_Decorrelated,"fscore") # The size depends on the variable independence relevance (fscore)
+VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
+
 
 
 gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
@@ -484,7 +548,7 @@ gr$layout <- layout_with_fr
 
 fc <- cluster_optimal(gr)
 plot(fc, gr,
-     edge.width=E(gr)$weight,
+     edge.width=2*E(gr)$weight,
      edge.arrow.size=0.5,
      edge.arrow.width=0.5,
      vertex.size=VertexSize,
@@ -493,7 +557,7 @@ plot(fc, gr,
      main="Bootstrap: Feature Association")
 par(op)
 
-
+## Here we plot the final degree of correlation among output features
   cormat <- cor(body_fat_Decorrelated,method="pearson")
   gplots::heatmap.2(abs(cormat),
                     trace = "none",
@@ -514,17 +578,28 @@ pander::pander(max(abs(cormat)))
 
 ```
 
+#### Association Plots
 
 The following code shows the association of the latent variable to each
 one of the observed parent variable, and the association of the parent
-variables to its linear model.
+variables to its linear model. For this example I will use the
+`"VarRatio"` to rank the latent variables from the ones that keep the
+most original variance to the latent variable with the minimum fraction.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
 
+
+
 par(mfrow=c(1,2),cex=0.45)
 fnames <- names(charFormulas)[1]
+## Sort by explanined variace
+varratio <- attr(body_fat_Decorrelated,"VarRatio")
+varratio <- varratio[names(varratio) %in% names(charFormulas)]
+varratio <- varratio[order(-varratio)]
 
-for (fnames in names(charFormulas))
+## Ploting
+
+for (fnames in names(varratio))
 {
   print(fnames)
   obsname <- str_remove(fnames,"La_")
@@ -573,7 +648,30 @@ par(op)
 The visual inspection of the above-displayed figures shows that some
 latent variables are not associated with the original parent variable,
 but their model is fully correlated to the observed parent variable. A
-clear example is BMI (The last plot in the above figure).
+clear example is The last plot in the above figure.
+
+### Direct Transform Estimation
+
+It is easier to estimate the observation using the transformation matrix.
+For this just set the diagonal of the transformation to zero, the the output is the estimated observation from the independent variables.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 5}
+transform <- attr(body_fat_Decorrelated,"UPLTM")
+# Set the diagonal to zero
+diag(transform) <- 0
+
+obsestim <- -1*as.data.frame(as.matrix(body_fat[,rownames(transform)]) %*% transform)
+par(mfrow=c(2,2),cex=0.45)
+
+for (ix in 1:ncol(obsestim))
+{
+  plot(obsestim[,ix],body_fat[,ix],xlab=colnames(obsestim)[ix],ylab=colnames(body_fat)[ix])
+}
+par(op)
+
+```
+ 
+
 
 # ILAA for Supervised Learning
 
@@ -655,7 +753,41 @@ pander::pander(as.matrix(modelBodyFatD$coef))
 
 ```
 
-The last lines of code display the beta coefficients of the model.
+The printed beta coefficients of the models show that the LASSO models
+are different between the Outcome-driven and outcome-blind ILAA methods.
+
+#### Muticollinear Analysis
+
+Here we check the Variance inflation factor (VIF) on the train and
+testing sets
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+frm <- paste("BodyFat~",str_flatten(modelBodyFat$selectedfeatures," + "))
+
+X <- model.matrix(formula(frm),body_fat_Decorrelated_train);
+mc <- multiCol(X)
+title("Train VIF")
+vifd <- VIF(X)
+vifx <-vif(lm(formula(frm),body_fat_Decorrelated_train))
+
+X <- model.matrix(formula(frm),body_fat_Decorrelated_test);
+mc <- multiCol(X)
+title("Test VIF")
+
+frm <- paste("BodyFat~",str_flatten(modelBodyFatD$selectedfeatures," + "))
+X <- model.matrix(formula(frm),body_fat_Decorrelated_trainD);
+mc <- multiCol(X)
+title("Driven: Train VIF")
+
+X <- model.matrix(formula(frm),body_fat_Decorrelated_testD);
+
+mc <- multiCol(X)
+title("Driven: Test VIF")
+
+```
+
+The plots clearly indicate that both models do not have colinearity
+issues
 
 ### The Model Coefficients in the Observed Space
 
@@ -669,11 +801,41 @@ code shows the procedure.
 observedCoef <- getObservedCoef(body_fat_Decorrelated_train,modelBodyFat)
 pander::pander(as.matrix(observedCoef$coefficients))
 
+
+
 # The outcome-driven coefficients
 observedCoefD <- getObservedCoef(body_fat_Decorrelated_trainD,modelBodyFatD)
 pander::pander(as.matrix(observedCoefD$coefficients))
 
+
 ```
+
+#### Muticollinear Analysis on the observed space
+
+Here we check the Variance inflation factor (VIF) on the train and
+testing sets using the observed variables
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+X <- model.matrix(formula(observedCoef$formula),trainingset);
+mc <- multiCol(X)
+title("Observed Training VIF")
+
+X <- model.matrix(formula(observedCoef$formula),testingset);
+mc <- multiCol(X)
+title("Observed Testing VIF")
+
+X <- model.matrix(formula(observedCoefD$formula),trainingset);
+mc <- multiCol(X)
+title("Driven: Observed Training VIF")
+
+X <- model.matrix(formula(observedCoefD$formula),testingset);
+mc <- multiCol(X)
+title("Driven: Observed Testing VIF")
+
+```
+
+The results indicate that the models created using the observed
+variables have strong collinearity issues.
 
 ### Predict Using the Transformed Data-Set
 

@@ -256,16 +256,16 @@ ILAAEvaluation <- function(traindata,testdata,trueRotation,method=method,Bootstr
   trainCorrelation <- max(cormat)
   ideac <- min(attr(IdeT,"IDeAEvolution")$Corr)
 
-#  if (trainCorrelation > thr)
-#  {
-#    if (ideac < (0.95*trainCorrelation))
-#    {
-#      mcor <- apply(cormat,2,max)
-#      cat("\n(",trainCorrelation,":",ideac,"|",attr(IdeT,"R.critical"),")\n");
-#      print(mcor[mcor==trainCorrelation])
-#      print(colnames(rmat))
-#    }
-#  }
+ if (trainCorrelation > thr)
+ {
+   if (ideac < (0.95*trainCorrelation))
+   {
+     mcor <- apply(cormat,2,max)
+     cat("\n(",trainCorrelation,":",ideac,"|",attr(IdeT,"R.critical"),")\n");
+#     print(mcor[mcor==trainCorrelation])
+#     print(colnames(rmat))
+   }
+ }
   cormat <- cor(predictDecorrelate(IdeT,testdata),method=method);
   cormat[is.na(cormat)] <- 0;
   diag(cormat) <- 0;

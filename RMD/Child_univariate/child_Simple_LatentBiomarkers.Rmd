@@ -126,6 +126,9 @@ pander::pander(sum(apply(DEdataframe[,varlistc],2,var)))
 pander::pander(entropy(discretize(unlist(dataframe[,varlist]), 256)))
 pander::pander(entropy(discretize(unlist(DEdataframe[,varlistc]), 256)))
 
+varratio <- attr(DEdataframe,"VarRatio")
+
+pander::pander(tail(varratio))
 ```
 
 
@@ -169,79 +172,77 @@ Displaying the features associations
 ```{r  warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
 par(op)
 
-if ((ncol(dataframe) < 1000) && (ncol(dataframe)>10))
-{
 
-  DEdataframeB <- ILAA(dataframe,verbose=TRUE,thr=thro,bootstrap=30)
+#if ((ncol(dataframe) < 1000) && (ncol(dataframe) > 10))
+#{
 
-  transform <- 1*(attr(DEdataframeB,"UPLTM") != 0)
+#  DEdataframeB <- ILAA(dataframe,verbose=TRUE,thr=thro,bootstrap=30)
+
+  transform <- attr(DEdataframe,"UPLTM") != 0
+  tnames <- colnames(transform)
+  colnames(transform) <- str_remove_all(colnames(transform),"La_")
+  transform <- abs(transform*cor(dataframe[,rownames(transform)])) # The weights are proportional to the observed correlation
+  
+  
+  VertexSize <- attr(DEdataframe,"fscore") # The size depends on the variable independence relevance (fscore)
+  names(VertexSize) <- str_remove_all(names(VertexSize),"La_")
+  VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
+
+  VertexSize <- VertexSize[rownames(transform)]
+  rsum <- apply(1*(transform !=0),1,sum) + 0.01*VertexSize + 0.001*varratio[tnames]
+  csum <- apply(1*(transform !=0),2,sum) + 0.01*VertexSize + 0.001*varratio[tnames]
+  
+  ntop <- min(10,length(rsum))
+
+
+  topfeatures <- unique(c(names(rsum[order(-rsum)])[1:ntop],names(csum[order(-csum)])[1:ntop]))
+  rtrans <- transform[topfeatures,]
+  csum <- (apply(1*(rtrans !=0),2,sum) > 1)
+  rtrans <- rtrans[,csum]
+  topfeatures <- unique(c(topfeatures,colnames(rtrans)))
   print(ncol(transform))
-  thrcol <- 1 + 0.025*nrow(transform)
-  rsum <- apply(1*(transform !=0),1,sum) > 2
-  csum <- apply(1*(transform !=0),2,sum) > thrcol | rsum
-  transform <- transform[csum,csum]
-  csum <- (apply(1*(transform !=0),2,sum) > 1) & (apply(1*(transform !=0),1,sum) > 1)
-  transform <- transform[csum,csum]
+  transform <- transform[topfeatures,topfeatures]
   print(ncol(transform))
   if (ncol(transform)>100)
   {
-    thrcol <- 1 + 0.10*nrow(transform)
-    rsum <- apply(1*(transform !=0),1,sum) > 4
-    csum <- apply(1*(transform !=0),2,sum) > thrcol | rsum
+    csum <- (apply(1*(transform !=0),2,sum) > 1) & (apply(1*(transform !=0),1,sum) > 1)
     transform <- transform[csum,csum]
-    csum <- (apply(1*(transform !=0),2,sum) > 3) & (apply(1*(transform !=0),1,sum) > 3)
-    transform <- transform[csum,csum]
+    print(ncol(transform))
   }
-  print(ncol(transform))
-  if (ncol(transform)>100)
-  {
-    thrcol <- 1 + 0.20*nrow(transform)
-    rsum <- apply(1*(transform !=0),1,sum) > 8
-    csum <- apply(1*(transform !=0),2,sum) > thrcol | rsum
-    transform <- transform[csum,csum]
-    csum <- (apply(1*(transform !=0),2,sum) > 7) & (apply(1*(transform !=0),1,sum) > 7)
-    transform <- transform[csum,csum]
-  }
-  print(ncol(transform))
 
-  if ((ncol(transform) > 10) && (ncol(transform) < 150))
-  {
-    
+
+    if (ncol(transform) < 150)
+    {
+
       gplots::heatmap.2(transform,
-                    trace = "none",
-                    mar = c(5,5),
-                    col=rev(heat.colors(5)),
-                    main = "Red Decorrelation matrix",
-                    cexRow = cexheat,
-                    cexCol = cexheat,
-                   srtCol=45,
-                   srtRow=45,
-                    key.title=NA,
-                    key.xlab="|Beta|>0",
-                    xlab="Output Feature", ylab="Input Feature")
+                        trace = "none",
+                        mar = c(5,5),
+                        col=rev(heat.colors(5)),
+                        main = "Red Decorrelation matrix",
+                        cexRow = cexheat,
+                        cexCol = cexheat,
+                       srtCol=45,
+                       srtRow=45,
+                        key.title=NA,
+                        key.xlab="|Beta|>0",
+                        xlab="Output Feature", ylab="Input Feature")
   
       par(op)
-
-    
-    colnames(transform) <- str_remove_all(colnames(transform),"La_")
-    
-    VertexSize <- apply(transform,2,mean)
-    VertexSize <- 5*VertexSize/max(VertexSize)
-    
-    gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
-    gr$layout <- layout_with_fr
-    
-    fc <- cluster_optimal(gr)
-    plot(fc, gr,
-         edge.width = 0.5*E(gr)$weight,
-         vertex.size=VertexSize,
-         edge.arrow.size=0.5,
-         edge.arrow.width=0.5,
-         vertex.label.cex=0.65,
-         vertex.label.dist=1,
-         main="Feature Association")
-  }
-}
+      VertexSize <- VertexSize[colnames(transform)]
+      gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
+      gr$layout <- layout_with_fr
+      
+      fc <- cluster_optimal(gr)
+      plot(fc, gr,
+           edge.width = 2*E(gr)$weight,
+           vertex.size=VertexSize,
+           edge.arrow.size=0.5,
+           edge.arrow.width=0.5,
+           vertex.label.cex=(0.15+0.05*VertexSize),
+           vertex.label.dist=0.5 + 0.05*VertexSize,
+           main="Top Feature Association")
+      
+    }
 
 par(op)
 
@@ -304,31 +305,46 @@ if (!largeSet)
 ## U-MAP Visualization of features
 
 
-### The UMAP based on LASSO on Raw Data
+### The UMAP on Raw Data
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
-if (nrow(dataframe) < 1000)
-{
   classes <- unique(dataframe[1:numsub,outcome])
   raincolors <- rainbow(length(classes))
   names(raincolors) <- classes
-  datasetframe.umap = umap(scale(dataframe[1:numsub,varlist]),n_components=2)
+  topvars <- univariate_BinEnsemble(dataframe,outcome)
+  lso <- LASSO_MIN(formula(paste(outcome,"~.")),dataframe,family="binomial")
+  topvars <- unique(c(names(topvars),lso$selectedfeatures))
+  pander::pander(head(topvars))
+#  names(topvars)
+#if (nrow(dataframe) < 1000)
+#{
+  datasetframe.umap = umap(scale(dataframe[1:numsub,topvars]),n_components=2)
+#  datasetframe.umap = umap(dataframe[1:numsub,varlist],n_components=2)
   plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: Original",t='n')
   text(datasetframe.umap$layout,labels=dataframe[1:numsub,outcome],col=raincolors[dataframe[1:numsub,outcome]+1])
-}
+#}
 
 ```
 
 
 ### The decorralted UMAP
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-if (nrow(dataframe) < 1000)
-{
+  varlistcV <- names(varratio[varratio >= 0.025])
+  topvars <- univariate_BinEnsemble(DEdataframe[,varlistcV],outcome)
+  lso <- LASSO_MIN(formula(paste(outcome,"~.")),DEdataframe,family="binomial")
+  topvars <- unique(c(names(topvars),lso$selectedfeatures))
+  pander::pander(head(topvars))
 
-  datasetframe.umap = umap(scale(DEdataframe[1:numsub,varlistc]),n_components=2)
+  varlistcV <- varlistcV[varlistcV != outcome]
+  
+#  DEdataframe[,outcome] <- as.numeric(DEdataframe[,outcome])
+#if (nrow(dataframe) < 1000)
+#{
+  datasetframe.umap = umap(scale(DEdataframe[1:numsub,topvars]),n_components=2)
+#  datasetframe.umap = umap(DEdataframe[1:numsub,varlistcV],n_components=2)
   plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: After ILAA",t='n')
   text(datasetframe.umap$layout,labels=DEdataframe[1:numsub,outcome],col=raincolors[DEdataframe[1:numsub,outcome]+1])
-}
+#}
 
 ```
 
@@ -502,7 +518,7 @@ pander::pander(ptab$detail[c(5,3,4,6),])
 par(op)
 par(xpd = TRUE)
 DEdataframe[,outcome] <- factor(DEdataframe[,outcome])
-IDeAmodel <- rpart(paste(outcome,"~."),DEdataframe,control=rpart.control(maxdepth=3))
+IDeAmodel <- rpart(paste(outcome,"~."),DEdataframe[,c(outcome,varlistcV)],control=rpart.control(maxdepth=3))
 pr <- predict(IDeAmodel,DEdataframe,type = "class")
 
   ptab <- list(er="Error",detail=matrix(nrow=6,ncol=1))

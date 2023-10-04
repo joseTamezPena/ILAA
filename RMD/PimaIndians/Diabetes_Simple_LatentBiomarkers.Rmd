@@ -68,12 +68,15 @@ PimaIndiansDiabetes  <- PimaIndiansDiabetes2[complete.cases(PimaIndiansDiabetes2
 #PimaIndiansDiabetes  <- PimaIndiansDiabetes[complete.cases(PimaIndiansDiabetes),]
 
 
-PimaIndiansDiabetes_mat <- as.data.frame(model.matrix(diabetes~.*.*.,PimaIndiansDiabetes)[,-1])
+PimaIndiansDiabetes_mat <- as.data.frame(model.matrix(diabetes~.*.,PimaIndiansDiabetes)[,-1])
 fnames <- colnames(PimaIndiansDiabetes_mat)
 fnames <- str_replace_all(fnames," ","_")
 fnames <- str_replace_all(fnames,"/","_")
 fnames <- str_replace_all(fnames,":","_x_")
 colnames(PimaIndiansDiabetes_mat) <- fnames
+
+whohasx <- str_detect(fnames,"_x_")
+PimaIndiansDiabetes_mat[,whohasx] <- sqrt(PimaIndiansDiabetes_mat[,whohasx])
 
 pander::pander(table(PimaIndiansDiabetes$diabetes))
 PimaIndiansDiabetes_mat$diabetes <- 1*(PimaIndiansDiabetes$diabetes=="pos")
@@ -89,9 +92,9 @@ studyName <- "Diabetes"
 dataframe <- PimaIndiansDiabetes_mat
 outcome <- "diabetes"
 
-thro <- 0.8
-TopVariables <- 3
-cexheat = 0.45
+thro <- 0.6
+TopVariables <- 5
+cexheat = 0.35
 
 ```
 

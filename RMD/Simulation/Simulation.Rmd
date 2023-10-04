@@ -1,5 +1,5 @@
 ---
-title: "Simulation_TranSBorm"
+title: "Simulation_Transform"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
@@ -22,11 +22,11 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 
 
 
-# Validating ILAA as metod to recover the tranSBormation matrix structure
+# Validating ILAA as metod to recover the transformation matrix structure
 
-We will simulate a set of sparse random tranSBormations, and we test if ILAA is able to recover the inverse tranSBormation
+We will simulate a set of sparse random transformations, and we test if ILAA is able to recover the inverse transformation
 The data will consist of a set of N random variables half Gaussian, half with uniform distribution.
-The tranSBormation matrix will only create a set of 10 correlated variables
+The transformation matrix will only create a set of 10 correlated variables
 
 ### Loading the libraries
 
@@ -175,7 +175,7 @@ gplots::heatmap.2(trueUsedFeatures,
                     Rowv = FALSE,
                     Colv = FALSE,
                     col=rev(heat.colors(5)),
-                    main = "True TranSBormation",
+                    main = "True transformation",
                     dendrogram = "none",
                     cexRow = 0.75,
                     cexCol = 0.75,
@@ -195,7 +195,7 @@ gplots::heatmap.2(detectedFeatures,
                     Rowv = FALSE,
                     Colv = FALSE,
                     col=rev(heat.colors(5)),
-                    main = "ILAA TranSBormation",
+                    main = "ILAA transformation",
                     dendrogram = "none",
                     cexRow = 0.75,
                     cexCol = 0.75,
@@ -280,14 +280,14 @@ for (i in 1:NUmberofSimulations)
                                  method=method,
                                  Bootstrap=30,
                                  thr=thr)
-  
+
   trainCorB[i] <- evalILAABoot$trainCorrelation
   testCorB[i] <- evalILAABoot$testCorrelation
   falseDiscoveryB[i] <- evalILAABoot$falseDiscovery
   DiscoveryAccuracyB[i] <- evalILAABoot$DiscoveryAccuracy
   DiscoverySenB[i] <- evalILAABoot$DiscoverySen
   DiscoverySpeB[i] <- evalILAABoot$DiscoverySpe
-  
+
   cat("t")
   evalILAASpearman <- ILAAEvaluation(traindata=syndata$data[trainSample,],
                                  testdata=syndata$data[-trainSample,],
@@ -436,6 +436,8 @@ boxplot(falseDiscovery,main="False Discoveries",ylab="Number of False Discoverie
 boxplot(rotSparcity,main="Rotation Matrix Sparcity",ylab="Sparcity")
 
 ylim <- c(thrvals[1],thrvals[length(thrvals)])
+boxplot(trainCor,main="Train Correlation",ylab="Correlation")
+lines(c(1,length(thrvals)),ylim)
 boxplot(testCor,main="Test Correlation",ylab="Correlation",ylim=ylim)
 lines(c(1,length(thrvals)),ylim)
 
@@ -515,10 +517,14 @@ boxplot(DiscoveryAccuracy,main="Accuracy",ylab="Accuracy")
 boxplot(DiscoverySen,main="Sensitivity",ylab="Sensitivity")
 boxplot(DiscoverySpe,main="Specificity",ylab="Specificity")
 boxplot(0.5*(DiscoverySpe+DiscoverySen),main="Balanced Accuracy",ylab="BACC")
-boxplot(testCor,main="Test Correlation",ylab="Correlation")
-lines(c(1,length(thrvals)),ylim)
 boxplot(falseDiscovery,main="False Discoveries",ylab="Number of False Discoveries")
 boxplot(rotSparcity,main="Rotation Matrix Sparcity",ylab="Sparcity")
+
+boxplot(trainCor,main="Train Correlation",ylab="Correlation")
+lines(c(1,length(thrvals)),ylim)
+boxplot(testCor,main="Test Correlation",ylab="Correlation")
+lines(c(1,length(thrvals)),ylim)
+
 
 ```
 

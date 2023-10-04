@@ -98,7 +98,7 @@ FractionOfLatent <- c(mean=mean(cvDataFS$DeFraction),sd=sd(cvDataFS$DeFraction))
 FractionOfLassoLatent <- c(mean=mean(cvDataFS$DeFractionLasso),sd=sd(cvDataFS$DeFractionLasso))
 latVarSize <- c(mean=mean(cvDataFS$Avlen),sd=sd(cvDataFS$Avlen))
 NumLatVar <- c(mean=mean(cvDataFS$NumLatent),sd=sd(cvDataFS$NumLatent))
-NumLofCorrelated <- c(mean=mean(cvDataFS$totCorrelated),sd=sd(cvDataFS$totCorrelated))
+#NumLofCorrelated <- c(mean=mean(cvDataFS$totCorrelated),sd=sd(cvDataFS$totCorrelated))
 
 SummaryRaw <- rbind(TDR=TDR_raw,
                     AUC=ROCAUC_raw,
@@ -139,8 +139,8 @@ SummaryDe <- rbind(TDR_de,
                    DifFROCAUC,
                    DifTopROCAUC,
                    NumLatVar,
-                   latVarSize,
-                   NumLofCorrelated
+                   latVarSize
+#                   NumLofCorrelated
 )
 
 pander::pander(SummaryDe)

@@ -30,7 +30,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
   DeFractionLasso <- numeric(loops)
   Avlen <- numeric(loops)
   NumLatent <- numeric(loops)
-  totCorrelated <- numeric(loops)
+#  totCorrelated <- numeric(loops)
   rocTest <- list()
   datadim <- NULL
   testPredict <- NULL
@@ -108,7 +108,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
       ## IDeA decorrelation
       cat("(")
       DEtrainSet <- IDeA(trainSet,...)
-      totCorrelated[lp] <- sqrt(attr(DEtrainSet,"totCorrelated"))
+#      totCorrelated[lp] <- sqrt(attr(DEtrainSet,"totCorrelated"))
 
       DEtestSet <- predictDecorrelate(DEtrainSet,testSet)
       cat(")")
@@ -300,7 +300,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
                       
                       Avlen=Avlen,
                       NumLatent=NumLatent,
-                      totCorrelated=totCorrelated,
+#                      totCorrelated=totCorrelated,
                       datadim=datadim
   )
   return (FDRAnalysis)

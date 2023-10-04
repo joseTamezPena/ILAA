@@ -10,6 +10,9 @@ library(psych)
 library(whitening)
 library("vioplot")
 library("rpart")
+library(multiColl)
+library(car)
+
 source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/RepeatedLinearCV.R")
 
 ```
@@ -107,19 +110,21 @@ Displaying the features associations
 ```{r  warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
 par(op)
 
-  transform <- log(abs(attr(trainage_DE,"UPLTM")) + 1.0)
-  
+  transform <- attr(trainage_DE,"UPLTM") != 0
   colnames(transform) <- str_remove_all(colnames(transform),"La_")
+  transform <- abs(transform*cor(trainingset[,rownames(transform)])) # The weights are proportional to the observed correlation
   
-  VertexSize <- apply(transform,2,mean)
-  VertexSize <- 5*VertexSize/max(VertexSize)
+  
+  VertexSize <- attr(trainage_DE,"fscore") # The size depends on the variable independence relevance (fscore)
+  names(VertexSize) <- str_remove_all(names(VertexSize),"La_")
+  VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
   
   gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
   gr$layout <- layout_with_fr
   
   fc <- cluster_optimal(gr)
   plot(fc, gr,
-       edge.width = 0.5*E(gr)$weight,
+       edge.width = 2*E(gr)$weight,
        vertex.size=VertexSize,
        edge.arrow.size=0.5,
        edge.arrow.width=0.5,
@@ -198,7 +203,7 @@ pander::pander(as.matrix(outcomeModel$coef))
 
 ```
 
-#### Modeling body fat using decorrelated set
+#### Modeling  outcome using decorrelated set
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 outcomeModel_DE <- LASSO_1SE(formula(paste(outcome,"~.")),trainage_DE);
@@ -345,6 +350,17 @@ vioplot(list(raw=corresults$testRawCorrelations,ILAA=corresults$testDeCorrelatio
         main="Test Correlations")
 
 pander::pander(t.test(corresults$testDeCorrelations,corresults$testRawCorrelations,paired=TRUE))
+
+sylim <- c(0,min(c(20,max(corresults$VIFRaw))))
+vioplot(list(raw=corresults$VIFRaw,ILAA=corresults$VIFDe),
+        ylab="VIF",
+        ylim=sylim,
+        main="Test VIF")
+
+
+pander::pander(summary(cbind(raw=corresults$VIFRaw,ILAA=corresults$VIFDe)))
+summary(corresults$VIFRaw)
+
 
 ```
 
