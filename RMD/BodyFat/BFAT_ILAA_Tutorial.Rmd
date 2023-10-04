@@ -595,7 +595,6 @@ fnames <- names(charFormulas)[1]
 ## Sort by explanined variace
 varratio <- attr(body_fat_Decorrelated,"VarRatio")
 varratio <- varratio[names(varratio) %in% names(charFormulas)]
-varratio <- varratio[order(-varratio)]
 
 ## Ploting
 
@@ -652,20 +651,37 @@ clear example is The last plot in the above figure.
 
 ### Direct Transform Estimation
 
-It is easier to estimate the observation using the transformation matrix.
+It is also possible to estimate the observation using the transformation matrix.
 For this just set the diagonal of the transformation to zero, the the output is the estimated observation from the independent variables.
+In this example I also estimated the bias.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5, fig.width= 5}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7}
 transform <- attr(body_fat_Decorrelated,"UPLTM")
 # Set the diagonal to zero
 diag(transform) <- 0
 
+#Estimating the observation
 obsestim <- -1*as.data.frame(as.matrix(body_fat[,rownames(transform)]) %*% transform)
-par(mfrow=c(2,2),cex=0.45)
 
-for (ix in 1:ncol(obsestim))
+#Bias estimation
+bias <- apply(body_fat[,rownames(transform)],2,mean) - apply(obsestim[,colnames(transform)],2,mean)
+
+#Plotting
+par(mfrow=c(1,2),cex=0.45)
+for (vn in names(varratio))
 {
-  plot(obsestim[,ix],body_fat[,ix],xlab=colnames(obsestim)[ix],ylab=colnames(body_fat)[ix])
+  oname <- str_remove_all(vn,"La_")
+  plot(obsestim[,vn] + bias[oname],body_fat[,oname],xlab=paste("Estimated:",oname),ylab=oname,main=oname)
+  indx <- obsestim[,vn]+bias[oname]
+  lmtvals <- lm(body_fat[,oname] ~ indx )
+  xvals <- c(min(obsestim[,vn]+ bias[oname]),max(obsestim[,vn]+ bias[oname])) 
+  pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
+  lines(x=xvals,y=pred,col="red")
+  ylim <- c(min(body_fat[,oname]),max(body_fat[,oname]))
+
+  text(xvals[1]+(xvals[2]-xvals[1])/2,0.95*(ylim[2]-ylim[1])+ylim[1],
+       sprintf("Slope= %.2f, R2=%3.2f",lmtvals$coefficients[2],1.0-varratio[vn])
+      )
 }
 par(op)
 
