@@ -1,12 +1,12 @@
-name: ILAA
-title: ILAA
+name: ILLA2
+title: ILLA2
 username: josetamezpena
 account: josetamezpena
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
-appId: 10091914
+appId: 10091926
 bundleId:
-url: https://josetamezpena.shinyapps.io/ILAA/
+url: https://josetamezpena.shinyapps.io/ILLA2/
 version: 1
 asMultiple: FALSE
 asStatic: FALSE

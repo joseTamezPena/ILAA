@@ -1,3 +1,11 @@
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
 # Install and load required packages if not already installed
 if (!requireNamespace("shiny", quietly = TRUE)) {
   install.packages("shiny")
@@ -14,8 +22,9 @@ if (!requireNamespace("heatmaply", quietly = TRUE)) {
 }
 
 if (!requireNamespace("FRESA.CAD", quietly = TRUE)) {
-  install.packages("FRESA.CAD")
+  devtools::install_github("joseTamezPena/FRESA.CAD")
 }
+
 
 # Load required packages
 library(shiny)
@@ -30,6 +39,7 @@ ui <- fluidPage(
   
   sidebarLayout(
     sidebarPanel(
+      verbatimTextOutput("Message"),      
       fileInput("file", "Choose a CSV file",
                 accept = c(
                   "text/csv",
@@ -49,6 +59,16 @@ ui <- fluidPage(
 
 # Define server
 server <- function(input, output) {
+  
+  output$Message <- renderText({
+    "ILAA will compute a linear transformation 
+    of the data to handle multicollineariy 
+    issues in data sets.
+    
+     Add your tabular .csv data.
+    On return you will have a transformed dataset.
+    and the corresponding linear transformation."
+  })
   
   # Load dataset
   dataset <- reactive({
@@ -79,11 +99,11 @@ server <- function(input, output) {
   })
   
   # Generate scatter plot
-    output$heatmapout <- renderPlotly({
-      if (!is.null(ILAA_result())) {
-          heatmaply(percentize(ILAA_result()), plot_method = "plotly",main = "Output")
-      }
-    })
+  output$heatmapout <- renderPlotly({
+    if (!is.null(ILAA_result())) {
+      heatmaply(percentize(ILAA_result()), plot_method = "plotly",main = "Output")
+    }
+  })
   
   # Download ILAA results as CSV
   output$downloadCSV <- downloadHandler(
