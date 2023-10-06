@@ -46,7 +46,7 @@ ui <- fluidPage(
       uiOutput("tab2"),
       uiOutput("tab3"),
       br(),
-      sliderInput("selected_Thr", "Target Maximum Correlation:", value = 80, min = 0, max = 99),
+      sliderInput("selected_Thr", "Target Maximum Correlation:", value = 80, min = 0, max = 99,step = 5),
       br(),
       fileInput("file", "Choose a CSV file",
                 accept = c(
@@ -88,12 +88,19 @@ server <- function(input, output) {
   <li>The corresponding linear transformation.</li>
 </ol>
 
-<p>In the main panel, you'll find visualizations of both the input Pearson correlation matrix and the transformed Pearson correlation matrix.</p>
+<p>In the main panel, you'll find visualizations of:</p> 
+<ol>
+  <li>the input Pearson correlation matrix
+  <li>the transformed Pearson correlation matrix.
+  <li>the Variable Association Network.
+  <li>the latent variable formula with its corresponding explained variance(R2).
+</ol>
 
 <p>Please note:<br>
 The transformation is applied to continuous or ordinal variables with more than 4 categories<br>
 Character columns, factors and binary variables will not be affected by the transformation<br>.
 .</p>
+<p>Contact: jose.tamezpena@tec.mx</p>
 
 "    
  
@@ -180,8 +187,8 @@ Character columns, factors and binary variables will not be affected by the tran
         plot(fc, gr,
              edge.width = 2*E(gr)$weight,
              vertex.size=VertexSize,
-             edge.arrow.size=0.5,
-             edge.arrow.width=0.5,
+             edge.arrow.size=0.65,
+             edge.arrow.width=0.75,
              vertex.label.cex=(0.5+0.1*VertexSize),
              vertex.label.dist=0.5 + 0.2*VertexSize,
              main="Top Feature Association")
@@ -212,7 +219,7 @@ Character columns, factors and binary variables will not be affected by the tran
     }
   )
   url <- a("ILAA Tutorial", href="https://rpubs.com/J_Tamez/ILAA_Tutorial")
-  url2 <- a("Sample Repository", href="https://github.com/joseTamezPena/LatentBiomarkers")
+  url2 <- a("Validation Repository", href="https://github.com/joseTamezPena/LatentBiomarkers")
   url3 <- a("FRESA.CAD Repository", href="https://github.com/joseTamezPena/FRESA.CAD")
   output$tab <- renderUI({
     tagList("Tutorial:", url)
