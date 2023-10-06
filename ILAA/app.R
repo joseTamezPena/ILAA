@@ -37,25 +37,38 @@ library(FRESA.CAD)
 # Define UI
 ui <- fluidPage(
   titlePanel("UPLTM Calculator"),
-  
+
+  tags$head(
+    tags$meta(name = "description", content = "Estimate Linear Transformation Matrices"),
+    tags$meta(name = "keywords", content = "Multicollinearity, Decorrelation, PCA, EFA, Whitening"),
+    tags$meta(property = "og:title", content="Linear Decorrelation"),
+    tags$meta(property = "og:description", content="Estimation of Linear Matrix to Address Multicolliearity")
+  ),
+    
   sidebarLayout(
     sidebarPanel(
       htmlOutput("Message"),
       br(),
-      uiOutput("tab"),
-      uiOutput("tab2"),
-      uiOutput("tab3"),
-      br(),
-      sliderInput("selected_Thr", "Target Maximum Correlation:", value = 80, min = 0, max = 99,step = 5),
-      br(),
+      sliderInput("selected_Thr", "Target Maximum Correlation:", value = 50, min = 0, max = 99,step = 5),
       fileInput("file", "Choose a CSV file",
                 accept = c(
                   "text/csv",
                   "text/comma-separated-values,text/plain",
                   ".csv")
       ),
+      br(),
+      sliderInput("Bootstrap", "Number of Bootstraps", value = 0, min = 0, max = 120,step = 30),
+      selectInput("corMeasure", "Select Correlation Measure", 
+                  choices=c("pearson","spearman"),
+                  selected="pearson"),
+      br(),
       downloadButton("downloadCSV", "Download the Transformed Data set"),
       downloadButton("downloadUPLTM", "Download the Transformation"),
+      br(),
+      uiOutput("tab"),
+      uiOutput("tab2"),
+      uiOutput("tab3"),
+      uiOutput("Twitter"),
     ),
     
     mainPanel(
@@ -74,20 +87,22 @@ ui <- fluidPage(
 # Define server
 server <- function(input, output) {
   output$Message <- renderText({
-"<p>This app performs a Linear Transformation (UPLTM) on the dataset, addressing issues related to multicollinearity.</p>
-
-<p>Follow these steps:</p>
+"<p>This app estimates and performs a Linear Transformation (UPLTM) on the dataset, addressing issues related to multicollinearity.</p>
+<p>Follow at least these two steps:</p>
 <ol>
-  <li>Select the desired maximum correlation (Pearson).</li>
+  <li>Select the target maximum correlation.</li>
   <li>Upload your tabular .csv data. Columns should represent variables, and rows should represent independent observations.</li>
 </ol>
-
+<p> If desired select:</p>
+<ol>
+  <li>The number of bootstraps.</li>
+  <li>The correlation measure: Pearson or Spearman.</li>
+</ol>
 <p>Upon completion, you will receive:</p>
 <ol>
   <li>The transformed dataset.</li>
   <li>The corresponding linear transformation.</li>
 </ol>
-
 <p>In the main panel, you'll find visualizations of:</p> 
 <ol>
   <li>the input Pearson correlation matrix
@@ -95,18 +110,12 @@ server <- function(input, output) {
   <li>the Variable Association Network.
   <li>the latent variable formula with its corresponding explained variance(R2).
 </ol>
-
-<p>Please note:<br>
-The transformation is applied to continuous or ordinal variables with more than 4 categories<br>
-Character columns, factors and binary variables will not be affected by the transformation<br>.
-.</p>
-<p>Contact: jose.tamezpena@tec.mx</p>
-
-"    
- 
+<p style='font-size:10px; '> Please note:<br>
+The transformation is applied to continuous or ordinal variables with more than 4 categories.
+Character columns, factors and binary variables will not be affected by the transformation.
+.</p> "
   })
-  
-  
+
   # Load dataset
   dataset <- reactive({
     req(input$file)
@@ -125,7 +134,8 @@ Character columns, factors and binary variables will not be affected by the tran
   ILAA_result <- reactive({
     if (!is.null(dataset())) {
       thrvalue <- input$selected_Thr/100
-      illa <- ILAA(dataset(),thr=thrvalue)
+      illa <- ILAA(dataset(),thr=thrvalue,bootstrap=input$Bootstrap,method=input$corMeasure)
+#      illa <- ILAA(dataset(),thr=thrvalue)
       return(illa)
     }
   })
@@ -134,7 +144,9 @@ Character columns, factors and binary variables will not be affected by the tran
   output$heatmapin <- renderPlotly({
     if (!is.null(ILAA_result())) {
       datavars <- rownames(attr(ILAA_result(),"UPLTM"))
-      heatmaply(cor(dataset()[,datavars]), plot_method = "plotly",main = "Pearson Correlation of the Input Data")
+      heatmaply(cor(dataset()[,datavars],method=input$corMeasure), 
+                plot_method = "plotly",
+                main = paste(input$corMeasure,"Correlation of the Input Data"))
     }
   })
   
@@ -142,7 +154,9 @@ Character columns, factors and binary variables will not be affected by the tran
     output$heatmapout <- renderPlotly({
       if (!is.null(ILAA_result())) {
         datavars <- colnames(attr(ILAA_result(),"UPLTM"))
-        heatmaply(cor(ILAA_result()[,datavars]), plot_method = "plotly",main = "Pearson Correlation of Transformed Data")
+        heatmaply(cor(ILAA_result()[,datavars],method=input$corMeasure), 
+                  plot_method = "plotly",
+                  main = paste(input$corMeasure,"Correlation of Transformed Data"))
       }
     })
 
@@ -150,6 +164,7 @@ Character columns, factors and binary variables will not be affected by the tran
     output$Formulas <- renderDataTable({
       if (!is.null(ILAA_result())) {
         R2 <- 1.0 - attr(ILAA_result(),"VarRatio")
+        R2 <- round(R2, digits = 3)
         dta <- attr(getLatentCoefficients(ILAA_result()),"LatentCharFormulas")
         dtb <- cbind(Variable=names(dta),R2=R2[names(dta)],formula=dta)
         data.frame(dtb)
@@ -188,9 +203,9 @@ Character columns, factors and binary variables will not be affected by the tran
              edge.width = 2*E(gr)$weight,
              vertex.size=VertexSize,
              edge.arrow.size=0.65,
-             edge.arrow.width=0.75,
-             vertex.label.cex=(0.5+0.1*VertexSize),
-             vertex.label.dist=0.5 + 0.2*VertexSize,
+             edge.arrow.width=1.00,
+             vertex.label.cex=(0.5 + 0.1*VertexSize),
+             vertex.label.dist=0.75 + 0.2*VertexSize,
              main="Top Feature Association")
       }
     })
@@ -221,6 +236,7 @@ Character columns, factors and binary variables will not be affected by the tran
   url <- a("ILAA Tutorial", href="https://rpubs.com/J_Tamez/ILAA_Tutorial")
   url2 <- a("Validation Repository", href="https://github.com/joseTamezPena/LatentBiomarkers")
   url3 <- a("FRESA.CAD Repository", href="https://github.com/joseTamezPena/FRESA.CAD")
+  url4 <- a("@jtamezpena", href="https://twitter.com/jtamezpena")
   output$tab <- renderUI({
     tagList("Tutorial:", url)
   })
@@ -229,6 +245,9 @@ Character columns, factors and binary variables will not be affected by the tran
   })
   output$tab3 <- renderUI({
     tagList("FRESA.CAD:", url3)
+  })
+  output$Twitter <- renderUI({
+    tagList("Twitter:", url4)
   })
   
   
