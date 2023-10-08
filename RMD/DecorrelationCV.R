@@ -155,7 +155,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
         cat(round(rcrit,2),",",length(isCorrContinous))
         
    ### PCA Decorrelation
-        pc <- prcomp(trainSet[,isCorrContinous],center = FALSE,tol=0.01)   #principal components
+        pc <- prcomp(trainSet[,isCorrContinous],center = TRUE,scale. = TRUE,tol=0.01)   #principal components
         PCApred <- predict(pc,trainSet[,isCorrContinous])
         PCA_Train <- as.data.frame(cbind(PCApred,trainSet[,idNotInCorCon]))
         colnames(PCA_Train) <- c(colnames(PCApred),idNotInCorCon) 
@@ -181,7 +181,7 @@ CV_TDR <- function(data,outcome,loops=50,scale=TRUE,Decor=TRUE,IDSample=FALSE,fi
         cat("[")
         if (length(isCorrContinous)<1000)
         {
-          topred <- min(length(isCorrContinous),nrow(trainSet),(ncol(PCA_Train)-1))
+          topred <- min(length(isCorrContinous),nrow(trainSet),(ncol(PCA_Train)/2+1))
           uls <- try(fa(trainSet[,isCorrContinous],topred,rotate="varimax",warnings=FALSE))  # EFA analysis
           if (!inherits(uls,"try-error"))
           {

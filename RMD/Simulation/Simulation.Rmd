@@ -86,7 +86,7 @@ print(syndata$rotMatrix)
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 IdeT <- ILAA(syndata$data,thr=thr,verbose=TRUE,bootstrap=30)
-#IdeT <- ILAA(syndata$data,thr=0.3,verbose=TRUE,bootstrap=100)
+#IdeT <- ILAA(syndata$data,thr=0.2,verbose=TRUE,bootstrap=100)
 rmat <- attr(IdeT,"UPLTM")
 print(rmat)
 
@@ -416,6 +416,9 @@ colnames(DiscoverySen) <- colnames(DiscoveryAccuracy)
 DiscoverySpe <- as.data.frame(DiscoverySpe)
 colnames(DiscoverySpe) <- colnames(DiscoveryAccuracy)
 
+trainCor <- as.data.frame(trainCor)
+colnames(trainCor) <- colnames(DiscoveryAccuracy)
+
 testCor <- as.data.frame(testCor)
 colnames(testCor) <- colnames(DiscoveryAccuracy)
 
@@ -502,6 +505,9 @@ colnames(DiscoverySen) <- colnames(DiscoveryAccuracy)
 DiscoverySpe <- as.data.frame(DiscoverySpe)
 colnames(DiscoverySpe) <- colnames(DiscoveryAccuracy)
 
+trainCor <- as.data.frame(trainCor)
+colnames(trainCor) <- colnames(DiscoveryAccuracy)
+
 testCor <- as.data.frame(testCor)
 colnames(testCor) <- colnames(DiscoveryAccuracy)
 
@@ -521,6 +527,7 @@ boxplot(0.5*(DiscoverySpe+DiscoverySen),main="Balanced Accuracy",ylab="BACC")
 boxplot(falseDiscovery,main="False Discoveries",ylab="Number of False Discoveries")
 boxplot(rotSparcity,main="Rotation Matrix Sparcity",ylab="Sparcity")
 
+ylim <- c(thrvals[1],thrvals[length(thrvals)])
 boxplot(trainCor,main="Train Correlation",ylab="Correlation")
 lines(c(1,length(thrvals)),ylim)
 boxplot(testCor,main="Test Correlation",ylab="Correlation")

@@ -169,14 +169,10 @@ if (!largeSet)
 
 Displaying the features associations
 
-```{r  warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
 par(op)
+clustable <- c("To many variables")
 
-
-#if ((ncol(dataframe) < 1000) && (ncol(dataframe) > 10))
-#{
-
-#  DEdataframeB <- ILAA(dataframe,verbose=TRUE,thr=thro,bootstrap=30)
 
   transform <- attr(DEdataframe,"UPLTM") != 0
   tnames <- colnames(transform)
@@ -184,7 +180,8 @@ par(op)
   transform <- abs(transform*cor(dataframe[,rownames(transform)])) # The weights are proportional to the observed correlation
   
   
-  VertexSize <- attr(DEdataframe,"fscore") # The size depends on the variable independence relevance (fscore)
+  fscore <- attr(DEdataframe,"fscore")
+  VertexSize <- fscore # The size depends on the variable independence relevance (fscore)
   names(VertexSize) <- str_remove_all(names(VertexSize),"La_")
   VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
 
@@ -197,7 +194,7 @@ par(op)
 
   topfeatures <- unique(c(names(rsum[order(-rsum)])[1:ntop],names(csum[order(-csum)])[1:ntop]))
   rtrans <- transform[topfeatures,]
-  csum <- (apply(1*(rtrans !=0),2,sum) > 1)
+  csum <- (apply(1*(rtrans !=0),2,sum) > 1*(colnames(rtrans) %in% topfeatures))
   rtrans <- rtrans[,csum]
   topfeatures <- unique(c(topfeatures,colnames(rtrans)))
   print(ncol(transform))
@@ -205,8 +202,25 @@ par(op)
   print(ncol(transform))
   if (ncol(transform)>100)
   {
-    csum <- (apply(1*(transform !=0),2,sum) > 1) & (apply(1*(transform !=0),1,sum) > 1)
-    transform <- transform[csum,csum]
+    csum <- apply(1*(transform !=0),1,sum) 
+    csum <- csum[csum > 1]
+    csum <- csum + 0.01*VertexSize[names(csum)]
+    csum <- csum[order(-csum)]
+    tpsum <- min(20,length(csum))
+    trsum <- rownames(transform)[rownames(transform) %in% names(csum[1:tpsum])]
+    rtrans <- transform[trsum,]
+    topfeatures <- unique(c(rownames(rtrans),colnames(rtrans)))
+    transform <- transform[topfeatures,topfeatures]
+    if (nrow(transform) > 150)
+    {
+      csum <- apply(1*(rtrans != 0 ),2,sum)
+      csum <- csum + 0.01*VertexSize[names(csum)]
+      csum <- csum[order(-csum)]
+      tpsum <- min(130,length(csum))
+      csum <- rownames(transform)[rownames(transform) %in% names(csum[1:tpsum])]
+      csum <- unique(c(trsum,csum))
+      transform <- transform[csum,csum]
+    }
     print(ncol(transform))
   }
 
@@ -242,9 +256,38 @@ par(op)
            vertex.label.dist=0.5 + 0.05*VertexSize,
            main="Top Feature Association")
       
+      varratios <- varratio
+      fscores <- fscore
+      names(varratios) <- str_remove_all(names(varratios),"La_")
+      names(fscores) <- str_remove_all(names(fscores),"La_")
+
+      dc <- getLatentCoefficients(DEdataframe)
+      theCharformulas <- attr(dc,"LatentCharFormulas")
+
+      
+      clustable <- as.data.frame(cbind(Variable=fc$names,
+                                       Formula=as.character(theCharformulas[paste("La_",fc$names,sep="")]),
+                                       Class=fc$membership,
+                                       ResidualVariance=round(varratios[fc$names],3),
+                                       Fscore=round(fscores[fc$names],3)
+                                       )
+                                 )
+      rownames(clustable) <- str_replace_all(rownames(clustable),"__","_")
+      clustable$Variable <- NULL
+      clustable$Class <- as.integer(clustable$Class)
+      clustable$ResidualVariance <- as.numeric(clustable$ResidualVariance)
+      clustable$Fscore <- as.numeric(clustable$Fscore)
+      clustable <- clustable[order(-clustable$Fscore),]
+      clustable <- clustable[order(clustable$Class),]
+      clustable <- clustable[clustable$Fscore >= -1,]
+      topv <- min(50,nrow(clustable))
+      clustable <- clustable[1:topv,]
     }
 
+pander::pander(clustable)
+
 par(op)
+
 
 ```
 
@@ -329,9 +372,9 @@ if (!largeSet)
 
 ### The decorralted UMAP
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-  varlistcV <- names(varratio[varratio >= 0.025])
+  varlistcV <- names(varratio[varratio >= 0.01])
   topvars <- univariate_BinEnsemble(DEdataframe[,varlistcV],outcome)
-  lso <- LASSO_MIN(formula(paste(outcome,"~.")),DEdataframe,family="binomial")
+  lso <- LASSO_MIN(formula(paste(outcome,"~.")),DEdataframe[,varlistcV],family="binomial")
   topvars <- unique(c(names(topvars),lso$selectedfeatures))
   pander::pander(head(topvars))
 
@@ -401,7 +444,7 @@ pander::pander(c(mean=mean(sapply(dc,length)),total=length(dc),fraction=length(d
 
 theCharformulas <- attr(dc,"LatentCharFormulas")
 
-
+topvar <- rownames(tableRaw)
 finalTable <- rbind(finalTable,tableRaw[topvar[!(topvar %in% topLAvar)],univariate_columns])
 
 
@@ -410,8 +453,9 @@ orgnamez <- str_remove_all(orgnamez,"La_")
 finalTable$RAWAUC <- univarRAW$orderframe[orgnamez,"ROCAUC"]
 finalTable$DecorFormula <- theCharformulas[rownames(finalTable)]
 finalTable$fscores <- fscores[rownames(finalTable)]
+finalTable$varratio <- varratio[rownames(finalTable)]
 
-Final_Columns <- c("DecorFormula","caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","RAWAUC","fscores")
+Final_Columns <- c("DecorFormula","caseMean","caseStd","controlMean","controlStd","controlKSP","ROCAUC","RAWAUC","fscores","varratio")
 
 finalTable <- finalTable[order(-finalTable$ROCAUC),]
 pander::pander(finalTable[,Final_Columns])
@@ -427,7 +471,7 @@ pander::pander(finalTable[,Final_Columns])
 
 ```{r results = "asis" ,warning = FALSE, dpi=600, fig.height= 8, fig.width= 11}
 featuresnames <- colnames(dataframe)[colnames(dataframe) != outcome]
-pc <- prcomp(dataframe[,iscontinous],center = TRUE,scale. = TRUE)   #principal components
+pc <- prcomp(dataframe[,iscontinous],center = TRUE,scale. = TRUE,tol=0.01)   #principal components
 predPCA <- predict(pc,dataframe[,iscontinous])
 PCAdataframe <- as.data.frame(cbind(predPCA,dataframe[,!iscontinous]))
 colnames(PCAdataframe) <- c(colnames(predPCA),colnames(dataframe)[!iscontinous]) 
@@ -464,7 +508,7 @@ EFAdataframe <- dataframeScaled
 
 if (length(iscontinous) < 2000)
 {
-  topred <- min(length(iscontinous),nrow(dataframeScaled),ncol(predPCA)/2)
+  topred <- min(length(iscontinous),nrow(dataframeScaled),ncol(predPCA)-1)
   if (topred < 2) topred <- 2
   
   uls <- fa(dataframeScaled[,iscontinous],nfactors=topred,rotate="varimax",warnings=FALSE)  # EFA analysis

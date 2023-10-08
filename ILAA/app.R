@@ -21,6 +21,18 @@ if (!requireNamespace("igraph", quietly = TRUE)) {
   install.packages("igraph")
 }
 
+if (!requireNamespace("MASS", quietly = TRUE)) {
+  install.packages("MASS")
+}
+
+if (!requireNamespace("nlme", quietly = TRUE)) {
+  install.packages("nlme")
+}
+
+if (!requireNamespace("mda", quietly = TRUE)) {
+  install.packages("mda")
+}
+
 if (!requireNamespace("FRESA.CAD", quietly = TRUE)) {
   install.packages("FRESA.CAD")
 }
@@ -57,7 +69,7 @@ ui <- fluidPage(
                   ".csv")
       ),
       br(),
-      sliderInput("Bootstrap", "Number of Bootstraps", value = 0, min = 0, max = 120,step = 30),
+#      sliderInput("Bootstrap", "Number of Bootstraps", value = 0, min = 0, max = 120,step = 30),
       selectInput("corMeasure", "Select Correlation Measure", 
                   choices=c("pearson","spearman"),
                   selected="pearson"),
@@ -95,7 +107,7 @@ server <- function(input, output) {
 </ol>
 <p> If desired select:</p>
 <ol>
-  <li>The number of bootstraps.</li>
+<!--  <li>The number of bootstraps.</li> -->
   <li>The correlation measure: Pearson or Spearman.</li>
 </ol>
 <p>Upon completion, you will receive:</p>
@@ -134,7 +146,8 @@ Character columns, factors and binary variables will not be affected by the tran
   ILAA_result <- reactive({
     if (!is.null(dataset())) {
       thrvalue <- input$selected_Thr/100
-      illa <- ILAA(dataset(),thr=thrvalue,bootstrap=input$Bootstrap,method=input$corMeasure)
+#      illa <- ILAA(dataset(),thr=thrvalue,bootstrap=input$Bootstrap,method=input$corMeasure)
+      illa <- ILAA(dataset(),thr=thrvalue,method=input$corMeasure)
 #      illa <- ILAA(dataset(),thr=thrvalue)
       return(illa)
     }
