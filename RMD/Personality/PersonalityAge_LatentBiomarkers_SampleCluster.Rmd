@@ -74,7 +74,7 @@ BigData$age <- log10(BigData$age)
 
 ```{r results = "asis"}
 studyName <- "PersonalityAge"
-dataframe <- as.data.frame(t(BigData[sample(nrow(BigData),200),]))
+dataframe <- as.data.frame(t(BigData[sample(nrow(BigData),100),]))
 colnames(dataframe) <- paste("S",colnames(dataframe),sep="")
 
 thro <- 0.20
@@ -88,7 +88,7 @@ cexheat <- 0.15
 ILAA bootstrapped training and testing sets
 
 ```{r results = "asis", warning = FALSE}
-trainage_DE <- ILAA(dataframe,thr=0.2,verbose=TRUE,bootstrap=30)
+trainage_DE <- ILAA(dataframe,thr=0.5,verbose=TRUE,bootstrap=0)
 
 ```
 
@@ -129,7 +129,6 @@ par(op)
       fscores <- attr(trainage_DE,"fscore") 
       names(fscores) <- str_remove_all(names(fscores),"La_")
       clustable <- as.data.frame(cbind(Variable=fc$names,
-                                       Formula=as.character(theCharformulas[paste("La_",fc$names,sep="")]),
                                        Cluster=fc$membership,
                                        ResidualVariance=round(varratios[fc$names],3),
                                        Fscore=round(fscores[fc$names],3)
