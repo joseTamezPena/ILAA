@@ -51,7 +51,7 @@ ui <- fluidPage(
   titlePanel("UPLTM Calculator"),
 
   tags$head(
-    tags$meta(name = "description", content = "Estimate Linear Transformation Matrices"),
+    tags$meta(name = "description", content = "Estimate Linear Decorrelation Transformation Matrices"),
     tags$meta(name = "keywords", content = "Multicollinearity, Decorrelation, PCA, EFA, Whitening"),
     tags$meta(property = "og:title", content="Linear Decorrelation"),
     tags$meta(property = "og:description", content="Estimation of Linear Matrix to Address Multicolliearity")
@@ -61,7 +61,7 @@ ui <- fluidPage(
     sidebarPanel(
       htmlOutput("Message"),
       br(),
-      sliderInput("selected_Thr", "Target Maximum Correlation:", value = 50, min = 0, max = 99,step = 5),
+      sliderInput("selected_Thr", "Target Maximum Correlation:", value = 40, min = 0, max = 99,step = 5),
       fileInput("file", "Choose a CSV file",
                 accept = c(
                   "text/csv",
@@ -99,7 +99,8 @@ ui <- fluidPage(
 # Define server
 server <- function(input, output) {
   output$Message <- renderText({
-"<p>This app estimates and performs a Linear Transformation (UPLTM) on the dataset, addressing issues related to multicollinearity.</p>
+"<p>This app addresses issues related to multicollinearity by employing a unit-preserving Linear Transformation matrix (UPLTM) on the dataset. 
+The resulting dataset will exhibit the requested maximum correlation among variables.</p>
 <p>Follow at least these two steps:</p>
 <ol>
   <li>Select the target maximum correlation.</li>

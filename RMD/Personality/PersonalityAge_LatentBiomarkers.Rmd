@@ -93,6 +93,7 @@ loops <- 30
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
+
 plot(10^predOutcome,10^testingset[,outcome],xlab="Raw Predicted",ylab=outcome,main="Age Prediction")
 plot(10^predOutcome_DE,10^testingset[,outcome],xlab="IDeA Predicted",ylab=outcome,main="Age Prediction")
 
