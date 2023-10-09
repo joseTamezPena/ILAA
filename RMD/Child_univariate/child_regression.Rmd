@@ -107,7 +107,7 @@ pander::pander(as.matrix(theCharformulas))
 
 Displaying the features associations
 
-```{r  warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
+```{r  results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
 par(op)
 
   transform <- attr(trainage_DE,"UPLTM") != 0
@@ -127,13 +127,33 @@ par(op)
        edge.width = 2*E(gr)$weight,
        vertex.size=VertexSize,
        edge.arrow.size=0.5,
-       edge.arrow.width=0.5,
+       edge.arrow.width=0.75,
        vertex.label.cex=0.5,
        vertex.label.dist=1,
        main="Feature Association")
 
 par(op)
 
+      varratios <- attr(trainage_DE,"VarRatio")
+      names(varratios) <- str_remove_all(names(varratios),"La_")
+      fscores <- attr(trainage_DE,"fscore") 
+      names(fscores) <- str_remove_all(names(fscores),"La_")
+      clustable <- as.data.frame(cbind(Variable=fc$names,
+                                       Formula=as.character(theCharformulas[paste("La_",fc$names,sep="")]),
+                                       Cluster=fc$membership,
+                                       ResidualVariance=round(varratios[fc$names],3),
+                                       Fscore=round(fscores[fc$names],3)
+                                       )
+                                 )
+      rownames(clustable) <- str_replace_all(rownames(clustable),"__","_")
+      clustable$Variable <- NULL
+      clustable$Cluster <- as.integer(clustable$Cluster)
+      clustable$ResidualVariance <- as.numeric(clustable$ResidualVariance)
+      clustable$Fscore <- as.numeric(clustable$Fscore)
+      clustable <- clustable[order(-clustable$Fscore),]
+      clustable <- clustable[order(clustable$Cluster),]
+
+pander::pander(as.matrix(clustable))
 ```
 
 ### Correlation Matrix of the Data
