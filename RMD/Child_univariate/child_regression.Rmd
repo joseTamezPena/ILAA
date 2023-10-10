@@ -117,8 +117,8 @@ par(op)
   
   VertexSize <- attr(trainage_DE,"fscore") # The size depends on the variable independence relevance (fscore)
   names(VertexSize) <- str_remove_all(names(VertexSize),"La_")
-  VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
-  
+  VertexSize <- 0.5+9.5*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
+  VertexSize <- VertexSize[colnames(transform)]
   gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
   gr$layout <- layout_with_fr
   
@@ -151,6 +151,7 @@ par(op)
       clustable$ResidualVariance <- as.numeric(clustable$ResidualVariance)
       clustable$Fscore <- as.numeric(clustable$Fscore)
       clustable <- clustable[order(-clustable$Fscore),]
+      clustable <- clustable[order(-clustable$ResidualVariance),]
       clustable <- clustable[order(clustable$Cluster),]
 
 pander::pander(as.matrix(clustable))

@@ -1,5 +1,5 @@
 ---
-title: "Decorrelation-Based Feature Discovery: Personality Clustering"
+title: "Decorrelation-Based Feature Discovery: Seeds"
 author: "Jose Tamez"
 date: "`r Sys.Date()`"
 output:
@@ -16,6 +16,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
+
 knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
 
@@ -25,7 +26,7 @@ knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment 
 # Effect of UPSTM-Based Decorrelation on Feature Discovery
 
 
-## Loading the libraries
+### Loading the libraries
 
 ```{r}
 library("FRESA.CAD")
@@ -34,6 +35,10 @@ library(igraph)
 library(umap)
 library(tsne)
 library(entropy)
+library(psych)
+library(whitening)
+library("vioplot")
+library("rpart")
 
 op <- par(no.readonly = TRUE)
 pander::panderOptions('digits', 3)
@@ -42,44 +47,50 @@ pander::panderOptions('keep.trailing.zeros',TRUE)
 
 ```
 
-
-## Material 
+## Material and Methods
 
 Data Source 
-https://quantdev.ssri.psu.edu/tutorials/intro-basic-exploratory-factor-analysis
+https://archive.ics.uci.edu/ml/datasets/seeds
 
-"For this example, we use data from the web that are collected and distributed at https://openpsychometrics.org/_rawdata/. The data were obtained from 19,719 participants (rows) who provided answers to the Big Five Personality Test, constructed with items from the International Personality Item Pool. Data columns include gender, age, race, native language, country, and answers to the 50 likert rated statements (1-5;0 if missed; 1 was labeled as “strongly disagree”, 2 was labeled as “disagree”, 3 was labeled as “neither agree not disagree”, 4 was labeled as “agree” and 5 was labeled as “strongly agree”.) The original files can be obtaned at http://openpsychometrics.org/_rawdata/BIG5.zip"
 
+M. Charytanowicz, J. Niewczas, P. Kulczycki, P.A. Kowalski, S. Lukasik, S. Zak, 'A Complete Gradient Clustering Algorithm for Features Analysis of X-ray Images', in: Information Technologies in Biomedicine, Ewa Pietka, Jacek Kawa (eds.), Springer-Verlag, Berlin-Heidelberg, 2010, pp. 15-24.
 
 
 ## The Data
 
 ```{r}
-BigData <- as.data.frame(read_excel("~/GitHub/LatentBiomarkers/Data/BigData.xlsx"))
+seeds <- read.delim("~/GitHub/LatentBiomarkers/Data/seeds_dataset.txt", header=FALSE)
+par(cex=0.5)
 
-BigData[BigData==0] <- NA 
-BigData <- BigData[complete.cases(BigData),]
-BigData <- BigData[BigData$age<100,]
-
-BigData <- BigData[,-c(1,3,5,6,7)]
-
-BigData$gender <- 1*(BigData$gender==1)
-
-
-BigData$age <- log10(BigData$age)
+featnames <- c("area",
+               "perimeter",
+               "compactness",
+               "length_of_kernel",
+               "width_of_kernel",
+               "asymmetry_coeff",
+               "length_ker_groove",
+               "class"
+)
+colnames(seeds) <- featnames
+#seeds$class <- 1*(seeds$class == 1)
+pander::pander(table(seeds$class))
 
 ```
 
+
 ### Standarize the names for the reporting
 
-```{r results = "asis"}
-studyName <- "PersonalityAge"
+```{r results = "asis" }
+studyName <- "Seeds"
+classes <- seeds$class
+names(classes) <- paste("SV",rownames(seeds),sep="")
+dataframe <- seeds[,colnames(seeds) != "class"]
+thro <- 0.25
 
-thro <- 0.2
 cexheat <- 0.15
-dataframe_FDe <- ILAA(BigData,thr=thro,verbose=TRUE,bootstrap=30)
+dataframe_FDe <- ILAA(dataframe,thr=thro,verbose=TRUE,bootstrap=30)
 
-dataframe <- as.data.frame(t(scale(dataframe_FDe[sample(nrow(dataframe_FDe),1000),])))
+dataframe <- as.data.frame(t(scale(dataframe_FDe)))
 colnames(dataframe) <- paste("S",colnames(dataframe),sep="")
 
 
@@ -91,7 +102,7 @@ colnames(dataframe) <- paste("S",colnames(dataframe),sep="")
 ILAA bootstrapped training and testing sets
 
 ```{r results = "asis", warning = FALSE}
-dataframe_De <- ILAA(dataframe,thr=0.25,verbose=TRUE,bootstrap=30)
+dataframe_De <- ILAA(dataframe,thr=0.5,verbose=TRUE,bootstrap=30)
 
 ```
 
@@ -155,7 +166,7 @@ par(op)
 
   transform <- 1*(attr(dataframe_De,"UPLTM") != 0)
   colnames(transform) <- str_remove_all(colnames(transform),"La_")
-  srow <- apply(transform,1,sum) > 5
+  srow <- apply(transform,1,sum) > 2
   rtans <- transform[srow,]
   scol <- apply(rtans,2,sum) > 1*(colnames(rtans) %in% rownames(rtans))
   rtans <- rtans[,scol]
@@ -186,13 +197,17 @@ par(op)
   VertexSize <- 0.5 + 9.5*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
   VertexSize <- VertexSize[colnames(transform)]
   gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
+#  gr <- graph_from_adjacency_matrix(transform,mode = "undirected",diag = FALSE,weighted=TRUE)
   gr$layout <- layout_with_fr
 
 #  fc <- cluster_optimal(gr)
+#  fc <- cluster_fast_greedy(gr)
 #  fc <- cluster_spinglass(gr,spins = 50)
 #  fc <- cluster_edge_betweenness(gr)
 #  fc <- cluster_leading_eigen(gr)
-  fc <- cluster_walktrap (gr,steps = 50)
+#  fc <- cluster_louvain(gr)
+  fc <- cluster_walktrap (gr,steps=50)
+#  fc <- cluster_label_prop(gr)
   plot(fc, gr,
        edge.width = 2*E(gr)$weight,
        vertex.size=VertexSize,
@@ -210,6 +225,7 @@ par(op)
       names(fscores) <- str_remove_all(names(fscores),"La_")
       clustable <- as.data.frame(cbind(Variable=fc$names,
                                        Cluster=fc$membership,
+                                       class=classes[fc$names],
                                        ResidualVariance=round(varratios[fc$names],3),
                                        Fscore=round(fscores[fc$names],3),
                                        VertexSize=round(VertexSize[fc$names],3)
@@ -224,5 +240,7 @@ par(op)
       clustable <- clustable[order(clustable$Cluster),]
 
 pander::pander(as.matrix(clustable))
+pander::pander(table(clustable$Cluster,clustable$class))
+
 ```
 

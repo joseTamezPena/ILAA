@@ -37,6 +37,9 @@ if (!requireNamespace("FRESA.CAD", quietly = TRUE)) {
   install.packages("FRESA.CAD")
 }
 
+if (!requireNamespace("TH.data", quietly = TRUE)) {
+  install.packages("TH.data")
+}
 
 # Load required packages
 library(shiny)
@@ -45,6 +48,7 @@ library(ggplot2)
 library(dplyr)
 library(heatmaply)
 library(FRESA.CAD)
+library(TH.data)
 
 # Define UI
 ui <- fluidPage(
@@ -62,11 +66,18 @@ ui <- fluidPage(
       htmlOutput("Message"),
       br(),
       sliderInput("selected_Thr", "Target Maximum Correlation:", value = 40, min = 0, max = 99,step = 5),
-      fileInput("file", "Choose a CSV file",
+      radioButtons("dataset_choice", "Choose Dataset:",
+                   choices = c("Built-in iris Dataset", "Wisconsin Prognostic Breast Cancer Data","Upload Your Own Dataset"),
+                   selected = "Built-in iris Dataset"),  # Set default selection here
+      
+      conditionalPanel(
+        condition = "input.dataset_choice == 'Upload Your Own Dataset'",
+        fileInput("file", "Choose a CSV file",
                 accept = c(
                   "text/csv",
                   "text/comma-separated-values,text/plain",
                   ".csv")
+          )
       ),
       br(),
 #      sliderInput("Bootstrap", "Number of Bootstraps", value = 0, min = 0, max = 120,step = 30),
@@ -131,14 +142,24 @@ Character columns, factors and binary variables will not be affected by the tran
 
   # Load dataset
   dataset <- reactive({
-    req(input$file)
-    inFile <- input$file
-    
-    # Check if file is a CSV
-    if (grepl("\\.csv$", inFile$name)) {
-      read.csv(inFile$datapath)
+    if(input$dataset_choice == "Built-in iris Dataset") {
+      return(iris)
     } else {
-      return(NULL)
+      if(input$dataset_choice == "Wisconsin Prognostic Breast Cancer Data") {
+        data("wpbc")
+        wpbc <- wpbc[complete.cases(wpbc),]
+        return(wpbc)
+      } else {
+        req(input$file)
+        inFile <- input$file
+      
+        # Check if file is a CSV
+        if (grepl("\\.csv$", inFile$name)) {
+          read.csv(inFile$datapath)
+        } else {
+          return(NULL)
+        }
+      }
     }
   })
   
