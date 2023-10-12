@@ -11,7 +11,7 @@
 
 <meta name="author" content="Jose Tamez" />
 
-<meta name="date" content="2023-10-09" />
+<meta name="date" content="2023-10-11" />
 
 <title>Decorrelation-Based Feature Discovery: NHNES</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">Decorrelation-Based Feature Discovery:
 NHNES</h1>
 <h4 class="author">Jose Tamez</h4>
-<h4 class="date">2023-10-09</h4>
+<h4 class="date">2023-10-11</h4>
 
 </div>
 
@@ -2847,30 +2847,38 @@ summaries</h4>
 <pre class="r"><code>
 psig &lt;- 0.1/(ncol(testingset)-1)
 lmod &lt;- lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(outcomeModel$coef)[-1])])
-sm &lt;- summary(lmod)
+try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(outcomeModel$coef)[-1])])))</code></pre>
+<p>Error in vif.default(lm(paste(outcome, “~.”), testingset[, c(outcome,
+: there are aliased coefficients in the model</p>
+<pre class="r"><code>sm &lt;- summary(lmod)
 if (length(lmod$coef)&gt;10)
 {
   sm$coefficients[1,4] &lt;- 1.0
   gcoef &lt;- lmod$coef[sm$coefficients[,4]&lt;psig]
   lmod &lt;- lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(gcoef))])
+  try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(gcoef))])))
 }
+
+
 
 sm &lt;- summary(lmod)
 smcoef &lt;- as.data.frame(sm$coefficients)
 smcoef &lt;- smcoef[order(-abs(smcoef[,3])),]
 smcoef$Uni_t_values &lt;- rawunittvalues[rownames(smcoef)]
+if (!inherits(vif,&quot;try-error&quot;)) smcoef$vif &lt;-vifx[rownames(smcoef)]
 smcoef &lt;- smcoef[!is.na(smcoef$Uni_t_values),]
 if (nrow(smcoef)&gt;10) smcoef &lt;- smcoef[smcoef[,4]&lt;psig,]
 
 pander::pander(smcoef)</code></pre>
 <table>
 <colgroup>
-<col width="20%" />
-<col width="14%" />
-<col width="17%" />
+<col width="18%" />
 <col width="13%" />
-<col width="14%" />
-<col width="20%" />
+<col width="15%" />
+<col width="12%" />
+<col width="13%" />
+<col width="18%" />
+<col width="9%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -2880,6 +2888,7 @@ pander::pander(smcoef)</code></pre>
 <th align="center">t value</th>
 <th align="center">Pr(&gt;|t|)</th>
 <th align="center">Uni_t_values</th>
+<th align="center">vif</th>
 </tr>
 </thead>
 <tbody>
@@ -2890,6 +2899,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">15.93</td>
 <td align="center">3.45e-51</td>
 <td align="center">17.362</td>
+<td align="center">1.09</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>BMXARML</strong></td>
@@ -2898,6 +2908,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">7.24</td>
 <td align="center">8.90e-13</td>
 <td align="center">-0.334</td>
+<td align="center">2.52</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>BMXLEG</strong></td>
@@ -2906,6 +2917,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-6.25</td>
 <td align="center">5.95e-10</td>
 <td align="center">-10.171</td>
+<td align="center">2.48</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>MGDCGSZ</strong></td>
@@ -2914,6 +2926,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-6.07</td>
 <td align="center">1.75e-09</td>
 <td align="center">-10.525</td>
+<td align="center">17.56</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>BPXPLS</strong></td>
@@ -2922,6 +2935,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-6.04</td>
 <td align="center">2.19e-09</td>
 <td align="center">-5.817</td>
+<td align="center">1.09</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>LBXEOPCT</strong></td>
@@ -2930,6 +2944,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">5.00</td>
 <td align="center">6.75e-07</td>
 <td align="center">3.605</td>
+<td align="center">5.76</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>LBXPLTSI</strong></td>
@@ -2938,6 +2953,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-5.00</td>
 <td align="center">6.84e-07</td>
 <td align="center">-5.049</td>
+<td align="center">1.17</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>LBDEONO</strong></td>
@@ -2946,6 +2962,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-3.91</td>
 <td align="center">9.72e-05</td>
 <td align="center">1.585</td>
+<td align="center">5.79</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>BMXWAIST</strong></td>
@@ -2954,6 +2971,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">3.55</td>
 <td align="center">4.07e-04</td>
 <td align="center">5.222</td>
+<td align="center">1.44</td>
 </tr>
 </tbody>
 </table>
@@ -2995,32 +3013,40 @@ pander::pander(smcoef)</code></pre>
 <pre class="r"><code>
 
 lmod_DE &lt;- lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])
+try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])))
+
 sm &lt;- summary(lmod_DE)
 if (length(lmod_DE$coef)&gt;10)
 {
   sm$coefficients[1,4] &lt;- 1.0
   gcoef &lt;- lmod_DE$coef[sm$coefficients[,4]&lt;psig]
   lmod_DE &lt;- lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(gcoef))])
+  try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(gcoef))])))
 }
 
 sm &lt;- summary(lmod_DE)
 lacoef &lt;- as.data.frame(sm$coefficients)
 lacoef &lt;- lacoef[order(-abs(lacoef[,3])),]
 lacoef$Uni_t_values &lt;- deunittvalues[rownames(lacoef)]
+if (!inherits(vif,&quot;try-error&quot;)) lacoef$vif &lt;-vifx[rownames(lacoef)]
 lacoef &lt;- lacoef[!is.na(lacoef$Uni_t_values),]
 if (nrow(lacoef)&gt;10) lacoef &lt;- lacoef[lacoef[,4]&lt;psig,]
 
 lacoef$formula &lt;- theCharformulas[rownames(lacoef)]
+lacoef$VarRatio &lt;- varratios[str_remove_all(rownames(lacoef),&quot;La_&quot;)]
+
 pander::pander(lacoef)</code></pre>
 <table>
 <colgroup>
-<col width="16%" />
-<col width="9%" />
-<col width="11%" />
-<col width="9%" />
-<col width="9%" />
 <col width="13%" />
-<col width="29%" />
+<col width="8%" />
+<col width="10%" />
+<col width="7%" />
+<col width="8%" />
+<col width="11%" />
+<col width="5%" />
+<col width="25%" />
+<col width="8%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -3030,7 +3056,9 @@ pander::pander(lacoef)</code></pre>
 <th align="center">t value</th>
 <th align="center">Pr(&gt;|t|)</th>
 <th align="center">Uni_t_values</th>
+<th align="center">vif</th>
 <th align="center">formula</th>
+<th align="center">VarRatio</th>
 </tr>
 </thead>
 <tbody>
@@ -3041,7 +3069,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-15.09</td>
 <td align="center">1.31e-46</td>
 <td align="center">-10.525</td>
+<td align="center">2.52</td>
 <td align="center">NA</td>
+<td align="center">1.00000</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>BPXML1</strong></td>
@@ -3050,7 +3080,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">13.73</td>
 <td align="center">1.76e-39</td>
 <td align="center">17.362</td>
+<td align="center">1.16</td>
 <td align="center">NA</td>
+<td align="center">1.00000</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_BMXWAIST</strong></td>
@@ -3059,8 +3091,10 @@ pander::pander(lacoef)</code></pre>
 <td align="center">9.30</td>
 <td align="center">7.93e-20</td>
 <td align="center">10.643</td>
+<td align="center">1.29</td>
 <td align="center">- (0.495)BMXWT - (0.841)BMXBMI + BMXWAIST +
 (0.161)MGDCGSZ</td>
+<td align="center">0.12687</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>RIAGENDR</strong></td>
@@ -3069,7 +3103,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-7.24</td>
 <td align="center">9.08e-13</td>
 <td align="center">-0.461</td>
+<td align="center">2.88</td>
 <td align="center">NA</td>
+<td align="center">1.00000</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_BMXLEG</strong></td>
@@ -3078,8 +3114,10 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-6.30</td>
 <td align="center">4.44e-10</td>
 <td align="center">-12.425</td>
+<td align="center">1.38</td>
 <td align="center">- (0.129)BMXWT + (0.355)BMXBMI + BMXLEG -
 (0.272)BMXARML - (3.26e-03)MGDCGSZ</td>
+<td align="center">0.44956</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_LBXLYPCT</strong></td>
@@ -3088,7 +3126,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-6.06</td>
 <td align="center">1.95e-09</td>
 <td align="center">-8.067</td>
+<td align="center">1.12</td>
 <td align="center">+ LBXLYPCT + (0.849)LBXNEPCT</td>
+<td align="center">0.12936</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_LBXHCT</strong></td>
@@ -3097,7 +3137,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-5.59</td>
 <td align="center">2.95e-08</td>
 <td align="center">1.482</td>
+<td align="center">1.32</td>
 <td align="center">- (0.083)MGDCGSZ + LBXHCT</td>
+<td align="center">0.79676</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_LBXMCHSI</strong></td>
@@ -3106,7 +3148,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">5.19</td>
 <td align="center">2.55e-07</td>
 <td align="center">6.222</td>
+<td align="center">1.20</td>
 <td align="center">- (3.532)LBXHGB + (1.249)LBXHCT + LBXMCHSI</td>
+<td align="center">0.65817</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>BPXPLS</strong></td>
@@ -3115,7 +3159,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-4.94</td>
 <td align="center">8.92e-07</td>
 <td align="center">-5.817</td>
+<td align="center">1.11</td>
 <td align="center">NA</td>
+<td align="center">1.00000</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_LBDNENO</strong></td>
@@ -3124,7 +3170,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-4.61</td>
 <td align="center">4.49e-06</td>
 <td align="center">-5.686</td>
+<td align="center">1.24</td>
 <td align="center">- (0.128)LBXNEPCT + LBDNENO</td>
+<td align="center">0.53015</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_OHX20TC</strong></td>
@@ -3133,7 +3181,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">4.59</td>
 <td align="center">4.96e-06</td>
 <td align="center">6.794</td>
+<td align="center">1.04</td>
 <td align="center">- (0.022)OHX06TC + OHX20TC - (0.592)OHX29TC</td>
+<td align="center">0.61686</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_BMXARML</strong></td>
@@ -3142,8 +3192,10 @@ pander::pander(lacoef)</code></pre>
 <td align="center">4.52</td>
 <td align="center">7.05e-06</td>
 <td align="center">5.768</td>
+<td align="center">1.15</td>
 <td align="center">- (0.211)BMXWT + (0.572)BMXBMI + BMXARML -
 (5.38e-03)MGDCGSZ</td>
+<td align="center">0.38496</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_WTMEC2YR</strong></td>
@@ -3152,7 +3204,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-4.13</td>
 <td align="center">3.86e-05</td>
 <td align="center">-4.502</td>
+<td align="center">1.02</td>
 <td align="center">- (1.025)WTINT2YR + WTMEC2YR</td>
+<td align="center">0.00232</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_LBXMPSI</strong></td>
@@ -3161,7 +3215,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-3.57</td>
 <td align="center">3.71e-04</td>
 <td align="center">-4.359</td>
+<td align="center">1.07</td>
 <td align="center">+ (6.34e-03)LBXPLTSI + LBXMPSI</td>
+<td align="center">0.83438</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>LBXTC</strong></td>
@@ -3170,7 +3226,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">3.52</td>
 <td align="center">4.57e-04</td>
 <td align="center">3.650</td>
+<td align="center">1.11</td>
 <td align="center">NA</td>
+<td align="center">1.00000</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>LBXPLTSI</strong></td>
@@ -3179,7 +3237,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-3.44</td>
 <td align="center">5.95e-04</td>
 <td align="center">-5.049</td>
+<td align="center">1.28</td>
 <td align="center">NA</td>
+<td align="center">1.00000</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>BMXBMI</strong></td>
@@ -3188,7 +3248,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">3.19</td>
 <td align="center">1.48e-03</td>
 <td align="center">0.692</td>
+<td align="center">1.33</td>
 <td align="center">NA</td>
+<td align="center">1.00000</td>
 </tr>
 </tbody>
 </table>

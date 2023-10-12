@@ -257,18 +257,23 @@ deunittvalues <- apply(testage_DE[,names(outcomeModel_DE$coef)[-1]],2,tvals,test
 
 psig <- 0.1/(ncol(testingset)-1)
 lmod <- lm(paste(outcome,"~."),testingset[,c(outcome,names(outcomeModel$coef)[-1])])
+try(vifx <-vif(lm(paste(outcome,"~."),testingset[,c(outcome,names(outcomeModel$coef)[-1])])))
 sm <- summary(lmod)
 if (length(lmod$coef)>10)
 {
   sm$coefficients[1,4] <- 1.0
   gcoef <- lmod$coef[sm$coefficients[,4]<psig]
   lmod <- lm(paste(outcome,"~."),testingset[,c(outcome,names(gcoef))])
+  try(vifx <-vif(lm(paste(outcome,"~."),testingset[,c(outcome,names(gcoef))])))
 }
+
+
 
 sm <- summary(lmod)
 smcoef <- as.data.frame(sm$coefficients)
 smcoef <- smcoef[order(-abs(smcoef[,3])),]
 smcoef$Uni_t_values <- rawunittvalues[rownames(smcoef)]
+if (!inherits(vif,"try-error")) smcoef$vif <-vifx[rownames(smcoef)]
 smcoef <- smcoef[!is.na(smcoef$Uni_t_values),]
 if (nrow(smcoef)>10) smcoef <- smcoef[smcoef[,4]<psig,]
 
@@ -278,22 +283,28 @@ pander::pander(c(numvar=nrow(smcoef)))
 
 
 lmod_DE <- lm(paste(outcome,"~."),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])
+try(vifx <-vif(lm(paste(outcome,"~."),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])))
+
 sm <- summary(lmod_DE)
 if (length(lmod_DE$coef)>10)
 {
   sm$coefficients[1,4] <- 1.0
   gcoef <- lmod_DE$coef[sm$coefficients[,4]<psig]
   lmod_DE <- lm(paste(outcome,"~."),testage_DE[,c(outcome,names(gcoef))])
+  try(vifx <-vif(lm(paste(outcome,"~."),testage_DE[,c(outcome,names(gcoef))])))
 }
 
 sm <- summary(lmod_DE)
 lacoef <- as.data.frame(sm$coefficients)
 lacoef <- lacoef[order(-abs(lacoef[,3])),]
 lacoef$Uni_t_values <- deunittvalues[rownames(lacoef)]
+if (!inherits(vif,"try-error")) lacoef$vif <-vifx[rownames(lacoef)]
 lacoef <- lacoef[!is.na(lacoef$Uni_t_values),]
 if (nrow(lacoef)>10) lacoef <- lacoef[lacoef[,4]<psig,]
 
 lacoef$formula <- theCharformulas[rownames(lacoef)]
+lacoef$VarRatio <- varratios[str_remove_all(rownames(lacoef),"La_")]
+
 pander::pander(lacoef)
 pander::pander(t(c(R2=sm$r.squared,adj_R2=sm$adj.r.squared)))
 pander::pander(c(numvar=nrow(lacoef)))

@@ -89,6 +89,7 @@ library(igraph)
 ## For multicollinearity
 library(multiColl)
 library(car)
+library("colorRamps")
 
 ```
 
@@ -127,6 +128,30 @@ body_fat$Density <- NULL
 body_fat$BMI <- 10000*body_fat$Weight*0.453592/((body_fat$Height*2.54)^2)
 ## Removing subjects with data errors
 body_fat <- body_fat[body_fat$BMI<=50,]
+```
+
+
+
+## The heatmap of the raw data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+bkcolors <-seq(-2.5, 2.5, by = 0.5)
+smap <- FRESAScale(body_fat,method="OrderLogit")$scaledData
+  hm <- gplots::heatmap.2(scale(as.matrix(smap)),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(colorRamps::matlab.like(length(bkcolors)-1)),
+                    breaks = bkcolors,
+                    main = "Raw Correlation",
+                    cexRow = 0.15,
+                    cexCol = 1.00,
+                     srtCol=30,
+                     srtRow=0,
+                    key.title=NA,
+                    key.xlab="Z",
+                    xlab="Feature", ylab="Sample")
+  par(op)
 
 ```
 
@@ -229,6 +254,28 @@ pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 
 ```
+
+## The heatmap of the transformed data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+smap <- FRESAScale(body_fat_Decorrelated,method="OrderLogit")$scaledData
+  hm <- gplots::heatmap.2(scale(as.matrix(smap)),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(colorRamps::matlab.like(length(bkcolors)-1)),
+                    breaks = bkcolors,
+                    main = "After ILAA Correlation",
+                    cexRow = 0.15,
+                    cexCol = 1.00,
+                     srtCol=30,
+                     srtRow=0,
+                    key.title=NA,
+                    key.xlab="Z",
+                    xlab="Feature", ylab="Sample")
+  par(op)
+
+```
+
 
 ## Data Frame Attributes
 

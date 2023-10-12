@@ -11,7 +11,7 @@
 
 <meta name="author" content="Jose Tamez" />
 
-<meta name="date" content="2023-10-09" />
+<meta name="date" content="2023-10-11" />
 
 <title>Decorrelation-Based Feature Discovery: Personality Age</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">Decorrelation-Based Feature Discovery:
 Personality Age</h1>
 <h4 class="author">Jose Tamez</h4>
-<h4 class="date">2023-10-09</h4>
+<h4 class="date">2023-10-11</h4>
 
 </div>
 
@@ -2404,30 +2404,36 @@ summaries</h4>
 <pre class="r"><code>
 psig &lt;- 0.1/(ncol(testingset)-1)
 lmod &lt;- lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(outcomeModel$coef)[-1])])
+try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(outcomeModel$coef)[-1])])))
 sm &lt;- summary(lmod)
 if (length(lmod$coef)&gt;10)
 {
   sm$coefficients[1,4] &lt;- 1.0
   gcoef &lt;- lmod$coef[sm$coefficients[,4]&lt;psig]
   lmod &lt;- lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(gcoef))])
+  try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(gcoef))])))
 }
+
+
 
 sm &lt;- summary(lmod)
 smcoef &lt;- as.data.frame(sm$coefficients)
 smcoef &lt;- smcoef[order(-abs(smcoef[,3])),]
 smcoef$Uni_t_values &lt;- rawunittvalues[rownames(smcoef)]
+if (!inherits(vif,&quot;try-error&quot;)) smcoef$vif &lt;-vifx[rownames(smcoef)]
 smcoef &lt;- smcoef[!is.na(smcoef$Uni_t_values),]
 if (nrow(smcoef)&gt;10) smcoef &lt;- smcoef[smcoef[,4]&lt;psig,]
 
 pander::pander(smcoef)</code></pre>
 <table>
 <colgroup>
-<col width="17%" />
-<col width="15%" />
-<col width="17%" />
+<col width="16%" />
 <col width="13%" />
-<col width="15%" />
-<col width="20%" />
+<col width="16%" />
+<col width="12%" />
+<col width="13%" />
+<col width="18%" />
+<col width="8%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -2437,6 +2443,7 @@ pander::pander(smcoef)</code></pre>
 <th align="center">t value</th>
 <th align="center">Pr(&gt;|t|)</th>
 <th align="center">Uni_t_values</th>
+<th align="center">vif</th>
 </tr>
 </thead>
 <tbody>
@@ -2447,6 +2454,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">8.69</td>
 <td align="center">4.87e-18</td>
 <td align="center">9.467</td>
+<td align="center">1.84</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>C8</strong></td>
@@ -2455,6 +2463,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-8.28</td>
 <td align="center">1.56e-16</td>
 <td align="center">-18.654</td>
+<td align="center">1.37</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>A3</strong></td>
@@ -2463,6 +2472,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-8.17</td>
 <td align="center">3.83e-16</td>
 <td align="center">-14.764</td>
+<td align="center">1.25</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>N2</strong></td>
@@ -2471,6 +2481,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-7.34</td>
 <td align="center">2.58e-13</td>
 <td align="center">-1.496</td>
+<td align="center">1.36</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>N7</strong></td>
@@ -2479,6 +2490,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-6.95</td>
 <td align="center">4.00e-12</td>
 <td align="center">-14.874</td>
+<td align="center">1.56</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>E10</strong></td>
@@ -2487,6 +2499,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-6.60</td>
 <td align="center">4.49e-11</td>
 <td align="center">-11.288</td>
+<td align="center">1.54</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>A1</strong></td>
@@ -2495,6 +2508,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-6.44</td>
 <td align="center">1.30e-10</td>
 <td align="center">-10.467</td>
+<td align="center">1.21</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>C4</strong></td>
@@ -2503,6 +2517,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-5.78</td>
 <td align="center">7.95e-09</td>
 <td align="center">-16.127</td>
+<td align="center">1.57</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>A7</strong></td>
@@ -2511,6 +2526,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">4.92</td>
 <td align="center">8.75e-07</td>
 <td align="center">-4.492</td>
+<td align="center">1.40</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>gender</strong></td>
@@ -2519,6 +2535,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">4.77</td>
 <td align="center">1.87e-06</td>
 <td align="center">2.235</td>
+<td align="center">1.11</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>C5</strong></td>
@@ -2527,6 +2544,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">4.66</td>
 <td align="center">3.23e-06</td>
 <td align="center">12.496</td>
+<td align="center">1.36</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>O8</strong></td>
@@ -2535,6 +2553,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-4.63</td>
 <td align="center">3.77e-06</td>
 <td align="center">-0.140</td>
+<td align="center">1.84</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>E5</strong></td>
@@ -2543,6 +2562,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">4.63</td>
 <td align="center">3.81e-06</td>
 <td align="center">9.291</td>
+<td align="center">1.66</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>C10</strong></td>
@@ -2551,6 +2571,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">4.51</td>
 <td align="center">6.50e-06</td>
 <td align="center">10.096</td>
+<td align="center">1.23</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>E9</strong></td>
@@ -2559,6 +2580,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-4.48</td>
 <td align="center">7.74e-06</td>
 <td align="center">0.599</td>
+<td align="center">1.35</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>N6</strong></td>
@@ -2567,6 +2589,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">4.20</td>
 <td align="center">2.76e-05</td>
 <td align="center">-6.137</td>
+<td align="center">1.87</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>N3</strong></td>
@@ -2575,6 +2598,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-3.91</td>
 <td align="center">9.26e-05</td>
 <td align="center">-8.653</td>
+<td align="center">1.67</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>N5</strong></td>
@@ -2583,6 +2607,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">3.78</td>
 <td align="center">1.56e-04</td>
 <td align="center">-4.218</td>
+<td align="center">1.38</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>N1</strong></td>
@@ -2591,6 +2616,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-3.74</td>
 <td align="center">1.88e-04</td>
 <td align="center">-8.452</td>
+<td align="center">1.83</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>O9</strong></td>
@@ -2599,6 +2625,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">3.73</td>
 <td align="center">1.93e-04</td>
 <td align="center">3.492</td>
+<td align="center">1.13</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>C3</strong></td>
@@ -2607,6 +2634,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-3.61</td>
 <td align="center">3.06e-04</td>
 <td align="center">2.279</td>
+<td align="center">1.23</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>C2</strong></td>
@@ -2615,6 +2643,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">3.46</td>
 <td align="center">5.40e-04</td>
 <td align="center">-5.052</td>
+<td align="center">1.31</td>
 </tr>
 </tbody>
 </table>
@@ -2656,32 +2685,40 @@ pander::pander(smcoef)</code></pre>
 <pre class="r"><code>
 
 lmod_DE &lt;- lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])
+try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])))
+
 sm &lt;- summary(lmod_DE)
 if (length(lmod_DE$coef)&gt;10)
 {
   sm$coefficients[1,4] &lt;- 1.0
   gcoef &lt;- lmod_DE$coef[sm$coefficients[,4]&lt;psig]
   lmod_DE &lt;- lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(gcoef))])
+  try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(gcoef))])))
 }
 
 sm &lt;- summary(lmod_DE)
 lacoef &lt;- as.data.frame(sm$coefficients)
 lacoef &lt;- lacoef[order(-abs(lacoef[,3])),]
 lacoef$Uni_t_values &lt;- deunittvalues[rownames(lacoef)]
+if (!inherits(vif,&quot;try-error&quot;)) lacoef$vif &lt;-vifx[rownames(lacoef)]
 lacoef &lt;- lacoef[!is.na(lacoef$Uni_t_values),]
 if (nrow(lacoef)&gt;10) lacoef &lt;- lacoef[lacoef[,4]&lt;psig,]
 
 lacoef$formula &lt;- theCharformulas[rownames(lacoef)]
+lacoef$VarRatio &lt;- varratios[str_remove_all(rownames(lacoef),&quot;La_&quot;)]
+
 pander::pander(lacoef)</code></pre>
 <table>
 <colgroup>
-<col width="12%" />
 <col width="10%" />
-<col width="12%" />
-<col width="9%" />
+<col width="8%" />
 <col width="10%" />
-<col width="14%" />
-<col width="31%" />
+<col width="8%" />
+<col width="8%" />
+<col width="12%" />
+<col width="5%" />
+<col width="26%" />
+<col width="8%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -2691,7 +2728,9 @@ pander::pander(lacoef)</code></pre>
 <th align="center">t value</th>
 <th align="center">Pr(&gt;|t|)</th>
 <th align="center">Uni_t_values</th>
+<th align="center">vif</th>
 <th align="center">formula</th>
+<th align="center">VarRatio</th>
 </tr>
 </thead>
 <tbody>
@@ -2702,8 +2741,10 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-8.87</td>
 <td align="center">1.06e-18</td>
 <td align="center">-14.673</td>
+<td align="center">1.17</td>
 <td align="center">- (0.187)N8 + (0.335)C1 + (1.51e-04)C2 + (7.77e-04)C5
 + C8 + (4.85e-04)C9</td>
+<td align="center">0.844</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_N7</strong></td>
@@ -2712,7 +2753,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-7.80</td>
 <td align="center">7.57e-15</td>
 <td align="center">-10.016</td>
+<td align="center">1.05</td>
 <td align="center">+ N7 - (0.738)N8</td>
+<td align="center">0.411</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_A3</strong></td>
@@ -2721,7 +2764,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-7.76</td>
 <td align="center">1.07e-14</td>
 <td align="center">-11.043</td>
+<td align="center">1.12</td>
 <td align="center">- (0.179)N8 + A3 + (0.362)A4</td>
+<td align="center">0.864</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_N2</strong></td>
@@ -2730,7 +2775,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-7.52</td>
 <td align="center">6.57e-14</td>
 <td align="center">-7.312</td>
+<td align="center">1.08</td>
 <td align="center">+ (0.318)N1 + N2 + (0.137)N6 + (0.084)N8</td>
+<td align="center">0.738</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>O1</strong></td>
@@ -2739,7 +2786,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">6.55</td>
 <td align="center">6.45e-11</td>
 <td align="center">9.467</td>
+<td align="center">1.12</td>
 <td align="center">NA</td>
+<td align="center">1.000</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_E10</strong></td>
@@ -2748,7 +2797,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-6.20</td>
 <td align="center">6.02e-10</td>
 <td align="center">-7.492</td>
+<td align="center">1.10</td>
 <td align="center">- (0.016)E2 + (0.347)E5 + (0.290)E7 + E10</td>
+<td align="center">0.633</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>E5</strong></td>
@@ -2757,7 +2808,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">6.12</td>
 <td align="center">1.04e-09</td>
 <td align="center">9.291</td>
+<td align="center">1.12</td>
 <td align="center">NA</td>
+<td align="center">1.000</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>N8</strong></td>
@@ -2766,7 +2819,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-5.80</td>
 <td align="center">6.98e-09</td>
 <td align="center">-10.878</td>
+<td align="center">1.17</td>
 <td align="center">NA</td>
+<td align="center">1.000</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_A1</strong></td>
@@ -2775,7 +2830,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-5.69</td>
 <td align="center">1.32e-08</td>
 <td align="center">-9.185</td>
+<td align="center">1.06</td>
 <td align="center">- (0.073)E5 + A1 + (0.285)A4 - (0.308)A7</td>
+<td align="center">0.843</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_C4</strong></td>
@@ -2784,8 +2841,10 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-5.29</td>
 <td align="center">1.31e-07</td>
 <td align="center">-9.343</td>
+<td align="center">1.12</td>
 <td align="center">- (0.252)N8 + (0.077)C1 - (0.201)C2 + C4 -
 (0.280)C6</td>
+<td align="center">0.666</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_O8</strong></td>
@@ -2794,7 +2853,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-5.08</td>
 <td align="center">3.90e-07</td>
 <td align="center">-7.981</td>
+<td align="center">1.07</td>
 <td align="center">- (0.710)O1 + O8</td>
+<td align="center">0.605</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_C10</strong></td>
@@ -2803,7 +2864,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">5.04</td>
 <td align="center">4.73e-07</td>
 <td align="center">8.436</td>
+<td align="center">1.05</td>
 <td align="center">- (0.226)C1 - (6.97e-03)C2 - (0.284)C3 + C10</td>
+<td align="center">0.826</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_C6</strong></td>
@@ -2812,7 +2875,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-4.90</td>
 <td align="center">1.01e-06</td>
 <td align="center">-8.754</td>
+<td align="center">1.09</td>
 <td align="center">+ (0.244)C1 - (0.472)C2 + C6</td>
+<td align="center">0.702</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_A7</strong></td>
@@ -2821,7 +2886,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">4.60</td>
 <td align="center">4.36e-06</td>
 <td align="center">1.120</td>
+<td align="center">1.08</td>
 <td align="center">+ (0.238)E5 + (0.480)A4 + A7</td>
+<td align="center">0.729</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>gender</strong></td>
@@ -2830,7 +2897,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">4.59</td>
 <td align="center">4.65e-06</td>
 <td align="center">2.235</td>
+<td align="center">1.11</td>
 <td align="center">NA</td>
+<td align="center">1.000</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_N3</strong></td>
@@ -2839,7 +2908,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-4.44</td>
 <td align="center">9.08e-06</td>
 <td align="center">-4.584</td>
+<td align="center">1.16</td>
 <td align="center">- (0.488)N1 + N3</td>
+<td align="center">0.688</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_N6</strong></td>
@@ -2848,7 +2919,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">4.23</td>
 <td align="center">2.34e-05</td>
 <td align="center">-0.403</td>
+<td align="center">1.11</td>
 <td align="center">+ N6 - (0.525)N8</td>
+<td align="center">0.712</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_C5</strong></td>
@@ -2857,7 +2930,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">4.23</td>
 <td align="center">2.37e-05</td>
 <td align="center">8.188</td>
+<td align="center">1.09</td>
 <td align="center">- (0.289)C1 + (0.195)C2 + C5 - (0.314)C9</td>
+<td align="center">0.724</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>A4</strong></td>
@@ -2866,7 +2941,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">4.22</td>
 <td align="center">2.53e-05</td>
 <td align="center">6.858</td>
+<td align="center">1.15</td>
 <td align="center">NA</td>
+<td align="center">1.000</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_C1</strong></td>
@@ -2875,7 +2952,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">4.01</td>
 <td align="center">6.19e-05</td>
 <td align="center">5.979</td>
+<td align="center">1.10</td>
 <td align="center">+ C1 + (0.210)C2</td>
+<td align="center">0.931</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_E8</strong></td>
@@ -2884,7 +2963,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">3.80</td>
 <td align="center">1.44e-04</td>
 <td align="center">3.430</td>
+<td align="center">1.09</td>
 <td align="center">- (0.230)E2 + (0.259)E5 - (0.050)E7 + E8</td>
+<td align="center">0.834</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_N1</strong></td>
@@ -2893,7 +2974,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-3.58</td>
 <td align="center">3.44e-04</td>
 <td align="center">-4.306</td>
+<td align="center">1.09</td>
 <td align="center">+ N1 - (0.424)N6 - (0.198)N8</td>
+<td align="center">0.683</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>O9</strong></td>
@@ -2902,7 +2985,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">3.19</td>
 <td align="center">1.43e-03</td>
 <td align="center">3.492</td>
+<td align="center">1.13</td>
 <td align="center">NA</td>
+<td align="center">1.000</td>
 </tr>
 </tbody>
 </table>

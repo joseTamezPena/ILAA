@@ -11,7 +11,7 @@
 
 <meta name="author" content="Jose Tamez" />
 
-<meta name="date" content="2023-10-09" />
+<meta name="date" content="2023-10-11" />
 
 <title>Decorrelation-Based Feature Discovery: body_fat</title>
 
@@ -353,7 +353,7 @@ display: none;
 <h1 class="title toc-ignore">Decorrelation-Based Feature Discovery:
 body_fat</h1>
 <h4 class="author">Jose Tamez</h4>
-<h4 class="date">2023-10-09</h4>
+<h4 class="date">2023-10-11</h4>
 
 </div>
 
@@ -1196,30 +1196,36 @@ summaries</h4>
 <pre class="r"><code>
 psig &lt;- 0.1/(ncol(testingset)-1)
 lmod &lt;- lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(outcomeModel$coef)[-1])])
+try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(outcomeModel$coef)[-1])])))
 sm &lt;- summary(lmod)
 if (length(lmod$coef)&gt;10)
 {
   sm$coefficients[1,4] &lt;- 1.0
   gcoef &lt;- lmod$coef[sm$coefficients[,4]&lt;psig]
   lmod &lt;- lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(gcoef))])
+  try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testingset[,c(outcome,names(gcoef))])))
 }
+
+
 
 sm &lt;- summary(lmod)
 smcoef &lt;- as.data.frame(sm$coefficients)
 smcoef &lt;- smcoef[order(-abs(smcoef[,3])),]
 smcoef$Uni_t_values &lt;- rawunittvalues[rownames(smcoef)]
+if (!inherits(vif,&quot;try-error&quot;)) smcoef$vif &lt;-vifx[rownames(smcoef)]
 smcoef &lt;- smcoef[!is.na(smcoef$Uni_t_values),]
 if (nrow(smcoef)&gt;10) smcoef &lt;- smcoef[smcoef[,4]&lt;psig,]
 
 pander::pander(smcoef)</code></pre>
-<table>
+<table style="width:100%;">
 <colgroup>
-<col width="18%" />
-<col width="14%" />
 <col width="17%" />
 <col width="13%" />
-<col width="14%" />
-<col width="20%" />
+<col width="16%" />
+<col width="12%" />
+<col width="13%" />
+<col width="18%" />
+<col width="8%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -1229,6 +1235,7 @@ pander::pander(smcoef)</code></pre>
 <th align="center">t value</th>
 <th align="center">Pr(&gt;|t|)</th>
 <th align="center">Uni_t_values</th>
+<th align="center">vif</th>
 </tr>
 </thead>
 <tbody>
@@ -1239,6 +1246,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">12.301</td>
 <td align="center">8.37e-18</td>
 <td align="center">11.12</td>
+<td align="center">1.38</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>Height</strong></td>
@@ -1247,6 +1255,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-2.292</td>
 <td align="center">2.56e-02</td>
 <td align="center">-1.88</td>
+<td align="center">1.70</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>Wrist</strong></td>
@@ -1255,6 +1264,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">-2.207</td>
 <td align="center">3.13e-02</td>
 <td align="center">1.64</td>
+<td align="center">1.87</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>Age</strong></td>
@@ -1263,6 +1273,7 @@ pander::pander(smcoef)</code></pre>
 <td align="center">0.701</td>
 <td align="center">4.86e-01</td>
 <td align="center">2.23</td>
+<td align="center">1.49</td>
 </tr>
 </tbody>
 </table>
@@ -1304,32 +1315,40 @@ pander::pander(smcoef)</code></pre>
 <pre class="r"><code>
 
 lmod_DE &lt;- lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])
+try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(outcomeModel_DE$coef)[-1])])))
+
 sm &lt;- summary(lmod_DE)
 if (length(lmod_DE$coef)&gt;10)
 {
   sm$coefficients[1,4] &lt;- 1.0
   gcoef &lt;- lmod_DE$coef[sm$coefficients[,4]&lt;psig]
   lmod_DE &lt;- lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(gcoef))])
+  try(vifx &lt;-vif(lm(paste(outcome,&quot;~.&quot;),testage_DE[,c(outcome,names(gcoef))])))
 }
 
 sm &lt;- summary(lmod_DE)
 lacoef &lt;- as.data.frame(sm$coefficients)
 lacoef &lt;- lacoef[order(-abs(lacoef[,3])),]
 lacoef$Uni_t_values &lt;- deunittvalues[rownames(lacoef)]
+if (!inherits(vif,&quot;try-error&quot;)) lacoef$vif &lt;-vifx[rownames(lacoef)]
 lacoef &lt;- lacoef[!is.na(lacoef$Uni_t_values),]
 if (nrow(lacoef)&gt;10) lacoef &lt;- lacoef[lacoef[,4]&lt;psig,]
 
 lacoef$formula &lt;- theCharformulas[rownames(lacoef)]
+lacoef$VarRatio &lt;- varratios[str_remove_all(rownames(lacoef),&quot;La_&quot;)]
+
 pander::pander(lacoef)</code></pre>
 <table>
 <colgroup>
-<col width="15%" />
-<col width="10%" />
-<col width="11%" />
-<col width="9%" />
-<col width="10%" />
 <col width="13%" />
-<col width="30%" />
+<col width="8%" />
+<col width="10%" />
+<col width="7%" />
+<col width="8%" />
+<col width="11%" />
+<col width="5%" />
+<col width="25%" />
+<col width="8%" />
 </colgroup>
 <thead>
 <tr class="header">
@@ -1339,7 +1358,9 @@ pander::pander(lacoef)</code></pre>
 <th align="center">t value</th>
 <th align="center">Pr(&gt;|t|)</th>
 <th align="center">Uni_t_values</th>
+<th align="center">vif</th>
 <th align="center">formula</th>
+<th align="center">VarRatio</th>
 </tr>
 </thead>
 <tbody>
@@ -1350,7 +1371,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">7.688</td>
 <td align="center">2.53e-10</td>
 <td align="center">4.884</td>
+<td align="center">1.03</td>
 <td align="center">NA</td>
+<td align="center">1.000</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_Abdomen</strong></td>
@@ -1359,7 +1382,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">6.581</td>
 <td align="center">1.70e-08</td>
 <td align="center">4.792</td>
+<td align="center">1.09</td>
 <td align="center">- (0.112)Weight - (0.773)Chest + Abdomen</td>
+<td align="center">0.130</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_Chest</strong></td>
@@ -1368,7 +1393,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">5.901</td>
 <td align="center">2.20e-07</td>
 <td align="center">5.399</td>
+<td align="center">1.22</td>
 <td align="center">- (0.254)Weight + Chest</td>
+<td align="center">0.194</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_Wrist</strong></td>
@@ -1377,7 +1404,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-1.609</td>
 <td align="center">1.13e-01</td>
 <td align="center">-2.146</td>
+<td align="center">1.08</td>
 <td align="center">- (0.024)Weight + Wrist</td>
+<td align="center">0.442</td>
 </tr>
 <tr class="odd">
 <td align="center"><strong>La_Biceps</strong></td>
@@ -1386,7 +1415,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">0.770</td>
 <td align="center">4.44e-01</td>
 <td align="center">-0.702</td>
+<td align="center">1.11</td>
 <td align="center">- (0.081)Weight + Biceps</td>
+<td align="center">0.347</td>
 </tr>
 <tr class="even">
 <td align="center"><strong>La_Thigh</strong></td>
@@ -1395,7 +1426,9 @@ pander::pander(lacoef)</code></pre>
 <td align="center">-0.298</td>
 <td align="center">7.67e-01</td>
 <td align="center">-1.769</td>
+<td align="center">1.16</td>
 <td align="center">- (0.029)Weight - (0.551)Hip + Thigh</td>
+<td align="center">0.183</td>
 </tr>
 </tbody>
 </table>
