@@ -12,7 +12,7 @@ output:
     toc: yes
     fig_caption: yes
 editor_options:
-  chunk_output_type: console
+  chunk_output_type: inline
   markdown: 
     wrap: 72
 ---
@@ -53,7 +53,8 @@ effectively accomplish the aforementioned tasks. The tutorial will
 showcase:
 
 -   Transform a data frame affected by data multicollinearity into a new
-    a data frame with a maximum degree of data correlation among variables
+    a data frame with a maximum degree of data correlation among
+    variables
 
 -   Visualize the transformation matrix
 
@@ -129,8 +130,6 @@ body_fat$BMI <- 10000*body_fat$Weight*0.453592/((body_fat$Height*2.54)^2)
 ## Removing subjects with data errors
 body_fat <- body_fat[body_fat$BMI<=50,]
 ```
-
-
 
 ## The heatmap of the raw data
 
@@ -276,7 +275,6 @@ smap <- FRESAScale(body_fat_Decorrelated,method="OrderLogit")$scaledData
 
 ```
 
-
 ## Data Frame Attributes
 
 The returned data matrix contains the following attributes
@@ -297,7 +295,7 @@ transformation matrix from observed variables to the latent variable.
 
 The next relevant attribute is the "`VarRatio"`, this attributive stores
 the fraction of the original feature variance that is still present in
-the latent variable. All non-altered variables return a "`VarRatio`" of
+the latent variable. All non-altered variables return a"`VarRatio`" of
 1.
 
 The "`IDeAEvolution`" attribute can be used to verify if the algorithm
@@ -698,9 +696,10 @@ clear example is The last plot in the above figure.
 
 ### Direct Transform Estimation
 
-It is also possible to estimate the observation using the transformation matrix.
-For this just set the diagonal of the transformation to zero, the the output is the estimated observation from the independent variables.
-In this example I also estimated the bias.
+It is also possible to estimate the observation using the transformation
+matrix. For this just set the diagonal of the transformation to zero,
+the the output is the estimated observation from the independent
+variables. In this example I also estimated the bias.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7}
 transform <- attr(body_fat_Decorrelated,"UPLTM")
@@ -733,8 +732,6 @@ for (vn in names(varratio))
 par(op)
 
 ```
- 
-
 
 # ILAA for Supervised Learning
 
@@ -806,11 +803,15 @@ $BodyFat$ using all the variables in the transformed training set.
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 ## Outcome-Blind
-modelBodyFat <- LASSO_1SE(BodyFat~.,body_fat_Decorrelated_train)
+modelBodyFatRaw <- LASSO_MIN(BodyFat~.,trainingset)
+pander::pander(as.matrix(modelBodyFatRaw$coef))
+
+## Outcome-Blind
+modelBodyFat <- LASSO_MIN(BodyFat~.,body_fat_Decorrelated_train)
 pander::pander(as.matrix(modelBodyFat$coef))
 
 ## Outcome-Driven
-modelBodyFatD <- LASSO_1SE(BodyFat~.,body_fat_Decorrelated_trainD)
+modelBodyFatD <- LASSO_MIN(BodyFat~.,body_fat_Decorrelated_trainD)
 pander::pander(as.matrix(modelBodyFatD$coef))
 
 
@@ -825,13 +826,28 @@ Here we check the Variance inflation factor (VIF) on the train and
 testing sets
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+frm <- paste("BodyFat~",str_flatten(modelBodyFatRaw$selectedfeatures," + "))
+
+X <- model.matrix(formula(frm),trainingset);
+mc <- multiCol(X)
+vifd <- VIF(X)
+vifx <-vif(lm(formula(frm),trainingset))
+title("Raw Train VIF")
+
+X <- model.matrix(formula(frm),testingset);
+mc <- multiCol(X)
+vifd <- VIF(X)
+vifx <-vif(lm(formula(frm),testingset))
+title("Raw Test VIF")
+
+
 frm <- paste("BodyFat~",str_flatten(modelBodyFat$selectedfeatures," + "))
 
 X <- model.matrix(formula(frm),body_fat_Decorrelated_train);
 mc <- multiCol(X)
-title("Train VIF")
 vifd <- VIF(X)
 vifx <-vif(lm(formula(frm),body_fat_Decorrelated_train))
+title("Train VIF")
 
 X <- model.matrix(formula(frm),body_fat_Decorrelated_test);
 mc <- multiCol(X)

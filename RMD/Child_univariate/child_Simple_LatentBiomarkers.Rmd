@@ -246,7 +246,8 @@ clustable <- c("To many variables")
       gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
       gr$layout <- layout_with_fr
       
-      fc <- cluster_optimal(gr)
+#      fc <- cluster_optimal(gr)
+        fc <- cluster_walktrap (gr,steps=50)
       plot(fc, gr,
            edge.width = 2*E(gr)$weight,
            vertex.size=VertexSize,

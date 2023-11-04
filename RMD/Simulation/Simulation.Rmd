@@ -86,7 +86,6 @@ print(syndata$rotMatrix)
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 IdeT <- ILAA(syndata$data,thr=thr,verbose=TRUE,bootstrap=30)
-#IdeT <- ILAA(syndata$data,thr=0.2,verbose=TRUE,bootstrap=100)
 rmat <- attr(IdeT,"UPLTM")
 print(rmat)
 
@@ -333,9 +332,9 @@ par(cex=0.8,cex.main=0.85,cex.axis=0.9)
 
 boxplot(list(Pearson_1=DiscoveryAccuracyT,Pearson_2=DiscoveryAccuracyB,Spearman_1=DiscoveryAccuracyST,Spearman_2=DiscoveryAccuracySB),
         main="Accuracy",ylab="Accuracy")
-boxplot(list(Pearson_1=DiscoverySenT,Pearson_2=DiscoverySenB,Spearman_1=DiscoverySenST,Spearman_2=DiscoverySenSB),
+boxplot(list(Pearson_0=DiscoverySenT,Pearson_P=DiscoverySenB,Spearman_0=DiscoverySenST,Spearman_P=DiscoverySenSB),
         main="Sensitivity",ylab="Sensitivity")
-boxplot(list(Pearson_1=DiscoverySpeT,Pearson_2=DiscoverySpeB,Spearman_1=DiscoverySpeST,Spearman_2=DiscoverySpeSB),
+boxplot(list(Pearson_0=DiscoverySpeT,Pearson_P=DiscoverySpeB,Spearman_0=DiscoverySpeST,Spearman_P=DiscoverySpeSB),
         main="Specificity",ylab="Specificity")
 boxplot(list(P1_P2=overlapTF,
              S1_S2=overlapSTSB,
@@ -432,10 +431,10 @@ rotSparcity <- cbind(rotSparcity,True=trueSpacity)
 
 par(cex=0.8,cex.main=0.85,cex.axis=0.9)
 
-boxplot(DiscoveryAccuracy,main="Accuracy",ylab="Accuracy")
-boxplot(DiscoverySen,main="Sensitivity",ylab="Sensitivity")
-boxplot(DiscoverySpe,main="Specificity",ylab="Specificity")
-boxplot(0.5*(DiscoverySpe+DiscoverySen),main="Balanced Accuracy",ylab="BACC")
+boxplot(DiscoveryAccuracy,main="Accuracy",ylab="Accuracy",ylim=c(0.5,1))
+boxplot(DiscoverySen,main="Sensitivity",ylab="Sensitivity",ylim=c(0,1))
+boxplot(DiscoverySpe,main="Specificity",ylab="Specificity",ylim=c(0,1))
+boxplot(0.5*(DiscoverySpe+DiscoverySen),main="Balanced Accuracy",ylab="BACC",ylim=c(0.5,1))
 boxplot(falseDiscovery,main="False Discoveries",ylab="Number of False Discoveries")
 boxplot(rotSparcity,main="Rotation Matrix Sparcity",ylab="Sparcity")
 
@@ -453,15 +452,15 @@ lines(c(1,length(thrvals)),ylim)
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 
-falseDiscovery <- matrix(0,nrow=NUmberofSimulations,ncol=length(thrvals))
-DiscoveryAccuracy <- falseDiscovery
-DiscoverySen <- falseDiscovery
-DiscoverySpe <- falseDiscovery
-trainCor <- falseDiscovery
-testCor <- falseDiscovery
-rotSparcity <- falseDiscovery
+falseDiscoveryB <- matrix(0,nrow=NUmberofSimulations,ncol=length(thrvals))
+DiscoveryAccuracyB <- falseDiscoveryB
+DiscoverySenB <- falseDiscoveryB
+DiscoverySpeB <- falseDiscoveryB
+trainCorB <- falseDiscoveryB
+testCorB <- falseDiscoveryB
+rotSparcityB <- falseDiscoveryB
 
-trueSpacity <- numeric(NUmberofSimulations)
+trueSpacityB <- numeric(NUmberofSimulations)
 i = 1
 for (i in 1:NUmberofSimulations)
 {
@@ -486,52 +485,69 @@ for (i in 1:NUmberofSimulations)
                                    Bootstrap=10,
                                    thr=thr)
     
-    trainCor[i,cn] <- evalILAA$trainCorrelation
-    testCor[i,cn] <- evalILAA$testCorrelation
-    falseDiscovery[i,cn] <- evalILAA$falseDiscovery
-    DiscoveryAccuracy[i,cn] <- evalILAA$DiscoveryAccuracy
-    DiscoverySen[i,cn] <- evalILAA$DiscoverySen
-    DiscoverySpe[i,cn] <- evalILAA$DiscoverySpe
+    trainCorB[i,cn] <- evalILAA$trainCorrelation
+    testCorB[i,cn] <- evalILAA$testCorrelation
+    falseDiscoveryB[i,cn] <- evalILAA$falseDiscovery
+    DiscoveryAccuracyB[i,cn] <- evalILAA$DiscoveryAccuracy
+    DiscoverySenB[i,cn] <- evalILAA$DiscoverySen
+    DiscoverySpeB[i,cn] <- evalILAA$DiscoverySpe
 
-    rotSparcity[i,cn] <- sum(evalILAA$UPLTM==0)/(ncol(evalILAA$UPLTM)^2)
+    rotSparcityB[i,cn] <- sum(evalILAA$UPLTM==0)/(ncol(evalILAA$UPLTM)^2)
     cn <- cn + 1;
   }
 }
-DiscoveryAccuracy <- as.data.frame(DiscoveryAccuracy)
-colnames(DiscoveryAccuracy) <- paste("At_",thrvals,sep="")
+DiscoveryAccuracyB <- as.data.frame(DiscoveryAccuracyB)
+colnames(DiscoveryAccuracyB) <- paste("At_",thrvals,sep="")
 
-DiscoverySen <- as.data.frame(DiscoverySen)
-colnames(DiscoverySen) <- colnames(DiscoveryAccuracy)
-DiscoverySpe <- as.data.frame(DiscoverySpe)
-colnames(DiscoverySpe) <- colnames(DiscoveryAccuracy)
+DiscoverySenB <- as.data.frame(DiscoverySenB)
+colnames(DiscoverySenB) <- colnames(DiscoveryAccuracyB)
+DiscoverySpeB <- as.data.frame(DiscoverySpeB)
+colnames(DiscoverySpeB) <- colnames(DiscoveryAccuracyB)
 
-trainCor <- as.data.frame(trainCor)
-colnames(trainCor) <- colnames(DiscoveryAccuracy)
+trainCorB <- as.data.frame(trainCorB)
+colnames(trainCorB) <- colnames(DiscoveryAccuracyB)
 
-testCor <- as.data.frame(testCor)
-colnames(testCor) <- colnames(DiscoveryAccuracy)
+testCorB <- as.data.frame(testCorB)
+colnames(testCorB) <- colnames(DiscoveryAccuracyB)
 
-falseDiscovery <- as.data.frame(falseDiscovery)
-colnames(falseDiscovery) <- colnames(DiscoveryAccuracy)
+falseDiscoveryB <- as.data.frame(falseDiscoveryB)
+colnames(falseDiscoveryB) <- colnames(DiscoveryAccuracyB)
 
 
-rotSparcity <- as.data.frame(rotSparcity)
-colnames(rotSparcity) <- colnames(DiscoveryAccuracy)
-rotSparcity <- cbind(rotSparcity,True=trueSpacity)
+rotSparcityB <- as.data.frame(rotSparcityB)
+colnames(rotSparcityB) <- colnames(DiscoveryAccuracyB)
+rotSparcityB <- cbind(rotSparcityB,True=trueSpacity)
 par(cex=0.8,cex.main=0.85,cex.axis=0.9)
 
-boxplot(DiscoveryAccuracy,main="Accuracy",ylab="Accuracy")
-boxplot(DiscoverySen,main="Sensitivity",ylab="Sensitivity")
-boxplot(DiscoverySpe,main="Specificity",ylab="Specificity")
-boxplot(0.5*(DiscoverySpe+DiscoverySen),main="Balanced Accuracy",ylab="BACC")
-boxplot(falseDiscovery,main="False Discoveries",ylab="Number of False Discoveries")
-boxplot(rotSparcity,main="Rotation Matrix Sparcity",ylab="Sparcity")
+boxplot(DiscoveryAccuracyB,main="Accuracy",ylab="Accuracy",ylim=c(0.5,1))
+boxplot(DiscoverySenB,main="Sensitivity",ylab="Sensitivity",ylim=c(0,1))
+boxplot(DiscoverySpeB,main="Specificity",ylab="Specificity",ylim=c(0,1))
+boxplot(0.5*(DiscoverySpeB+DiscoverySenB),main="Balanced Accuracy",ylab="BACC",ylim=c(0.5,1))
+boxplot(falseDiscoveryB,main="False Discoveries",ylab="Number of False Discoveries")
+boxplot(rotSparcityB,main="Rotation Matrix Sparcity",ylab="Sparcity")
 
 ylim <- c(thrvals[1],thrvals[length(thrvals)])
-boxplot(trainCor,main="Train Correlation",ylab="Correlation")
+boxplot(trainCorB,main="Train Correlation",ylab="Correlation")
 lines(c(1,length(thrvals)),ylim)
-boxplot(testCor,main="Test Correlation",ylab="Correlation")
+boxplot(testCorB,main="Test Correlation",ylab="Correlation")
 lines(c(1,length(thrvals)),ylim)
+
+allSen <- cbind(DiscoverySen,DiscoverySenB)
+unsortednames <- c(colnames(DiscoverySen),paste(colnames(DiscoverySen),"B",sep="_"))
+colnames(allSen) <- unsortednames
+ordernames <- colnames(allSen)[order(colnames(allSen))]
+allSen <- allSen[ordernames]
+vioplot(allSen,col=c("red","blue"))
+
+allSpe <- cbind(DiscoverySpe,DiscoverySpeB)
+colnames(allSpe) <- unsortednames
+allSpe <- allSpe[ordernames]
+vioplot(allSpe,col=c("red","blue"))
+
+allBACC <- cbind(0.5*(DiscoverySpe+DiscoverySen),0.5*(DiscoverySpeB+DiscoverySenB))
+colnames(allBACC) <- unsortednames
+allBACC <- allBACC[ordernames]
+vioplot(allBACC,col=c("red","blue"))
 
 
 ```

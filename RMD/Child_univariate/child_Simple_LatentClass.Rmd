@@ -1,0 +1,216 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+### Libraries
+Some libraries
+```{r}
+library(psych)
+library(whitening)
+library("vioplot")
+library("rpart")
+
+```
+
+### Data specs
+
+
+
+### Scaling the data
+
+Scaling and removing near zero variance columns and highly co-linear(r>0.99999) columns
+
+```{r}
+
+  ### Some global cleaning
+  sdiszero <- apply(dataframe,2,sd) > 1.0e-16
+  dataframe <- dataframe[,sdiszero]
+
+  tokeep <- as.character(correlated_Remove(dataframe,colnames(dataframe),thr=0.99999))
+  dataframe <- dataframe[,tokeep]
+
+
+#dataframeScaled <- FRESAScale(dataframe,method="OrderLogit")$scaledData
+
+```
+
+
+#### Correlation Matrix of the Data
+
+The heat map of the data
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+{
+
+  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+  cormat <- cor(dataframe,method="pearson")
+  cormat[is.na(cormat)] <- 0
+  gplots::heatmap.2(abs(cormat),
+                    trace = "none",
+  #                  scale = "row",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Original Correlation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                     srtCol=45,
+                     srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Pearson Correlation|",
+                    xlab="Feature", ylab="Feature")
+  diag(cormat) <- 0
+  print(max(abs(cormat)))
+}
+
+```
+
+
+## The decorrelation
+
+```{r}
+
+DEdataframe <- ILAA(dataframe,verbose=TRUE,thr=thro,bootstrap=100)
+
+
+varratio <- attr(DEdataframe,"VarRatio")
+
+pander::pander(tail(varratio))
+```
+
+
+
+### The decorrelation matrix
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+
+{
+
+  par(cex=0.6,cex.main=0.85,cex.axis=0.7)
+  
+  UPLTM <- attr(DEdataframe,"UPLTM")
+  
+  gplots::heatmap.2(1.0*(abs(UPLTM)>0),
+                    trace = "none",
+                    mar = c(5,5),
+                    col=rev(heat.colors(5)),
+                    main = "Decorrelation matrix",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="|Beta|>0",
+                    xlab="Output Feature", ylab="Input Feature")
+  
+  par(op)
+  
+  
+  
+}
+
+```
+
+### Formulas Network
+
+Displaying the features associations
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0}
+par(op)
+clustable <- c("To many variables")
+
+
+  transform <- attr(DEdataframe,"UPLTM") != 0
+  tnames <- colnames(transform)
+  colnames(transform) <- str_remove_all(colnames(transform),"La_")
+  transform <- abs(transform*cor(dataframe[,rownames(transform)])) # The weights are proportional to the observed correlation
+  
+  
+  fscore <- attr(DEdataframe,"fscore")
+  VertexSize <- fscore # The size depends on the variable independence relevance (fscore)
+  names(VertexSize) <- str_remove_all(names(VertexSize),"La_")
+  VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
+
+  VertexSize <- VertexSize[rownames(transform)]
+  rsum <- apply(1*(transform !=0),1,sum) + 0.01*VertexSize + 0.001*varratio[tnames]
+  csum <- apply(1*(transform !=0),2,sum) + 0.01*VertexSize + 0.001*varratio[tnames]
+  
+  ntop <- min(TopVariables,length(rsum))
+
+
+  topfeatures <- unique(c(names(rsum[order(-rsum)])[1:ntop],names(csum[order(-csum)])[1:ntop]))
+  rtrans <- transform[topfeatures,]
+  csum <- (apply(1*(rtrans !=0),2,sum) > 1*(colnames(rtrans) %in% topfeatures))
+  rtrans <- rtrans[,csum]
+  topfeatures <- unique(c(topfeatures,colnames(rtrans)))
+  print(ncol(transform))
+  transform <- transform[topfeatures,topfeatures]
+  print(ncol(transform))
+
+      gplots::heatmap.2(transform,
+                        trace = "none",
+                        mar = c(5,5),
+                        col=rev(heat.colors(5)),
+                        main = "Red Decorrelation matrix",
+                        cexRow = cexheat,
+                        cexCol = cexheat,
+                       srtCol=45,
+                       srtRow=45,
+                        key.title=NA,
+                        key.xlab="|Beta|>0",
+                        xlab="Output Feature", ylab="Input Feature")
+  
+      par(op)
+      VertexSize <- VertexSize[colnames(transform)]
+      gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
+      gr$layout <- layout_with_fr
+      
+#      fc <- cluster_optimal(gr)
+        fc <- cluster_walktrap (gr,steps=50)
+      plot(fc, gr,
+           edge.width = 2*E(gr)$weight,
+           vertex.size=VertexSize,
+           edge.arrow.size=0.5,
+           edge.arrow.width=0.5,
+           vertex.label.cex=(0.15+0.05*VertexSize),
+           vertex.label.dist=0.5 + 0.05*VertexSize,
+           main="Top Feature Association")
+      
+      varratios <- varratio
+      fscores <- fscore
+      names(varratios) <- str_remove_all(names(varratios),"La_")
+      names(fscores) <- str_remove_all(names(fscores),"La_")
+
+      dc <- getLatentCoefficients(DEdataframe)
+      theCharformulas <- attr(dc,"LatentCharFormulas")
+
+      
+      clustable <- as.data.frame(cbind(Variable=fc$names,
+                                       Formula=as.character(theCharformulas[paste("La_",fc$names,sep="")]),
+                                       Class=fc$membership,
+                                       ResidualVariance=round(varratios[fc$names],3),
+                                       Fscore=round(fscores[fc$names],3)
+                                       )
+                                 )
+      rownames(clustable) <- str_replace_all(rownames(clustable),"__","_")
+      clustable$Variable <- NULL
+      clustable$Class <- as.integer(clustable$Class)
+      clustable$classType <- classType[fc$names]
+      clustable$ResidualVariance <- as.numeric(clustable$ResidualVariance)
+      clustable$Fscore <- as.numeric(clustable$Fscore)
+      clustable <- clustable[order(-clustable$Fscore),]
+      clustable <- clustable[order(clustable$Class),]
+      topv <- min(50,nrow(clustable))
+
+pander::pander(head(clustable))
+
+pander::pander(table(clustable$classType))
+pander::pander(table(clustable$Class,clustable$classType))
+par(op)
+
+
+```
+
+
+
