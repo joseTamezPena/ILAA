@@ -57,6 +57,7 @@ M. Charytanowicz, J. Niewczas, P. Kulczycki, P.A. Kowalski, S. Lukasik, S. Zak, 
 ```{r}
 seeds <- read.delim("~/GitHub/LatentBiomarkers/Data/seeds_dataset.txt", header=FALSE)
 
+seeds$V8
 featnames <- c("area",
                "perimeter",
                "compactness",

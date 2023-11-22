@@ -29,13 +29,17 @@ op <- par(no.readonly = TRUE)
 
 # Introduction
 
-Iterative Linear Association Analysis (ILAA) is a computational method
-that creates a linear transformation from a sample of multidimensional
-data that effectively removes linear associations between data
-variables. The returned transformation matrix can be used to:
+![Figure 1: The UPLTM](images/Fig_Trans_1-01.jpg)
 
-1.  Do an exploratory analysis of latent variables and their association
-    to the observed variables
+Iterative Linear Association Analysis (ILAA) is a computational method
+that estimates the Exploratory Residualizatio Transform (ERT), an
+special case of the UPLTM as seen in Figure 1. The ERT is estimated from
+a sample of multidimensional data. ERT mitigates muticollinearity issues
+via variable residualizatoin. The returned transformation matrix can be
+used to:
+
+1.  Do exploratory analysis of latent variables and their association to
+    the observed variables
 
 2.  Do exploratory discovery of latent variables associated with an
     specific outcome-target
@@ -117,6 +121,10 @@ web address: <http://silver.sdsmt.edu/~rwjohnso>"
 
 ## Loading the Data
 
+The BodyFat dataset contains the density information, a not direct
+measurement. In this tutorial, we will remove the density and we will
+try to model the body fat based on antrophometry.
+
 The following code snippet loads the data and removes the density
 information from the data. It also computes the Body Mass Index (BMI)
 
@@ -131,7 +139,9 @@ body_fat$BMI <- 10000*body_fat$Weight*0.453592/((body_fat$Height*2.54)^2)
 body_fat <- body_fat[body_fat$BMI<=50,]
 ```
 
-## The heatmap of the raw data
+### The Heatmap of the Raw Data
+
+Now, here we show the heatmap of the dataframe:
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
@@ -156,7 +166,7 @@ smap <- FRESAScale(body_fat,method="OrderLogit")$scaledData
 
 # ILAA Unsupervised Processing
 
-The ILAA function is:
+The ILLA function is defined as follows:
 
 ``` r
  decorrelatedData <- ILAA(data=NULL,
@@ -188,12 +198,54 @@ where:
 
 -   `verbose` : Display the evolution of the algorithm.
 
--   `bootstrap` : The number of bootstrap estimations.
+-   `bootstrap` : The number of bootstrap estimations. (True bootstrap
+    when n\>500, 5% bootstrap at n\<=500)
+
+At return of the ILLA function is a decorrelated dataframe that shares
+the same dimensions as the input dataframe. The dataframe has the
+following attributes:
+
+```         
+RTM <- attr(decorrelatedData,"UPLTM") 
+fscore <- attr(decorrelatedData,"fscore");
+drivingFeatures <- attr(decorrelatedData,"drivingFeatures");
+adjustedpvalue <- attr(decorrelatedData,"unipvalue")
+RCritical <- attr(decorrelatedData,"R.critical")
+EvolutionData <- attr(decorrelatedData,"IDeAEvolution")
+VarRatio <- attr(decorrelatedData,"VarRatio")
+```
+
+Attributes details:
+
+-   `UPLTM`: The UPLTM matrix that can be used to decorrelated or
+    analyze variables associations
+
+-   `fscore`: A numeric vector with the final feature score of each
+    analyzed variable. The fscore contains the number of times a
+    variable was used as an independent variable minus the times it was
+    a dependent variable.
+
+-   `drivingFeatures` : The ordered character vector indicating the
+    hierarchy of the variables for tiebreak
+
+-   `unipvalue` : The adjusted p-values used to define a true
+    variable-to-variable association inside the linear modeling
+
+-   `R.critical` : The pearson R critical value used to filter-out false
+    association between variables.
+
+-   `IDeAEvolution` : A list with two elements:
+
+    -   `Corr`: The evolution of the maximum observed correlation.
+
+    -   `Spar`: The evolution of the matrix sparcity.
+
+-   `VarRatio` : A vector indicating the ratio of the observed variance
+    explained by the latent variable model.
 
 ## ILLA Auxiliary Functions
 
-To help user taking advantage of the ILLA transformed object. FRESA.CAD
-provide the following auxiliary functions:
+FRESA.CAD provide the following auxiliary functions:
 
 ``` r
 newTransformedData   <- predictDecorrelate(decorrelatedData,NewData)
@@ -205,7 +257,9 @@ fromLatenttoObserved <- getObservedCoef(decorrelatedData,latentModel)
     of an `ILAA` transformed data set.
 
 -   `getLatentCoefficients()` Returns a list of all the beta
-    coefficients for each one of the discovered latent variables.
+    coefficients for each one of the discovered latent variables. The
+    attribute: "LatentCharFormulas" returns a list of the character
+    string of the corresponding latent variable formula.
 
 -   `getObservedCoef()` returns the beta coefficients on the observed
     space of any linear model that was trained on the UPLTM space.
@@ -254,7 +308,9 @@ pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 ```
 
-## The heatmap of the transformed data
+## The Heatmap of the Transformed Data
+
+Here we review the transformed data using a heatmap of the data
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 smap <- FRESAScale(body_fat_Decorrelated,method="OrderLogit")$scaledData
@@ -283,8 +339,6 @@ The returned data matrix contains the following attributes
   attr(body_fat_Decorrelated,"UPLTM")            #The transformation matrix
   attr(body_fat_Decorrelated,"fscore")           #The score of each feature
   attr(body_fat_Decorrelated,"drivingFeatures")  #The list of driving features
-  attr(body_fat_Decorrelated,"unaltered")        #The list of unaltered features
-  attr(body_fat_Decorrelated,"LatentVariables")  #The list of latent variables
   attr(body_fat_Decorrelated,"R.critical")       #The estimated minimum achieviable correlation
   attr(body_fat_Decorrelated,"IDeAEvolution")    #Evolution of the algorithm
   attr(body_fat_Decorrelated,"VarRatio")         #Variance Ratios: var(Latent)/Var(obs)
@@ -456,11 +510,14 @@ henceforth, the interpretation of each feature is as follows:
     $Neck$. The latent variable $LaWrist$ is the amount of information
     in the $Wrist$ not found by $Weight$ nor the $Neck$.
 
--   The model of the $Wrist$ is therefore:
+-   Therefore, the model of the $Wrist$ is :
 
 $$
-Wrist = +0.012Weight + 0.165Neck.  
+Wrist = +0.012Weight + 0.165Neck + b_o,  
 $$
+
+where $b_o$ is the bias term. It can be estimated using the difference
+beteen the raw observations and the mean of the model.
 
 ## The Formula Network
 
@@ -483,6 +540,7 @@ VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) 
 gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
 gr$layout <- layout_with_fr
 
+# The user can use any cluster method. Here we use the optimal clustering.
 fc <- cluster_optimal(gr)
 plot(fc, gr,
      edge.width=2*E(gr)$weight,
@@ -500,7 +558,10 @@ par(op)
 ### ILAA Solution is Data Dependent
 
 I'll generate 100 solutions of the UPLTM and aggregate the non-zero
-coefficients. Then, I'll plot the heat map of the frequency of hits
+coefficients. Then, I'll plot the heat map of the frequency of hits.
+
+Each estimation will be done using a bootstrapped sample from the
+original data set.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 par(op)
@@ -537,11 +598,12 @@ gplots::heatmap.2(taccmatrix,
 
 ### Bootstrapping ILLA
 
-To handle data sensitivity, ILAA allows for bootstrapping estimation of
-the transformation matrix.
+To handle the data sensitivity to the input data, ILAA allows for
+bootstrapping estimation of the transformation matrix.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
+## Here we petrubate only 5% of the data
 body_fat_Decorrelated <-  ILAA(body_fat,thr=0.2,verbose=TRUE,bootstrap=100)
 
 
@@ -804,15 +866,15 @@ $BodyFat$ using all the variables in the transformed training set.
 
 ## Outcome-Blind
 modelBodyFatRaw <- LASSO_MIN(BodyFat~.,trainingset)
-pander::pander(as.matrix(modelBodyFatRaw$coef))
+pander::pander(as.matrix(modelBodyFatRaw$coef),caption="Raw Coefficients")
 
 ## Outcome-Blind
 modelBodyFat <- LASSO_MIN(BodyFat~.,body_fat_Decorrelated_train)
-pander::pander(as.matrix(modelBodyFat$coef))
+pander::pander(as.matrix(modelBodyFat$coef),caption="Outcome-Blind Coefficients")
 
 ## Outcome-Driven
 modelBodyFatD <- LASSO_MIN(BodyFat~.,body_fat_Decorrelated_trainD)
-pander::pander(as.matrix(modelBodyFatD$coef))
+pander::pander(as.matrix(modelBodyFatD$coef),caption="Outcome-Driven Coefficients")
 
 
 ```
@@ -847,11 +909,11 @@ X <- model.matrix(formula(frm),body_fat_Decorrelated_train);
 mc <- multiCol(X)
 vifd <- VIF(X)
 vifx <-vif(lm(formula(frm),body_fat_Decorrelated_train))
-title("Train VIF")
+title("Blind: Train VIF")
 
 X <- model.matrix(formula(frm),body_fat_Decorrelated_test);
 mc <- multiCol(X)
-title("Test VIF")
+title("Blind: Test VIF")
 
 frm <- paste("BodyFat~",str_flatten(modelBodyFatD$selectedfeatures," + "))
 X <- model.matrix(formula(frm),body_fat_Decorrelated_trainD);
@@ -878,13 +940,13 @@ code shows the procedure.
 
 # Get the coefficients in the observed space for the outcome-blind
 observedCoef <- getObservedCoef(body_fat_Decorrelated_train,modelBodyFat)
-pander::pander(as.matrix(observedCoef$coefficients))
+pander::pander(as.matrix(observedCoef$coefficients),caption="Blind Coefficients")
 
 
 
 # The outcome-driven coefficients
 observedCoefD <- getObservedCoef(body_fat_Decorrelated_trainD,modelBodyFatD)
-pander::pander(as.matrix(observedCoefD$coefficients))
+pander::pander(as.matrix(observedCoefD$coefficients),caption="Driven Coefficients")
 
 
 ```
@@ -981,7 +1043,7 @@ pander::pander(rawmodelBodyFat$coef)
 
 rawpredicBodyFat <- predict(rawmodelBodyFat,testingset)
 rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,
-                                             rawpredicBodyFat),"Body Fat")
+                                             rawpredicBodyFat),"Raw: Body Fat")
 pander::pander(rmetrics)
 
 ```
@@ -1050,8 +1112,8 @@ trainingsetBMI$BMI <- NULL
 testingsetBMI$BMI <- NULL
 
 # The number of subjects
-pander::pander(table(trainingsetBMI$Overweight))
-pander::pander(table(testingsetBMI$Overweight))
+pander::pander(table(trainingsetBMI$Overweight),caption="Training Distribution")
+pander::pander(table(testingsetBMI$Overweight),caption="Testing Distribution")
 
 ## The outcome-blind transformation
 OW_Decorrelated_train <- ILAA(trainingsetBMI,
@@ -1090,13 +1152,13 @@ of overweight.
 modelOverweight <- LASSO_1SE(Overweight~.,
                              OW_Decorrelated_train,
                              family="binomial")
-pander::pander(as.matrix(modelOverweight$coef))
+pander::pander(as.matrix(modelOverweight$coef),caption="Training: Blind")
 
 ## Outcome-driven
 modelOverweightD <- LASSO_1SE(Overweight~.,
                               OW_Decorrelated_trainD,
                               family="binomial")
-pander::pander(as.matrix(modelOverweightD$coef))
+pander::pander(as.matrix(modelOverweightD$coef),caption="Training: Driven")
 
 ```
 
@@ -1109,7 +1171,7 @@ compute the beta coefficients for each one of the observed variables.
 
 # Get the coefficients in the observed space
 observedCoef <- getObservedCoef(OW_Decorrelated_train,modelOverweight)
-pander::pander(as.matrix(observedCoef$coefficients))
+pander::pander(as.matrix(observedCoef$coefficients),caption="Observed Coefficients")
 
 
 ```

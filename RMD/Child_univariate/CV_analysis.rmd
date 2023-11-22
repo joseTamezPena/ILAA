@@ -45,26 +45,26 @@ FSEFA <- as.numeric(unlist(lapply(cvDataFS$EFASelectedTrainFeatures,length)))
 
 FSDe <- FSDe + 0.1*runif(length(FSDe))
 
-vioplot(cbind(RAW=cvDataFS$TDR,IDeA=cvDataFS$DeTDR,PCA=cvDataFS$PCATDR,EFA=cvDataFS$EFATDR),
+vioplot(cbind(RAW=cvDataFS$TDR,ILAA=cvDataFS$DeTDR,PCA=cvDataFS$PCATDR,EFA=cvDataFS$EFATDR),
         ylab="TDR",
         xlab="Method",
         main="Train-Test Discovery Rate",
 )
 
 
-vioplot(cbind(RAW=cvDataFS$ROCAUC,IDeA=cvDataFS$DeROCAUC,PCA=cvDataFS$PCAROCAUC,EFA=cvDataFS$EFAROCAUC),
+vioplot(cbind(RAW=cvDataFS$ROCAUC,ILAA=cvDataFS$DeROCAUC,PCA=cvDataFS$PCAROCAUC,EFA=cvDataFS$EFAROCAUC),
         ylab="ROC AUC",
         xlab="Method",
         main="Test: ROC AUC (LASSO)",
 )
 
-vioplot(cbind(RAW=cvDataFS$topROCAUC,IDeA=cvDataFS$DetopROCAUC,PCA=cvDataFS$PCAtopROCAUC,EFA=cvDataFS$EFAtopROCAUC),
+vioplot(cbind(RAW=cvDataFS$topROCAUC,ILAA=cvDataFS$DetopROCAUC,PCA=cvDataFS$PCAtopROCAUC,EFA=cvDataFS$EFAtopROCAUC),
         ylab="ROC AUC",
         xlab="Method",
         main="Test: ROC AUC (Top Feature)",
 )
 
-vioplot(cbind(RAW=FSRaw,IDeA=FSDe,PCA=FSPCA,EFA=FSEFA),
+vioplot(cbind(RAW=FSRaw,ILAA=FSDe,PCA=FSPCA,EFA=FSEFA),
         ylab="Selected Features",
         xlab="Method",
         main="Number of Selected Features",
@@ -149,7 +149,7 @@ pander::pander(summary(as.numeric(unlist(cvDataFS$rocTest))),caption="ROC p.valu
 
 pander::pander(c(pvalue=pnorm(0, mean(diffinTOPROCACU), sd(diffinTOPROCACU))),caption="TOP ROC Diff, p.value")
 
-pander::pander(rbind(RAW=bpRaw$aucs,IDeA=bpDe$aucs,PCA=bpPCA$aucs,EFA=bpEFA$aucs))
+pander::pander(rbind(RAW=bpRaw$aucs,ILAA=bpDe$aucs,PCA=bpPCA$aucs,EFA=bpEFA$aucs))
 
 pander::pander(roc.test(bpRaw$ROC.analysis$roc.predictor,bpDe$ROC.analysis$roc.predictor))
 pander::pander(roc.test(bpPCA$ROC.analysis$roc.predictor,bpDe$ROC.analysis$roc.predictor))
