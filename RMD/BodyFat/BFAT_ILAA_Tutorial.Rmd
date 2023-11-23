@@ -32,11 +32,22 @@ op <- par(no.readonly = TRUE)
 ![Figure 1: The UPLTM](images/Fig_Trans_1-01.jpg)
 
 Iterative Linear Association Analysis (ILAA) is a computational method
-that estimates the Exploratory Residualizatio Transform (ERT), an
-special case of the UPLTM as seen in Figure 1. The ERT is estimated from
-a sample of multidimensional data. ERT mitigates muticollinearity issues
-via variable residualizatoin. The returned transformation matrix can be
-used to:
+that estimates the Exploratory Residualization Transform (ERT), an
+special case of the UPLTM as seen in Figure 1. ERT is estimated from a
+sample of multidimensional data. and mitigates muticollinearity issues
+via variable residualization.
+
+The dataframe with reduced multicollinarity issues, $Q$, is estimated
+by:
+
+$$
+Q=W  X,
+$$
+
+where $X$ is the observed dataframe and $W$ is the Exploratory
+Residualization Transform (ERT) matrix.
+
+The returned transformation matrix can be used to:
 
 1.  Do exploratory analysis of latent variables and their association to
     the observed variables
@@ -72,6 +83,11 @@ showcase:
 
     -   Explore the model in the transformed space
     -   Get the observed variables coefficients.
+
+## Shiny App
+
+Users can test ILLA application using the ERT calculator: [ILLA Shiny
+App](https://josetamezpena.shinyapps.io/ILAA/ "Simple ERT calculator")
 
 ## The Libraries
 
@@ -276,33 +292,149 @@ snippet shows the different options.
 
 # Default call
 body_fat_Decorrelated <- ILAA(body_fat)
-pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
+varRatio_D <- attr(body_fat_Decorrelated,"VarRatio")
+yCor_D <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
+ySpar_D <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
 
 # Explore the convergence metrics in verbose mode
 body_fat_Decorrelated <- ILAA(body_fat,verbose=TRUE)
-pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 # Robust Linear Fitting with the Spearman correlation measure
-body_fat_Decorrelated <- ILAA(body_fat,method="spearman",verbose=TRUE)
-pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
+body_fat_Decorrelated <- ILAA(body_fat,method="spearman")
+varRatio_S <- attr(body_fat_Decorrelated,"VarRatio")
+yCor_S <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
+ySpar_S <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
 
 # Lowering the threshold
-body_fat_Decorrelated <- ILAA(body_fat,thr=0.4,verbose=TRUE)
-pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
+body_fat_Decorrelated <- ILAA(body_fat,thr=0.4)
+varRatio_P_40 <- attr(body_fat_Decorrelated,"VarRatio")
+yCor_P_40 <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
+ySpar_P_40 <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
 
-# Tring to achive the maximum independence beteeen variables, i.e., thr=0.0
-body_fat_Decorrelated <- ILAA(body_fat,thr=0.0,verbose=TRUE)
-pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
+# Trying to achieve the maximum independence between variables, i.e., thr=0.0
+body_fat_Decorrelated <- ILAA(body_fat,thr=0.0)
+varRatior_P_00 <- attr(body_fat_Decorrelated,"VarRatio")
+yCor_P_00 <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
+ySpar_P_00 <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
+
+# The BMI and BodyFat variables Driving the Decorrelation
+body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,drivingFeatures=c("BMI","BodyFat"))
+varRatior_P_20_D <- attr(body_fat_Decorrelated,"VarRatio")
+yCor_P_20_D <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
+ySpar_P_20_D <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
+
+# The Bodyfat variable and its association will be Driving the Decorrelation process
+body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,Outcome="BodyFat",drivingFeatures="BodyFat")
+varRatior_P_20_OD <- attr(body_fat_Decorrelated,"VarRatio")
+yCor_P_20_OD <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
+ySpar_P_20_OD <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
 
 ```
 
-For the rest of the tutorial I'll set the correlation goal to 0.2 in
-verbose mode.
+### Latent Models Variance Ratios
+
+Every change in parameters will create different solutions of the ERT
+transform.
+
+Here we will check the variance ratio of each latent model. Where the
+variance ratio can be interpreted as the percentage of the observed
+variance still present in the latent variable.
+
+Note: Every time the variance ratio is 1, is an indication that the
+observed variable was not modeled by any other variable in the
+dataframe.
+
+```{r results = "asis", warning = FALSE}
+
+names(varRatio_D) <- str_remove_all(names(varRatio_D),"La_")
+names(varRatio_S) <- str_remove_all(names(varRatio_S),"La_")
+names(varRatio_P_40) <- str_remove_all(names(varRatio_P_40),"La_")
+names(varRatior_P_00) <- str_remove_all(names(varRatior_P_00),"La_")
+names(varRatior_P_20_D) <- str_remove_all(names(varRatior_P_20_D),"La_")
+names(varRatior_P_20_OD) <- str_remove_all(names(varRatior_P_20_OD),"La_")
+namesVar <- names(varRatio_D)
+
+varratios <- rbind(Default=varRatio_D,
+                   Spearman=varRatio_S[namesVar],
+                   At_40=varRatio_P_40[namesVar],
+                   At_0=varRatior_P_00[namesVar],
+                   BMI_BF=varRatior_P_20_D[namesVar],
+                   BodyFat_Driven=varRatior_P_20_OD[namesVar])
+pander::pander(varratios,caption="Unexplained variance ratio of latent models")
+
+```
+
+### Plotting the Evolution
+
+Here we will use the `attr(dataTransformed,"IDeAEvolution")` to plot the
+evolution of the correlation measure and the evolution of the matrix
+sparsity.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
+par(mfrow=c(1,2),cex=0.5)
+
+# Correlation
+yval <- yCor_P_00
+xidx <- c(1:length(yval))
+plot(xidx,yval,
+     xlab="Iteration Cycle",
+     ylab="Maximum Correlation",
+     ylim=c(0,1.0),
+     main="Evolution of the maximum Correlation")
+  lfit <-try(loess(yval~xidx,span=0.5));
+  if (!inherits(lfit,"try-error"))
+  {
+    plx <- try(predict(lfit,se=TRUE))
+    if (!inherits(plx,"try-error"))
+    {
+      lines(xidx,plx$fit,lty=1,col="red")
+    }
+  }
+lines(xidx,yCor_D[xidx],lty=2)
+lines(xidx,yCor_S[xidx],lty=3)
+lines(xidx,yCor_P_40[xidx],lty=4)
+lines(xidx,yCor_P_20_D[xidx],lty=5)
+lines(xidx,yCor_P_20_OD[xidx],lty=6)
+legend("bottomleft",
+       legend=c("@0.0","Default(@0.8)","Spearman(@0.8)","@0.4","Driven(@0.2)","Outcome_Driven(@0.2)"),
+       lty=c(1:6),
+       col=c("red","black","black","black","black","black"))
+       
+# Sparsity  
+yval <- ySpar_P_00
+
+plot(xidx,yval,
+     xlab="Iteration Cycle",
+     ylab="Matrix Sparcity",
+     ylim=c(0,1.0),
+     main="Evolution of the Matrix Sparcity")
+  lfit <-try(loess(yval~xidx,span=0.5));
+  if (!inherits(lfit,"try-error"))
+  {
+    plx <- try(predict(lfit,se=TRUE))
+    if (!inherits(plx,"try-error"))
+    {
+      lines(xidx,plx$fit,lty=1,col="red")
+    }
+  }
+lines(xidx,ySpar_D[xidx],lty=2)
+lines(xidx,ySpar_S[xidx],lty=3)
+lines(xidx,ySpar_P_40[xidx],lty=4)
+lines(xidx,ySpar_P_20_D[xidx],lty=5)
+lines(xidx,ySpar_P_20_OD[xidx],lty=6)
+legend("bottomleft",
+       legend=c("@0.0","Default(@0.8)","Spearman(@0.8)","@0.4","Driven(@0.2)","Outcome_Driven(@0.2)"),
+       lty=c(1:6),
+       col=c("red","black","black","black","black","black"))
+
+```
+
+For the next part of the tutorial I'll set the correlation goal to 0.2
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 # Calling ILAA to achieve a final correlation of 0.2
-body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,verbose=TRUE)
+body_fat_Decorrelated <- ILAA(body_fat,thr=0.2)
 pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 
@@ -355,53 +487,6 @@ the latent variable. All non-altered variables return a"`VarRatio`" of
 The "`IDeAEvolution`" attribute can be used to verify if the algorithm
 achieved the target correlation goal, and the sparsity of the returned
 matrix.
-
-## Plotting the Evolution
-
-Here we will use the `attr(dataTransformed,"IDeAEvolution")` to plot the
-evolution of the correlation measure and the evolution of the matrix
-sparsity.
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
-par(mfrow=c(1,2),cex=0.5)
-
-# Correlation
-yval <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
-xidx <- c(1:length(yval))
-plot(xidx,yval,
-     xlab="Iteration Cycle",
-     ylab="Max. Pearson Correlation",
-     ylim=c(0,1.0),
-     main="Evolution of the maximum Correlation")
-  lfit <-try(loess(yval~xidx,span=0.5));
-  if (!inherits(lfit,"try-error"))
-  {
-    plx <- try(predict(lfit,se=TRUE))
-    if (!inherits(plx,"try-error"))
-    {
-      lines(xidx,plx$fit,lty=1,col="red")
-    }
-  }
-
-# Sparsity  
-yval <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
-
-plot(xidx,yval,
-     xlab="Iteration Cycle",
-     ylab="Matrix Sparcity",
-     ylim=c(0,1.0),
-     main="Evolution of the Matrix Sparcity")
-  lfit <-try(loess(yval~xidx,span=0.5));
-  if (!inherits(lfit,"try-error"))
-  {
-    plx <- try(predict(lfit,se=TRUE))
-    if (!inherits(plx,"try-error"))
-    {
-      lines(xidx,plx$fit,lty=1,col="red")
-    }
-  }
-
-```
 
 ## The ILAA Transformed Data
 
@@ -555,48 +640,13 @@ par(op)
 
 ```
 
-### ILAA Solution is Data Dependent
+### ILAA Solution and Perturbations
 
-I'll generate 100 solutions of the UPLTM and aggregate the non-zero
-coefficients. Then, I'll plot the heat map of the frequency of hits.
+ILLA solutions depends on the observed data. The provided function can
+add data perturbations aiming to improve the sensitivity to find
+multicollinearity issues.
 
-Each estimation will be done using a bootstrapped sample from the
-original data set.
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-par(op)
-
-dsize <- nrow(body_fat);
-taccmatrix <- cor(body_fat)*0;
-for (lp in c(1:100))
-{
-  dmat <- ILAA(body_fat[sample(dsize,dsize,replace = TRUE),],thr=0.2)
-  transform <- attr(dmat,"UPLTM") != 0 
-  colnames(transform) <- str_remove_all(colnames(transform),"La_")
-  taccmatrix[,colnames(transform)] <- taccmatrix[,colnames(transform)] + transform
-}
-
-gplots::heatmap.2(taccmatrix,
-                    trace = "none",
-                    mar = c(5,5),
-                    Rowv=NULL,
-                    Colv="Rowv",
-                    dendrogram="none",
-                    col=rev(heat.colors(11)),
-                    main = "Transform Hits",
-                    cexRow = 0.75,
-                    cexCol = 0.75,
-                   srtCol=30,
-                   srtRow=60,
-                    key.title=NA,
-                    key.xlab="|Beta|>0",
-                    xlab="Output Feature", ylab="Input Feature")
-
-  par(op)
-  
-```
-
-### Bootstrapping ILLA
+#### Bootstrapping ILLA
 
 To handle the data sensitivity to the input data, ILAA allows for
 bootstrapping estimation of the transformation matrix.
@@ -604,7 +654,7 @@ bootstrapping estimation of the transformation matrix.
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 ## Here we petrubate only 5% of the data
-body_fat_Decorrelated <-  ILAA(body_fat,thr=0.2,verbose=TRUE,bootstrap=100)
+body_fat_Decorrelated <-  ILAA(body_fat,thr=0.2,bootstrap=100)
 
 
 pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
@@ -685,86 +735,21 @@ pander::pander(max(abs(cormat)))
 
 ```
 
-#### Association Plots
+### Association Plots
 
-The following code shows the association of the latent variable to each
-one of the observed parent variable, and the association of the parent
-variables to its linear model. For this example I will use the
-`"VarRatio"` to rank the latent variables from the ones that keep the
-most original variance to the latent variable with the minimum fraction.
+#### Direct Transform Estimation
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
+The transformation matrix can be used to get estimation of each variable
+from the latent models.
 
-
-
-par(mfrow=c(1,2),cex=0.45)
-fnames <- names(charFormulas)[1]
-## Sort by explanined variace
-varratio <- attr(body_fat_Decorrelated,"VarRatio")
-varratio <- varratio[names(varratio) %in% names(charFormulas)]
-
-## Ploting
-
-for (fnames in names(varratio))
-{
-  print(fnames)
-  obsname <- str_remove(fnames,"La_")
-  menv <- mean(body_fat_Decorrelated[,fnames])
-  range <- max(body_fat[,obsname])-min(body_fat[,obsname])
-  ylim <- c(menv-range/2,menv+range/2)
-  xvals <- c(min(body_fat[,obsname]),max(body_fat[,obsname]))
-  plot(body_fat[,obsname],
-       body_fat_Decorrelated[,fnames],
-       ylim=ylim,
-       ylab=fnames,
-       xlab=obsname,
-       main=paste("ILAA Latent Variable:",fnames))
-
-  lmtvals <- lm(body_fat_Decorrelated[,fnames]~body_fat[,obsname])
-  pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
-  lines(x=xvals,y=pred,col="red")
-  text(xvals[1]+(xvals[2]-xvals[1])/2,0.95*(ylim[2]-ylim[1])+ylim[1],sprintf("Slope= %.2f",lmtvals$coefficients[2]))
-
-  
-    
-  deformula <- LatentFormulas[[fnames]]
-  noInames <- names(deformula)[names(deformula) != obsname]
-  predObs <- -(as.matrix(body_fat[,noInames]) %*% deformula[noInames])
-  xvals <- c(min(predObs),max(predObs))
-  plot(predObs,
-       body_fat[,obsname],
-       ylab=obsname,
-       xlab=paste("Model:",obsname),
-       main=paste("ILAA Generated Predictions of",obsname)
-       )
-  
-  lmtvals <- lm(body_fat[,obsname]~predObs)
-  pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
-  lines(x=xvals,y=pred,col="red")
-  ylim <- c(min(body_fat[,obsname]),max(body_fat[,obsname]))
-
-  text(xvals[1]+(xvals[2]-xvals[1])/2,0.95*(ylim[2]-ylim[1])+ylim[1],sprintf("Slope= %.2f",lmtvals$coefficients[2]))
-
-}
-
-par(op)
-
-```
-
-The visual inspection of the above-displayed figures shows that some
-latent variables are not associated with the original parent variable,
-but their model is fully correlated to the observed parent variable. A
-clear example is The last plot in the above figure.
-
-### Direct Transform Estimation
-
-It is also possible to estimate the observation using the transformation
-matrix. For this just set the diagonal of the transformation to zero,
-the the output is the estimated observation from the independent
-variables. In this example I also estimated the bias.
+To to this just set the diagonal of the transformation to zero, then
+rotate the input matrix, multiply by -1, and the the output is the
+estimated observation from the independent variables. The bias term is
+estimated by computing the observed mean minus the transformed mean.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7}
 transform <- attr(body_fat_Decorrelated,"UPLTM")
+varratio <- attr(body_fat_Decorrelated,"VarRatio")
 # Set the diagonal to zero
 diag(transform) <- 0
 
@@ -794,6 +779,11 @@ for (vn in names(varratio))
 par(op)
 
 ```
+
+The visual inspection of the above-displayed figures shows that some
+latent variables are not associated with the original parent variable,
+but their model is fully correlated to the observed parent variable. A
+clear example is the last plot.
 
 # ILAA for Supervised Learning
 
@@ -834,8 +824,7 @@ both outcome-blind and outcome-driven transformations.
 ## Outcome-blind
 body_fat_Decorrelated_train <- ILAA(trainingset,
                                     thr=0.2,
-                                    Outcome="BodyFat",
-                                    verbose=TRUE)
+                                    Outcome="BodyFat")
 pander::pander(attr(body_fat_Decorrelated_train,"drivingFeatures"))
 
 body_fat_Decorrelated_test <- predictDecorrelate(body_fat_Decorrelated_train
@@ -845,8 +834,7 @@ body_fat_Decorrelated_test <- predictDecorrelate(body_fat_Decorrelated_train
 body_fat_Decorrelated_trainD <- ILAA(trainingset,
                                      thr=0.2,
                                      Outcome="BodyFat",
-                                     drivingFeatures="BodyFat",
-                                     verbose=TRUE)
+                                     drivingFeatures="BodyFat")
 
 pander::pander(attr(body_fat_Decorrelated_trainD,"drivingFeatures"))
 
@@ -1118,8 +1106,7 @@ pander::pander(table(testingsetBMI$Overweight),caption="Testing Distribution")
 ## The outcome-blind transformation
 OW_Decorrelated_train <- ILAA(trainingsetBMI,
                               thr=0.2,
-                              Outcome="Overweight",
-                              verbose=TRUE)
+                              Outcome="Overweight")
 
 OW_Decorrelated_test <- predictDecorrelate(OW_Decorrelated_train,testingsetBMI)
 
@@ -1128,8 +1115,7 @@ OW_Decorrelated_test <- predictDecorrelate(OW_Decorrelated_train,testingsetBMI)
 OW_Decorrelated_trainD <- ILAA(trainingsetBMI,
                                thr=0.2,
                                Outcome="Overweight",
-                               drivingFeatures="Overweight",
-                               verbose=TRUE)
+                               drivingFeatures="Overweight")
 
 OW_Decorrelated_testD <- predictDecorrelate(OW_Decorrelated_trainD,testingsetBMI)
 

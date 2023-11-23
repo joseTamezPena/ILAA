@@ -52,10 +52,10 @@ library(TH.data)
 
 # Define UI
 ui <- fluidPage(
-  titlePanel("UPLTM Calculator"),
+  titlePanel("ERT Calculator"),
 
   tags$head(
-    tags$meta(name = "description", content = "Estimate Linear Decorrelation Transformation Matrices"),
+    tags$meta(name = "description", content = "Estimate Linear Decorrelation Transformation Matrices via Exploratory Residual Transformations"),
     tags$meta(name = "keywords", content = "Multicollinearity, Decorrelation, PCA, EFA, Whitening"),
     tags$meta(property = "og:title", content="Linear Decorrelation"),
     tags$meta(property = "og:description", content="Estimation of Linear Matrix to Address Multicolliearity")
@@ -111,7 +111,8 @@ ui <- fluidPage(
 server <- function(input, output) {
   output$Message <- renderText({
 "<p>This app addresses issues related to multicollinearity by employing a unit-preserving Linear Transformation matrix (UPLTM) on the dataset. 
-The resulting dataset will exhibit the requested maximum correlation among variables.</p>
+The applicatoin will estimate an exploratory residual transformation (ERT), and 
+the resulting dataset will exhibit the requested maximum correlation among variables.</p>
 <p>Follow at least these two steps:</p>
 <ol>
   <li>Select the target maximum correlation.</li>
