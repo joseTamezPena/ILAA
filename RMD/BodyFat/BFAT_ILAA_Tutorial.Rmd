@@ -87,7 +87,10 @@ showcase:
 ## Shiny App
 
 Users can test ILLA application using the ERT calculator: [ILLA Shiny
-App](https://josetamezpena.shinyapps.io/ILAA/ "Simple ERT calculator")
+App](https://josetamezpena.shinyapps.io/ILAA/ "Simple ERT calculator"):
+
+[![ERT Calculator a Shiny
+App](images/ERT_calc-01.jpg)](https://josetamezpena.shinyapps.io/ILAA/)
 
 ## The Libraries
 
