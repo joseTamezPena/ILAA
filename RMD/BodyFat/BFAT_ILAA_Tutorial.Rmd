@@ -8,7 +8,7 @@ output:
     fig_caption: yes
     number_sections: yes
   word_document: 
-    reference_docx: WordStyle_FRESA.docx
+    reference_docx: ..\WordStyle_FRESA.docx
     toc: yes
     fig_caption: yes
 editor_options:
@@ -22,7 +22,9 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
 
 pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
 pander::panderOptions('keep.trailing.zeros',TRUE)
+
 op <- par(no.readonly = TRUE)
 
 ```
@@ -49,10 +51,10 @@ Residualization Transform (ERT) matrix.
 
 The returned transformation matrix can be used to:
 
-1.  Do exploratory analysis of latent variables and their association to
-    the observed variables
+1.  Do an exploratory analysis of latent variables and their association
+    to the observed variables
 
-2.  Do exploratory discovery of latent variables associated with an
+2.  Do exploratory discovery of latent variables associated with a
     specific outcome-target
 
 3.  Addressing multicollinearity issues in linear regression models
@@ -171,7 +173,7 @@ smap <- FRESAScale(body_fat,method="OrderLogit")$scaledData
                     mar = c(5,5),
                     col=rev(colorRamps::matlab.like(length(bkcolors)-1)),
                     breaks = bkcolors,
-                    main = "Raw Correlation",
+                    main = "Raw",
                     cexRow = 0.15,
                     cexCol = 1.00,
                      srtCol=30,
@@ -203,11 +205,11 @@ where:
 
 -   `data`: The source data-frame
 
--   *`thr`* : The target correlation goal.
+-   `thr` : The target correlation goal.
 
--   *`method`* : Defines the correlation measure
+-   `method` : Defines the correlation measure
 
--   `Outcome` The name of the target variable, and it is required for
+-   `Outcome` :The name of the target variable, and it is required for
     supervised learning
 
 -   `drivingFeatures` : Defines a set of variables that are aimed to be
@@ -454,7 +456,7 @@ smap <- FRESAScale(body_fat_Decorrelated,method="OrderLogit")$scaledData
                     mar = c(5,5),
                     col=rev(colorRamps::matlab.like(length(bkcolors)-1)),
                     breaks = bkcolors,
-                    main = "After ILAA Correlation",
+                    main = "After ILAA",
                     cexRow = 0.15,
                     cexCol = 1.00,
                      srtCol=30,
@@ -605,7 +607,7 @@ Wrist = +0.012Weight + 0.165Neck + b_o,
 $$
 
 where $b_o$ is the bias term. It can be estimated using the difference
-beteen the raw observations and the mean of the model.
+between the mean of the raw observations and the mean of the model.
 
 ## The Formula Network
 
@@ -850,7 +852,7 @@ body_fat_Decorrelated_testD <- predictDecorrelate(body_fat_Decorrelated_trainD
 
 Once we have a transformed training and testing set, we can proceed to
 train a linear model of the body fat content. For this example we will
-use the `LASSO_1SE()` function of the FRESA.CAD package to model the
+use the `LASSO_MIN()` function of the FRESA.CAD package to model the
 $BodyFat$ using all the variables in the transformed training set.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
@@ -1029,8 +1031,11 @@ The next lines of code compute the linear model using LASSO from the
 original observed data. Then, it computes the predicted performance.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
-rawmodelBodyFat <- LASSO_1SE(BodyFat~.,trainingset)
-pander::pander(rawmodelBodyFat$coef)
+#rawmodelBodyFat <- LASSO_MIN(BodyFat~.,trainingset)
+#pander::pander(rawmodelBodyFat$coef)
+
+rawmodelBodyFat <- modelBodyFatRaw;
+
 
 rawpredicBodyFat <- predict(rawmodelBodyFat,testingset)
 rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,
@@ -1132,19 +1137,19 @@ by the target outcome.
 
 ### The Logistic Model
 
-LASSO_1SE with a binomial family is used to compute the logistic model
+LASSO_MIN with a binomial family is used to compute the logistic model
 of overweight.
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 
 ## Outcome-blind
-modelOverweight <- LASSO_1SE(Overweight~.,
+modelOverweight <- LASSO_MIN(Overweight~.,
                              OW_Decorrelated_train,
                              family="binomial")
 pander::pander(as.matrix(modelOverweight$coef),caption="Training: Blind")
 
 ## Outcome-driven
-modelOverweightD <- LASSO_1SE(Overweight~.,
+modelOverweightD <- LASSO_MIN(Overweight~.,
                               OW_Decorrelated_trainD,
                               family="binomial")
 pander::pander(as.matrix(modelOverweightD$coef),caption="Training: Driven")
@@ -1217,7 +1222,7 @@ testing performance:
 
 ```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
 ##Training
-rawmodelOverweight <- LASSO_1SE(Overweight~.,
+rawmodelOverweight <- LASSO_MIN(Overweight~.,
                                 trainingsetBMI,
                                 family="binomial")
 pander::pander(rawmodelOverweight$coef)

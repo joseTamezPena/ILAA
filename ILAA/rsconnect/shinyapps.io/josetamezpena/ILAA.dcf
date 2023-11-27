@@ -5,7 +5,7 @@ account: josetamezpena
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 10091914
-bundleId: 7962634
+bundleId: 7968467
 url: https://josetamezpena.shinyapps.io/ILAA/
 version: 1
 asMultiple: FALSE
