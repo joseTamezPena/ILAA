@@ -1,0 +1,11 @@
+name: Publish Document
+title:
+username:
+account: rpubs
+server: rpubs.com
+envVars: rpubs.com
+hostUrl: https://api.rpubs.com/api/v1/document/1086267/fdf2cbbf8fda4d02b4cf8b777ca3ad25
+appId: https://api.rpubs.com/api/v1/document/1086267/fdf2cbbf8fda4d02b4cf8b777ca3ad25
+bundleId: http://rpubs.com/J_Tamez/1086267
+url: 1701880771.35139
+version: 1

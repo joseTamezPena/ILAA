@@ -1,50 +1,106 @@
-# Latent Biomarker Discovery
+# ILAA and the ERT
 
-This repository showcase the use of the **FRESA.CAD::ILAA(), FRESA.CAD::IDeA()** and the **FRESA.CAD::getLatentCoefficients()** for the discovery of Latent Biomarkers from tabular data-sets.
+This repository showcases the use of the **FRESA.CAD::ILAA(), FRESA.CAD::IDeA()** and the **FRESA.CAD::getLatentCoefficients()** for the discovery of latent variables from tabular data-sets.
 
-In many biomarker-discovery studies, a large set of measurements and variables are recorded aiming to find surrogate markers of disease stage or markers of therapeutic efficiency (i.e., the biomarker). In many cases, simple feature selection approaches are enough to discover the relevant variables associated with the desired outcome, but in many cases, these simple approaches fail to return a simple set of features or fail to discover a strong candidate with clinical utility. The issue is mainly present when a large set of these measurements are correlated hence cluttering the discovery process. This repository shows how to use the FRESA.CAD R package to decorrelate the data features and extract a set of Latent biomarkers that may be used as alternative markers.
+## Table of Contents
 
-Simple use:
+-   [About](#about)
+-   [Installation](#installation)
+-   [Usage](#usage)
+-   [Contributing](#contributing)
+-   [License](#license)
 
-```{r}
-library("FRESA.CAD")
-data('iris')
+## About {#about}
 
-##FCA Decorrelation at 0.25 threshold, pearson and fast estimation 
-irisDecor <- IDeA(iris,thr=0.25)
+Examples of usage and applications of the **FRESA.CAD::ILAA()** and the associated exploratory residualization matrix (**ERT**).
 
-### Print the latent variables
+This repository also holds the Source code of the Shiny App: [ERT Calculator](https://josetamezpena.shinyapps.io/ILAA/) the source code is at the ILAA folder.
+
+The repository folder structure is:
+
++-------------+------------------------------------------------------------------------+
+| Folder Name | Contents                                                               |
++=============+========================================================================+
+| Data        | Data sets used in the examples of this repository                      |
+|             |                                                                        |
+|             | The data sources are described in: DataSpecsAndSource.xlsx             |
++-------------+------------------------------------------------------------------------+
+| ILAA        | Shiny App code                                                         |
++-------------+------------------------------------------------------------------------+
+| Main        | The ILAA Tutorial Code                                                 |
++-------------+------------------------------------------------------------------------+
+| RMD         | The RMD scripts used for the validation and showcasing the ILAA method |
++-------------+------------------------------------------------------------------------+
+
+: Repository Structure
+
+## Installation {#installation}
+
+ILAA is part of the FRESA.CAD package. To use ILAA first install FRESA.CAD You can install the official release of the package from CRAN using:
+
+``` r
+install.packages("FRESA.CAD")
+```
+
+To install the development version from GitHub, use:
+
+``` r
+# Install 'devtools' package if you haven't already
+install.packages("devtools")
+
+# Install the package from GitHub
+devtools::install_github("https://github.com/joseTamezPena/FRESA.CAD")
+```
+
+## Usage {#usage}
+
+After installation you can test ILAA on the iris data set.
+
+```         
+library("FRESA.CAD") 
+# The IRIS dataset
+data('iris')  
+##FCA Decorrelation at 0.25 threshold, pearson and fast estimation  
+irisDecor <- IDeA(iris,thr=0.25)  
+# Print the latent variables 
 print(getLatentCoefficients(irisDecor))
 
-
+# Lets model setosa using logistic regression
+setosaData <- iris
+setosaData$setosa <- 1.0*(as.character(iris$Species)=="setosa")
+setosaData$Species <- NULL
+setosaILAA <- ILAA(setosaData,thr=0.25)
+modelSetosa <- glm(setosa~.,setosaILAA,family="binomial")
+#The model cofficients in the ERT space
+print(modelSetosa$coefficients)
+#Get the observed Coefficients
+observedCoef <- getObservedCoef(setosaILAA,modelSetosa)
+#The model cofficients in the Observed space
+print(observedCoef)
 ```
 
-The output:
+You can test ILAA using the ERT calculator at: <https://josetamezpena.shinyapps.io/ILAA/>
 
-```{=asciidoc}
-$La_Sepal.Length
-Sepal.Length Petal.Length 
-   1.0000000   -0.4089223 
+The app will compute the ERT transformation using the user-provided data set.
 
-$La_Sepal.Width
-Sepal.Length  Sepal.Width Petal.Length 
-  -0.5611860    1.0000000    0.3352667 
+Also you can look at the output of the ILAA tutorial at: <https://rpubs.com/J_Tamez/ILAA_Tutorial>
 
-$La_Petal.Width
-Sepal.Length  Sepal.Width Petal.Length  Petal.Width 
-   0.1250483   -0.2228285   -0.4904624    1.0000000 
-   
-```
-The answer to the decorrelation of the iris data set was a set of three latent variables.
+## Contributing {#contributing}
 
-The scatter plot of the decorrelated variables is:
+Contributions are welcome! If you'd like to contribute to this project, please follow these guidelines:
 
-```{r}
-colors <- c("red","green","blue")
-names(colors) <- names(table(iris$Species))
-classcolor <- colors[iris$Species]
-featuresDecor <- colnames(irisDecor[,sapply(irisDecor,is,"numeric")])
-plot(irisDecor[,featuresDecor],col=classcolor,main="IDeA IRIS")
-```
+-   Fork the repository.
+-   Create a new branch: `git checkout -b feature/new-feature`.
+-   Make your changes and commit them: `git commit -m 'Add new feature'`.
+-   Push to the branch: `git push origin feature/new-feature`.
+-   Submit a pull request.
 
-![](images/IDeAIRIS.png)
+## License {#license}
+
+This project is licensed under the LGPL Licence 3.0 see the [LICENSE](LICENSE) file for details.
+
+## Contact
+
+Email: jose.tamezpena\@tec.mx
+
+Twitter: [\@tamezpena](https://twitter.com/jtamezpena)
