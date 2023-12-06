@@ -9,8 +9,9 @@ This repository showcases the use of the **FRESA.CAD::ILAA(), FRESA.CAD::IDeA()*
 -   [Usage](#usage)
 -   [Contributing](#contributing)
 -   [License](#license)
+-   [Contact](#contact)
 
-## About {#about}
+## About
 
 Examples of usage and applications of the **FRESA.CAD::ILAA()** and the associated exploratory residualization matrix (**ERT**).
 
@@ -25,7 +26,7 @@ The repository folder structure is:
 | Main        | [The ILAA Tutorial Code](https://rpubs.com/J_Tamez/ILAA_Tutorial)                       |
 | RMD         | The RMD scripts used for the validation and showcasing the ILAA method                  |
 
-## Installation {#installation}
+## Installation
 
 ILAA is part of the FRESA.CAD package. To use ILAA first install FRESA.CAD You can install the official release of the package from CRAN using:
 
@@ -43,7 +44,7 @@ install.packages("devtools")
 devtools::install_github("https://github.com/joseTamezPena/FRESA.CAD")
 ```
 
-## Usage {#usage}
+## Usage
 
 After installation you can test ILAA on the iris data set.
 
@@ -76,7 +77,7 @@ The app will compute the ERT transformation using the user-provided data set.
 
 Also you can look at the output of the ILAA tutorial at: <https://rpubs.com/J_Tamez/ILAA_Tutorial>
 
-## Contributing {#contributing}
+## Contributing
 
 Contributions are welcome! If you'd like to contribute to this project, please follow these guidelines:
 
@@ -86,7 +87,7 @@ Contributions are welcome! If you'd like to contribute to this project, please f
 -   Push to the branch: `git push origin feature/new-feature`.
 -   Submit a pull request.
 
-## License {#license}
+## License
 
 This project is licensed under the LGPL Licence 3.0 see the [LICENSE](LICENSE) file for details.
 
