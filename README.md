@@ -18,19 +18,12 @@ This repository also holds the Source code of the Shiny App: [ERT Calculator](ht
 
 The repository folder structure is:
 
-+-------------+------------------------------------------------------------------------+
 | Folder Name | Contents                                                               |
-+=============+========================================================================+
+|-------------|------------------------------------------------------------------------|
 | Data        | Data sets used in the examples of this repository                      |
-|             |                                                                        |
-|             | The data sources are described in: DataSpecsAndSource.xlsx             |
-+-------------+------------------------------------------------------------------------+
 | ILAA        | Shiny App code                                                         |
-+-------------+------------------------------------------------------------------------+
 | Main        | The ILAA Tutorial Code                                                 |
-+-------------+------------------------------------------------------------------------+
 | RMD         | The RMD scripts used for the validation and showcasing the ILAA method |
-+-------------+------------------------------------------------------------------------+
 
 : Repository Structure
 
