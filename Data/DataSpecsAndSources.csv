@@ -1,0 +1,19 @@
+,Name,Data Type,#Samples,#Features,Source
+0,Simulated,Continuous,1000,20,NA
+1,Body Fat,Body Measurements,252,14,https://www.kaggle.com/datasets/fedesoriano/body-fat-prediction-dataset
+2,Big Five,Personality Tests,19303,52,https://quantdev.ssri.psu.edu/tutorials/intro-basic-exploratory-factor-analysis
+3,NHNES,Lab & Measurements,4153,65,https://www.cdc.gov/Nchs/Nhanes/about_nhanes.htm
+4,Seeds,X-ray features,210(140/70),7,https://archive.ics.uci.edu/ml/datasets/seeds
+5,Glaucoma,Laser scanning image,196(98/98),62,"data(GlaucomaM),  TH.data R Package"
+6,COVID-19 Saliva 1,RAMAN IR,61 (30/31),252,https://zenodo.org/record/4156647#.Y1bSF3bMKUk
+7,TADPOLE,"Cognitive tests, MRI Radiomics",680(436/244),327,https://tadpole.grand-challenge.org/
+8,DARWIN,Handwritten features,174(85/89),450,https://archive-beta.ics.uci.edu/dataset/732/darwin
+9,Activity,Wearable ECG,80(40/40),534,https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6960825/
+10,LGG,Radiomic Features,150(54/96),640,https://www.kaggle.com/datasets/knamdar/radiomics-for-lgg-dataset
+11,Parkinson,Speech Features,252(64/188),753,https://archive.ics.uci.edu/ml/datasets/Parkinson
+12,COVID-19 Saliva 2,RAMAN IR,103(50/53),899,https://doi.org/10.6084/m9.figshare.12159924.v1
+13,GI,Colonoscopy video features,76(21/55),1396,https://archive.ics.uci.edu/ml/datasets/Gastrointestinal+Lesions+in+Regular+Colonoscopy
+14,COVID-19 MS,Mass spectrometry,146(37/109),2715,https://www.kaggle.com/datasets/kerneler/saliva-testing-dataset
+15,GRAVIER,Gene Expression,168(111/57),2905,"data('gravier'), datamicroarray R package"
+16,ARCENE,Mass Spectroscopy,200(112/88),10000,https://archive.ics.uci.edu/ml/datasets/Arcene
+17,Prostate,Gene Expression,124(60/64),12620,https://sbcb.inf.ufrgs.br/cumida
