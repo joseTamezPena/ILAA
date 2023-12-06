@@ -52,7 +52,7 @@ library("FRESA.CAD")
 # The IRIS dataset
 data('iris')  
 ##FCA Decorrelation at 0.25 threshold, pearson and fast estimation  
-irisDecor <- IDeA(iris,thr=0.25)  
+irisDecor <- ILAA(iris,thr=0.25)  
 # Print the latent variables 
 print(getLatentCoefficients(irisDecor))
 
