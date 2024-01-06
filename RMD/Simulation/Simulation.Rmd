@@ -41,7 +41,8 @@ op <- par(no.readonly = TRUE)
 pander::panderOptions('digits', 3)
 pander::panderOptions('table.split.table', 400)
 pander::panderOptions('keep.trailing.zeros',TRUE)
-source("~/GitHub/LatentBiomarkers/SimulatedDataFunctions.R")
+#source("~/GitHub/LatentBiomarkers/SimulatedDataFunctions.R")
+source("~/GitHub/LatentBiomarkers/RMD/Simulation/SimulatedDataFunctions.R")
 
 ```
 

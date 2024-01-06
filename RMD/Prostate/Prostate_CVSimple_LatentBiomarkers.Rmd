@@ -67,7 +67,7 @@ dataframe <- Prostate_DS
 outcome <- "type"
 
 
-nLoops <- 30
+nLoops <- 100
 needScaling <- FALSE
 IDSample <- FALSE
 thro <- 0.8

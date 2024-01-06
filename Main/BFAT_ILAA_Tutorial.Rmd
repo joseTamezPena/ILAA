@@ -383,9 +383,9 @@ yval <- yCor_P_00
 xidx <- c(1:length(yval))
 plot(xidx,yval,
      xlab="Iteration Cycle",
-     ylab="Maximum Correlation",
+     ylab="Mean(Correlation > Thr)",
      ylim=c(0,1.0),
-     main="Evolution of the maximum Correlation")
+     main="Evolution of the Correlation")
   lfit <-try(loess(yval~xidx,span=0.5));
   if (!inherits(lfit,"try-error"))
   {

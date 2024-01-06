@@ -82,10 +82,13 @@ par(op)
 ILAA bootstrapped training and testing sets
 
 ```{r results = "asis", warning = FALSE}
+#trainage_DE <- ILAA(trainingset,thr=thro,Outcome=outcome,verbose=TRUE)
 trainage_DE <- ILAA(trainingset,thr=thro,Outcome=outcome,verbose=TRUE,bootstrap=30)
 
 testage_DE <- predictDecorrelate(trainage_DE,testingset)
 
+attr(trainage_DE,"LatentVariables")
+attr(trainage_DE,"useDeCorr")
 
 ```
 
@@ -128,8 +131,13 @@ par(op)
        vertex.size=VertexSize,
        edge.arrow.size=0.5,
        edge.arrow.width=0.75,
-       vertex.label.cex=0.5,
-       vertex.label.dist=1,
+       vertex.label.color="purple",
+#       vertex.label.cex=0.85,
+#       vertex.label.dist=1.2,
+       vertex.label.cex=(0.70 + 0.025*VertexSize),
+       vertex.label.dist=(0.5 + 0.05*VertexSize),
+
+       
        main="Feature Association")
 
 par(op)
@@ -383,7 +391,7 @@ vioplot(list(raw=corresults$testRawCorrelations,ILAA=corresults$testDeCorrelatio
 
 pander::pander(t.test(corresults$testDeCorrelations,corresults$testRawCorrelations,paired=TRUE))
 
-sylim <- c(0,min(c(20,max(corresults$VIFRaw))))
+sylim <- c(1,min(c(20,max(corresults$VIFRaw))))
 vioplot(list(raw=corresults$VIFRaw,ILAA=corresults$VIFDe),
         ylab="VIF",
         ylim=sylim,
