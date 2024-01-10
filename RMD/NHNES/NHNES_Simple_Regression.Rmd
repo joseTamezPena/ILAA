@@ -210,3 +210,15 @@ plot(predOutcome,testingset[,outcome],xlab="Raw Predicted",ylab=outcome,main="Ra
 plot(predOutcome_DE,testingset[,outcome],xlab="IDeA Predicted",ylab=outcome,main="IDeA Age Prediction")
 
 ```
+
+## Descriptors
+
+```{r results = "asis", warning = FALSE,}
+
+
+pander::pander(demographiDesc[demographiDesc$`Variable Name` %in% colnames(transform),c(1,2)])
+pander::pander(examinationDesc[examinationDesc$`Variable Name` %in% colnames(transform),c(1,2)])
+pander::pander(questionnaireDesc[questionnaireDesc$`Variable Name` %in% colnames(transform),c(1,2)])
+pander::pander(labsDesc[labsDesc$`Variable Name` %in% colnames(transform),c(1,2)])
+```
+
