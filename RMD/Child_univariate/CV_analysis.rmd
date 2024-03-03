@@ -10,6 +10,7 @@ library(psych)
 library(whitening)
 library("vioplot")
 source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
+#source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV_ML.R")
 
 ```
 
@@ -157,6 +158,86 @@ pander::pander(roc.test(bpEFA$ROC.analysis$roc.predictor,bpDe$ROC.analysis$roc.p
 
 
 ```
+
+
+## SOTA Comparison to XGB and SVM
+```{r  results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+library(xgboost)
+
+s3xgb <- function(formula=formula,data=NULL,...)
+{
+  if (inherits(formula, "character"))
+	{
+		formula <- formula(formula);
+	}
+	dependent <- all.vars(formula)
+	Outcome = dependent[1];
+
+  thexbcol <- colnames(data)[(colnames(data) != Outcome)]
+  xbst <- xgboost(data = as.matrix(data[,thexbcol]), label = data[,Outcome],
+                max_depth = 30, eta = 0.05, nthread = 12, nrounds = 100,
+                objective = "binary:logistic",verbose = 0)
+  class(xbst) <- c("S3XBST",class(xbst))
+  attr(xbst,"trainnames") <-  thexbcol
+  return (xbst)
+}
+predict.S3XBST <- function(object,...)
+{
+  parameters <- list(...);
+	testData <- parameters[[1]];
+	class(object) <- class(object)[2]
+  pred <- predict(object,as.matrix(testData[,attr(object,"trainnames")]))
+  return(pred)
+}
+XBOOSTcv <- randomCV(dataframe,outcome,s3xgb,
+                        trainFraction = 0.90,
+                        repetitions = 100,
+                        classSamplingType ="Ba")
+bs <- predictionStats_binary(XBOOSTcv$medianTest,"XGBoost: CV")
+
+
+ILAAXGBcv <- randomCV(fittingFunction = filteredFit,
+                     trainSampleSets = XBOOSTcv$trainSamplesSets,
+                     fitmethod = s3xgb,
+                      filtermethod = NULL,
+                    DECOR = TRUE,
+                    DECOR.control=list(thr=0.80)
+                    )
+bs <- predictionStats_binary(ILAAXGBcv$medianTest,"ILAA-XGB: CV")
+
+
+SVMcv <- randomCV(fittingFunction = filteredFit,
+                  trainSampleSets = XBOOSTcv$trainSamplesSets,
+                  asFactor = TRUE,
+                  probability=TRUE)
+bs <- predictionStats_binary(SVMcv$medianTest,"SVM: CV")
+
+ILLASVMcv <- randomCV(fittingFunction = filteredFit,
+                  trainSampleSets = XBOOSTcv$trainSamplesSets,
+                  asFactor = TRUE,
+                  DECOR = TRUE,
+                  DECOR.control=list(thr=0.80),
+                  probability=TRUE)
+
+bs <- predictionStats_binary(ILLASVMcv$medianTest,"ILLA-SVM: CV")
+
+LASSOcv <- randomCV(fittingFunction = LASSO_MIN,
+                     trainSampleSets = XBOOSTcv$trainSamplesSets,
+                    family="binomial")
+bs <- predictionStats_binary(LASSOcv$medianTest,"LASSO: CV")
+
+ILAALASSOcv <- randomCV(fittingFunction = filteredFit,
+                     trainSampleSets = XBOOSTcv$trainSamplesSets,
+                     fitmethod = LASSO_MIN,
+                      filtermethod = NULL,
+                    DECOR = TRUE,
+                    DECOR.control=list(thr=0.80),
+                    family="binomial")
+bs <- predictionStats_binary(ILAALASSOcv$medianTest,"LASSO: CV")
+
+
+```
+
 
 ### Saving ALL
 

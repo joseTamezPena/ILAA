@@ -1,0 +1,155 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+### Libraries
+```{r}
+library(xgboost)
+library("vioplot")
+
+```
+
+
+## SOTA Comparison to XGB, SVM and LASSO
+
+```{r  results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+s3xgb <- function(formula=formula,data=NULL,...)
+{
+  if (inherits(formula, "character"))
+	{
+		formula <- formula(formula);
+	}
+	dependent <- all.vars(formula)
+	Outcome = dependent[1];
+
+  thexbcol <- colnames(data)[(colnames(data) != Outcome)]
+  xbst <- xgboost(data = as.matrix(data[,thexbcol]), label = data[,Outcome],
+                max_depth = 30, eta = 0.05, nthread = 12, nrounds = 100,
+                objective = "binary:logistic",verbose = 0)
+  class(xbst) <- c("S3XBST",class(xbst))
+  attr(xbst,"trainnames") <-  thexbcol
+  return (xbst)
+}
+predict.S3XBST <- function(object,...)
+{
+  parameters <- list(...);
+	testData <- parameters[[1]];
+	class(object) <- class(object)[2]
+  pred <- predict(object,as.matrix(testData[,attr(object,"trainnames")]))
+  return(pred)
+}
+XBOOSTcv <- randomCV(dataframe,outcome,s3xgb,
+                        trainFraction = 0.90,
+                        repetitions = nLoops,
+                        classSamplingType ="Ba")
+XGBbs <- predictionStats_binary(XBOOSTcv$medianTest,"XGB: CV")
+
+
+ILAAXGBcv <- randomCV(fittingFunction = filteredFit,
+                     trainSampleSets = XBOOSTcv$trainSamplesSets,
+                     fitmethod = s3xgb,
+                      filtermethod = NULL,
+                    DECOR = TRUE,
+                    DECOR.control=list(thr=thro)
+                    )
+ILAAXGBbs <- predictionStats_binary(ILAAXGBcv$medianTest,"ILAA-XGB: CV")
+
+
+SVMcv <- randomCV(fittingFunction = filteredFit,
+                  trainSampleSets = XBOOSTcv$trainSamplesSets,
+                  asFactor = TRUE,
+                  probability=TRUE)
+SVMbs <- predictionStats_binary(SVMcv$medianTest,"SVM: CV")
+
+ILLASVMcv <- randomCV(fittingFunction = filteredFit,
+                  trainSampleSets = XBOOSTcv$trainSamplesSets,
+                  asFactor = TRUE,
+                  DECOR = TRUE,
+                  DECOR.control=list(thr=thro),
+                  probability=TRUE)
+
+ILLASVMbs <- predictionStats_binary(ILLASVMcv$medianTest,"ILLA-SVM: CV")
+
+LASSOcv <- randomCV(fittingFunction = LASSO_MIN,
+                     trainSampleSets = XBOOSTcv$trainSamplesSets,
+                    family="binomial")
+LASSObs <- predictionStats_binary(LASSOcv$medianTest,"LASSO: CV")
+
+ILAALASSOcv <- randomCV(fittingFunction = filteredFit,
+                     trainSampleSets = XBOOSTcv$trainSamplesSets,
+                     fitmethod = LASSO_MIN,
+                      filtermethod = NULL,
+                    DECOR = TRUE,
+                    DECOR.control=list(thr=thro),
+                    family="binomial")
+ILAALASSObs <- predictionStats_binary(ILAALASSOcv$medianTest,"ILLA-LASSO: CV")
+
+
+```
+
+## The Reports
+```{r tables, results = "asis", warning = FALSE,  dpi=300, fig.height= 4.5, fig.width= 7.0}
+par(op)
+AUCTABLE <- rbind(
+                  XGBbs$aucs,
+                  SVMbs$aucs,
+                  LASSObs$aucs,
+                  ILAAXGBbs$aucs,
+                  ILLASVMbs$aucs,
+                  ILAALASSObs$aucs
+                  )
+colnames(AUCTABLE) <- c("Median","Lower","Upper")
+rownames(AUCTABLE) <- c("XGB","SVM","LASSO",
+                        "ILAA-XGB","ILAA-SVM","ILAA-LASSO")
+
+pander::pander(AUCTABLE)
+
+thesets <- c("XGB","SVM","LASSO")
+themethod <- c("Raw","ILAA")
+pauc <- barPlotCiError(AUCTABLE,
+               "ROC AUC", 
+               thesets=thesets, 
+               themethod=themethod, 
+               main="ROC AUC",
+               angle=0, 
+               offsets=c(0.1,1.0),
+               scoreDirection=">",args.legend=list(x="bottomleft"))
+
+par(op)
+
+
+BERTABLE <- rbind(
+                  XGBbs$berror,
+                  SVMbs$berror,
+                  LASSObs$berror,
+                  ILAAXGBbs$berror,
+                  ILLASVMbs$berror,
+                  ILAALASSObs$berror
+                  )
+
+
+colnames(BERTABLE) <- colnames(AUCTABLE)
+rownames(BERTABLE) <- rownames(AUCTABLE)
+
+pander::pander(BERTABLE)
+
+
+pber <- barPlotCiError(BERTABLE,
+               "BER", 
+               thesets=thesets, 
+               themethod=themethod, 
+               main="Balanced Error Rate",
+               angle=0, 
+               offsets=c(0.1,1.0),
+               scoreDirection="<",args.legend=list(x="topleft"))
+
+```
+
+### Saving ALL
+
+```{r}
+save.image(paste("SOTACV_analyiss",studyName,".RData",sep="_"))
+```

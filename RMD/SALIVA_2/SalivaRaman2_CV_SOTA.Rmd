@@ -1,0 +1,120 @@
+---
+title: "Decorrelation-Based SOTA: Saliva COVID-19"
+author: "Jose Tamez"
+date: "`r Sys.Date()`"
+output:
+  html_document: 
+    toc: yes
+    fig_caption: yes
+    number_sections: yes
+  word_document: 
+    reference_docx: WordStyle_FRESA.docx
+    toc: yes
+    fig_caption: yes
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
+
+```
+
+# Effect of UPSTM-Based Decorrelation on ML Performance
+
+
+### Loading the libraries
+
+```{r}
+library("FRESA.CAD")
+library(readxl)
+library(igraph)
+library(umap)
+library(tsne)
+library(entropy)
+
+op <- par(no.readonly = TRUE)
+pander::panderOptions('digits', 3)
+pander::panderOptions('table.split.table', 400)
+pander::panderOptions('keep.trailing.zeros',TRUE)
+source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/DecorrelationCV.R")
+
+```
+
+
+
+
+## Material and Methods
+About Dataset
+Context
+The principal diagnosis method for SARS-CoV-2 is a PCR technique, which allows for the detection of a genetic material of a pathogen or microorganism and it has high specificity, sensitivity and helps diagnosing even in the first stages of infection. However, it is not the fastest method to use in this situation and it's very time consuming.
+
+Raman spectroscopy could be used as a cheap and quick method to diagnose infection by SARS-CoV-2.
+
+Content
+Inside this dataset there're three files, each containing the raw spectra of healthy and infected subjects, unknown-state subjects and the probe used with saline solution inside. The data was in MATLAB's proprietary format and was transformed to CSV using Python's Pandas library.
+
+Source
+The source of this data was found in the following DOI: https://doi.org/10.6084/m9.figshare.12159924.v1
+
+Acknowledgements
+If used cite:
+Yin, Gang; Li, Lintao; Lu, Shun; Yin, Yu; Su, Yuanzhang; Zeng, Yilan; et al. (2020): Data and code on serum Raman spectroscopy as an efficient primary screening of coronavirus disease in 2019 (COVID-19). figshare. Dataset. https://doi.org/10.6084/m9.figshare.12159924.v1
+
+## Data: The COVID_19 Data-Set
+
+The data to process is described in:
+
+https://www.kaggle.com/datasets/sfran96/raman-spectroscopy-for-detecting-covid19?select=covid_and_healthy_spectra.csv
+
+
+
+
+
+I added a column to the data identifying the repeated experiments.
+
+```{r}
+
+SalivaIR <- read.csv("~/GitHub/LatentBiomarkers/Data/RAMANCOVID19/covid_and_healthy_spectra.csv")
+SalivaIR$X400 <- NULL
+SalivaIR$RepID <- rep(c(1:3),103) 
+SalivaIR_set1 <- subset(SalivaIR,RepID==1)
+SalivaIR_set1$RepID <- NULL
+diagnos <- SalivaIR_set1$diagnostic
+SalivaIR_set1$diagnostic <- NULL
+
+SalivaIR_set2 <- subset(SalivaIR,RepID==2)
+SalivaIR_set2$RepID <- NULL
+SalivaIR_set2$diagnostic <- NULL
+
+SalivaIR_set3 <- subset(SalivaIR,RepID==3)
+SalivaIR_set3$RepID <- NULL
+SalivaIR_set3$diagnostic <- NULL
+
+SalivaIR_Avg <- (SalivaIR_set1 + SalivaIR_set2 + SalivaIR_set3)/3
+
+SalivaIR_Avg$class <- 1*(diagnos=="SARS-CoV-2")
+
+
+```
+
+
+#### Standarize the names for the reporting
+
+```{r results = "asis"}
+studyName <- "SalivaCOVID19_2"
+dataframe <- SalivaIR_Avg
+outcome <- "class"
+nLoops <- 100
+
+needScaling <- TRUE
+IDSample <- FALSE
+thro <- 0.8
+
+```
+## CV Analysis and report
+
+
+```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/SOTACV_analysis.Rmd")}
+```
