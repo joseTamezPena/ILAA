@@ -106,7 +106,8 @@ SalivaIR_Avg$class <- 1*(diagnos=="SARS-CoV-2")
 studyName <- "SalivaCOVID19_2"
 dataframe <- SalivaIR_Avg
 outcome <- "class"
-nLoops <- 100
+tfrac <- 0.80
+nLoops <- 50
 
 needScaling <- TRUE
 IDSample <- FALSE

@@ -79,11 +79,13 @@ pander::pander(table(seeds$class))
 studyName <- "Seeds"
 dataframe <- seeds
 outcome <- "class"
-nLoops <- 100
+nLoops <- 50
+tfrac <- 0.80
 
 needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.8
+
 
 ```
 ## CV Analysis and report

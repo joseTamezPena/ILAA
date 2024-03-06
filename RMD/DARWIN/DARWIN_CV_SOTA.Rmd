@@ -73,7 +73,8 @@ studyName <- "DARWIN"
 dataframe <- DARWIN
 outcome <- "class"
 needScaling <- TRUE
-nLoops <- 100
+nLoops <- 50
+tfrac <- 0.80
 
 IDSample <- FALSE
 thro <- 0.8

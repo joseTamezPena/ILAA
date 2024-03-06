@@ -33,6 +33,7 @@ library(igraph)
 library(umap)
 library(tsne)
 library(entropy)
+library(pls)
 
 op <- par(no.readonly = TRUE)
 pander::panderOptions('digits', 3)
@@ -101,10 +102,25 @@ pander::pander(table(SalivaIR_Avg$class))
 studyName <- "SalivaCOVID19"
 dataframe <- SalivaIR_Avg
 outcome <- "class"
-nLoops <- 100
+tfrac <- 0.80
+nLoops <- 50
 needScaling <- FALSE
 IDSample <- FALSE
 thro <- 0.8
+
+#mvs <- multivariate_BinEnsemble(dataframe,outcome)
+#st <- ILAA(dataframe)
+#mvs <- multivariate_BinEnsemble(st,outcome)
+
+#bmo <- BSWiMS.model(class~.,dataframe,print=TRUE,loops=1,elimination.bootstrap.steps=0)
+#bmo$formula.list
+
+data(yarn)
+yarn.pls <- plsr(density ~ NIR, 6, data = yarn, validation = "CV")
+
+plscf <- yarn.pls$coefficients
+yarn.pls$loadings
+
 
 ```
 ## CV Analysis and report

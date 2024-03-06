@@ -37,7 +37,7 @@ library(entropy)
 library(psych)
 library(whitening)
 library("vioplot")
-library("rpart")
+library("pls")
 
 op <- par(no.readonly = TRUE)
 pander::panderOptions('digits', 3)
@@ -86,6 +86,31 @@ outcome <- "BodyFat"
 thro <- 0.40
 cexheat <- 0.75
 loops  <- 100
+
+bfm <- filteredFit(BodyFat~.,body_fat,fitmethod=LASSO_MIN,filtermethod=NULL,DECOR=TRUE)
+plot(body_fat$BodyFat~predict(bfm,body_fat))
+bfm <- filteredFit(BodyFat~.,body_fat,fitmethod=LASSO_MIN,filtermethod=NULL)
+plot(body_fat$BodyFat~predict(bfm,body_fat))
+bfm <-  plsr(BodyFat~.,data=body_fat)
+class(bfm)
+prd <- predict(bfm,newdata=body_fat)[,1,5]
+plot(body_fat$BodyFat~prd)
+bfm <-  pcr(BodyFat~.,data=body_fat)
+class(bfm)
+prd <- predict(bfm,newdata=body_fat)[,1,5]
+plot(body_fat$BodyFat~prd)
+bfm <-  cppls(BodyFat~.,data=body_fat)
+prd <- predict(bfm,newdata=body_fat)[,1,5]
+plot(body_fat$BodyFat~prd)
+
+bfm <-  GLMNET_RIDGE_MIN(BodyFat~.,data=body_fat)
+prd <- predict(bfm,newdata=body_fat)
+plot(body_fat$BodyFat~prd)
+
+bfm <-  GLMNET_ELASTICNET_MIN(BodyFat~.,data=body_fat)
+prd <- predict(bfm,newdata=body_fat)
+plot(body_fat$BodyFat~prd)
+
 ```
 
 ## Generaring the report
@@ -98,7 +123,7 @@ loops  <- 100
 
 Final plots
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0, fig.align="center"}
 
 plot(predOutcome,testingset[,outcome],xlab="Raw Predicted",ylab=outcome,main="Raw Fat Prediction")
 plot(predOutcome_DE,testingset[,outcome],xlab="IDeA Predicted",ylab=outcome,main="IDeA Fat Prediction")

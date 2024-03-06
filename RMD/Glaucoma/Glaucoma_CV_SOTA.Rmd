@@ -81,7 +81,8 @@ outcome <- "Class"
 
 
 
-nLoops <- 100
+tfrac <- 0.80
+nLoops <- 50
 
 needScaling <- TRUE
 IDSample <- FALSE

@@ -82,13 +82,11 @@ par(op)
 ILAA bootstrapped training and testing sets
 
 ```{r results = "asis", warning = FALSE}
-#trainage_DE <- ILAA(trainingset,thr=thro,Outcome=outcome,verbose=TRUE)
-trainage_DE <- ILAA(trainingset,thr=thro,Outcome=outcome,verbose=TRUE,bootstrap=30)
+trainage_DE <- ILAA(trainingset,thr=thro,Outcome=outcome,verbose=TRUE)
+#trainage_DE <- ILAA(trainingset,thr=thro,Outcome=outcome,verbose=TRUE,bootstrap=30)
 
 testage_DE <- predictDecorrelate(trainage_DE,testingset)
 
-attr(trainage_DE,"LatentVariables")
-attr(trainage_DE,"useDeCorr")
 
 ```
 
@@ -125,7 +123,9 @@ par(op)
   gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
   gr$layout <- layout_with_fr
   
-  fc <- cluster_optimal(gr)
+#  fc <- cluster_optimal(gr)
+          fc <- cluster_walktrap (gr,steps=50)
+
   plot(fc, gr,
        edge.width = 2*E(gr)$weight,
        vertex.size=VertexSize,
@@ -306,7 +306,7 @@ sm <- summary(lmod_DE)
 lacoef <- as.data.frame(sm$coefficients)
 lacoef <- lacoef[order(-abs(lacoef[,3])),]
 lacoef$Uni_t_values <- deunittvalues[rownames(lacoef)]
-if (!inherits(vif,"try-error")) lacoef$vif <-vifx[rownames(lacoef)]
+if (!inherits(vifx,"try-error")) lacoef$vif <-vifx[rownames(lacoef)]
 lacoef <- lacoef[!is.na(lacoef$Uni_t_values),]
 if (nrow(lacoef)>10) lacoef <- lacoef[lacoef[,4]<psig,]
 

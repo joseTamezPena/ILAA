@@ -83,7 +83,8 @@ dataframe <- LGG_Data
 outcome <- "Mutacion"
 
 needScaling <- TRUE
-nLoops <- 100
+tfrac <- 0.80
+nLoops <- 50
 
 IDSample <- FALSE
 thro <- 0.8

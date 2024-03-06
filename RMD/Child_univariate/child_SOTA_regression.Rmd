@@ -1,0 +1,262 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+### Libraries
+Some libraries
+```{r}
+library("pls")
+
+```
+
+### CV interface
+
+```{r}
+
+plfit <- function(formula=formula,data=NULL,...)
+{
+  fitpls <- plsr(formula=formula,data=data,...)
+  class(fitpls) <- c("TopPLS",class(fitpls))
+  return(fitpls)
+}
+
+pcrfit <- function(formula=formula,data=NULL,...)
+{
+  fitpls <- pcr(formula=formula,data=data,...)
+  class(fitpls) <- c("TopPLS",class(fitpls))
+  return(fitpls)
+}
+
+cpplsfit <- function(formula=formula,data=NULL,...)
+{
+  fitpls <- cppls(formula=formula,data=data,...)
+  class(fitpls) <- c("TopPLS",class(fitpls))
+  return(fitpls)
+}
+
+predict.TopPLS <- function(object,...)
+{
+  parameters <- list(...);
+	testData <- parameters[[1]];
+	class(object) <- class(object)[2]
+  pred <- predict(object,newdata=testData)
+  return(pred[,1,object$ncomp])
+}
+
+
+```
+
+
+
+## SOTA Comparison to PLS, PC, LASSO, and ENET
+### PLSR
+
+```{r PLSR, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+
+PLScv <- randomCV(dataframe,outcome,plfit,
+                        trainFraction = tfrac,
+                        repetitions = loops)
+
+PLSbs <- predictionStats_regression(PLScv$medianTest,"PLS: CV")
+
+```
+
+### PC XGB
+
+```{r PCR, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+
+PCcv <- randomCV(fittingFunction = pcrfit,
+                     trainSampleSets = PLScv$trainSamplesSets
+                    )
+
+PCbs <- predictionStats_regression(PCcv$medianTest,"PCR: CV")
+
+```
+
+### CPP XGB
+
+```{r CPP, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+
+CPPlcv <- randomCV(fittingFunction = cpplsfit,
+                     trainSampleSets = PLScv$trainSamplesSets
+                    )
+
+CPPlbs <- predictionStats_regression(CPPlcv$medianTest,"cppls: CV")
+
+```
+
+
+### LASSO
+
+```{r LASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+
+LASSOcv <- randomCV(fittingFunction = LASSO_MIN,
+                     trainSampleSets = PLScv$trainSamplesSets)
+
+LASSObs <- predictionStats_regression(LASSOcv$medianTest,"LASSO: CV")
+
+
+
+```
+
+### PCA LASSO
+
+```{r PCALASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+
+PCALASSOcv <- randomCV(fittingFunction = filteredFit,
+                     trainSampleSets = PLScv$trainSamplesSets,
+                     fitmethod = LASSO_MIN,
+                      filtermethod = NULL,
+                    PCA = TRUE)
+
+PCALASSObs <- predictionStats_regression(PCALASSOcv$medianTest,"ILLA-LASSO: CV")
+```
+
+
+### ILAA LASSO
+
+```{r ILAALASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+
+ILAALASSOcv <- randomCV(fittingFunction = filteredFit,
+                     trainSampleSets = PLScv$trainSamplesSets,
+                     fitmethod = LASSO_MIN,
+                      filtermethod = NULL,
+                    DECOR = TRUE,
+                    DECOR.control=list(thr=thro,Outcome=outcome))
+
+ILAALASSObs <- predictionStats_regression(ILAALASSOcv$medianTest,"ILLA-LASSO: CV")
+```
+
+### ENET 
+
+```{r SVM, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+ENETcv <- randomCV(fittingFunction = GLMNET_ELASTICNET_MIN,
+                     trainSampleSets = PLScv$trainSamplesSets)
+ENETbs <- predictionStats_regression(ENETcv$medianTest,"ENET: CV")
+```
+
+### ILAAA ENET 
+
+```{r ILAASVM, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+
+
+ILAAENETcv <- randomCV(fittingFunction = filteredFit,
+                     trainSampleSets = PLScv$trainSamplesSets,
+                     fitmethod = GLMNET_ELASTICNET_MIN,
+                      filtermethod = NULL,
+                    DECOR = TRUE,
+                    DECOR.control=list(thr=thro,Outcome=outcome))
+
+ILAAENETbs <- predictionStats_regression(ILAAENETcv$medianTest,"ILLA-ENET: CV")
+
+```
+
+
+## The Reports
+```{r tables, results = "asis", warning = FALSE,  dpi=300, fig.height= 4.5, fig.width= 7.0}
+par(op)
+RMSTABLE <- rbind(
+                  PLSbs$RMSEci,
+                  PCbs$RMSEci,
+                  CPPlbs$RMSEci,
+                  LASSObs$RMSEci,
+                  PCALASSObs$RMSEci,
+                  ILAALASSObs$RMSEci,
+                  ENETbs$RMSEci,
+                  ILAAENETbs$RMSEci
+                  )
+colnames(RMSTABLE) <- c("Median","Lower","Upper")
+rownames(RMSTABLE) <- c("PLS","PC","CPP",
+                        "LASSO","PCA-LASSO","ILAA-LASSO","ENET","ILAA-ENET")
+
+pander::pander(RMSTABLE)
+
+themethod <- rownames(RMSTABLE)
+thesets <- c("Fit Method")
+pRMS <- barPlotCiError(RMSTABLE,
+               "RMS", 
+               thesets=thesets, 
+               themethod=themethod, 
+               main="RMS",
+               angle=0, 
+               offsets=c(0.1,1.0),
+               scoreDirection="<",args.legend=list(x="bottomleft"),
+               col=rainbow(length(themethod)))
+
+par(op)
+
+
+MADTABLE <- rbind(
+                  PLSbs$MAEci,
+                  PCbs$MAEci,
+                  CPPlbs$MAEci,
+                  LASSObs$MAEci,
+                  PCALASSObs$MAEci,
+                  ILAALASSObs$MAEci,
+                  ENETbs$MAEci,
+                  ILAAENETbs$MAEci
+                  )
+
+
+colnames(MADTABLE) <- colnames(RMSTABLE)
+rownames(MADTABLE) <- rownames(RMSTABLE)
+
+pander::pander(MADTABLE)
+
+
+pber <- barPlotCiError(MADTABLE,
+               "MAD", 
+               thesets=thesets, 
+               themethod=themethod, 
+               main="Mean Absolute DIfferences",
+               angle=0, 
+               offsets=c(0.1,0.5),
+               scoreDirection="<",args.legend=list(x="bottomright"),
+               col=rainbow(length(themethod))
+               )
+
+PearsonTABLE <- rbind(
+                  PLSbs$corci,
+                  PCbs$corci,
+                  CPPlbs$corci,
+                  LASSObs$corci,
+                  PCALASSObs$corci,
+                  ILAALASSObs$corci,
+                  ENETbs$corci,
+                  ILAAENETbs$corci
+                  )
+
+
+colnames(PearsonTABLE) <- colnames(RMSTABLE)
+rownames(PearsonTABLE) <- rownames(RMSTABLE)
+
+pander::pander(PearsonTABLE)
+
+
+pber <- barPlotCiError(PearsonTABLE,
+               "Pearson Correlation", 
+               thesets=thesets, 
+               themethod=themethod, 
+               main="Pearson Correlation",
+               angle=0, 
+               offsets=c(0.1,0.5),
+               scoreDirection=">",args.legend=list(x="bottomright"),
+               col=rainbow(length(themethod))
+               )
+
+
+```
+
+### Saving ALL
+
+```{r}
+save.image(paste("SOTACV_analyiss",studyName,".RData",sep="_"))
+```

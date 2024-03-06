@@ -1,6 +1,6 @@
 ---
 title: "ILAA Tutorial"
-author: "Jose Tamez"
+author: "Jose Gerardo Tamez-Peña"
 date: "`r Sys.Date()`"
 output:
   html_document: 
@@ -11,6 +11,10 @@ output:
     reference_docx: ..\WordStyle_FRESA.docx
     toc: yes
     fig_caption: yes
+  pdf_document: 
+    toc: true
+    fig_caption: true
+    number_sections: true
 editor_options:
   chunk_output_type: inline
   markdown: 
@@ -22,7 +26,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_chunk$set(collapse = TRUE, warning = FALSE, message = FALSE,comment = "#>")
 
 pander::panderOptions('digits', 3)
-pander::panderOptions('table.split.table', 400)
+#pander::panderOptions('table.split.table', 400)
 pander::panderOptions('keep.trailing.zeros',TRUE)
 
 op <- par(no.readonly = TRUE)
@@ -150,7 +154,8 @@ The following code snippet loads the data and removes the density
 information from the data. It also computes the Body Mass Index (BMI)
 
 ```{r}
-body_fat <- read.csv("~/GitHub/LatentBiomarkers/Data/BodyFat/BodyFat.csv", header=TRUE)
+body_fat <- read.csv("~/GitHub/LatentBiomarkers/Data/BodyFat/BodyFat.csv", 
+                     header=TRUE)
 
 ### Removing density as estimator
 body_fat$Density <- NULL
@@ -164,7 +169,7 @@ body_fat <- body_fat[body_fat$BMI<=50,]
 
 Now, here we show the heatmap of the dataframe:
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 bkcolors <-seq(-2.5, 2.5, by = 0.5)
 smap <- FRESAScale(body_fat,method="OrderLogit")$scaledData
@@ -316,20 +321,24 @@ varRatio_P_40 <- attr(body_fat_Decorrelated,"VarRatio")
 yCor_P_40 <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
 ySpar_P_40 <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
 
-# Trying to achieve the maximum independence between variables, i.e., thr=0.0
+# Trying to achieve the maximum independence 
+# between variables, i.e., thr=0.0
 body_fat_Decorrelated <- ILAA(body_fat,thr=0.0)
 varRatior_P_00 <- attr(body_fat_Decorrelated,"VarRatio")
 yCor_P_00 <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
 ySpar_P_00 <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
 
 # The BMI and BodyFat variables Driving the Decorrelation
-body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,drivingFeatures=c("BMI","BodyFat"))
+body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,
+                              drivingFeatures=c("BMI","BodyFat"))
 varRatior_P_20_D <- attr(body_fat_Decorrelated,"VarRatio")
 yCor_P_20_D <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
 ySpar_P_20_D <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
 
-# The Bodyfat variable and its association will be Driving the Decorrelation process
-body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,Outcome="BodyFat",drivingFeatures="BodyFat")
+# The Bodyfat variable and its association will be 
+# Driving the Decorrelation process
+body_fat_Decorrelated <- ILAA(body_fat,thr=0.2,
+                              Outcome="BodyFat",drivingFeatures="BodyFat")
 varRatior_P_20_OD <- attr(body_fat_Decorrelated,"VarRatio")
 yCor_P_20_OD <- attr(body_fat_Decorrelated,"IDeAEvolution")$Corr
 ySpar_P_20_OD <- attr(body_fat_Decorrelated,"IDeAEvolution")$Spar
@@ -375,7 +384,7 @@ Here we will use the `attr(dataTransformed,"IDeAEvolution")` to plot the
 evolution of the correlation measure and the evolution of the matrix
 sparsity.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 6.0, fig.align="center"}
 par(mfrow=c(1,2),cex=0.5)
 
 # Correlation
@@ -401,7 +410,8 @@ lines(xidx,yCor_P_40[xidx],lty=4)
 lines(xidx,yCor_P_20_D[xidx],lty=5)
 lines(xidx,yCor_P_20_OD[xidx],lty=6)
 legend("bottomleft",
-       legend=c("@0.0","Default(@0.8)","Spearman(@0.8)","@0.4","Driven(@0.2)","Outcome_Driven(@0.2)"),
+       legend=c("@0.0","Default(@0.8)","Spearman(@0.8)",
+                "@0.4","Driven(@0.2)","Outcome_Driven(@0.2)"),
        lty=c(1:6),
        col=c("red","black","black","black","black","black"))
        
@@ -428,7 +438,8 @@ lines(xidx,ySpar_P_40[xidx],lty=4)
 lines(xidx,ySpar_P_20_D[xidx],lty=5)
 lines(xidx,ySpar_P_20_OD[xidx],lty=6)
 legend("bottomleft",
-       legend=c("@0.0","Default(@0.8)","Spearman(@0.8)","@0.4","Driven(@0.2)","Outcome_Driven(@0.2)"),
+       legend=c("@0.0","Default(@0.8)","Spearman(@0.8)",
+                "@0.4","Driven(@0.2)","Outcome_Driven(@0.2)"),
        lty=c(1:6),
        col=c("red","black","black","black","black","black"))
 
@@ -436,7 +447,7 @@ legend("bottomleft",
 
 For the next part of the tutorial I'll set the correlation goal to 0.2
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 # Calling ILAA to achieve a final correlation of 0.2
 body_fat_Decorrelated <- ILAA(body_fat,thr=0.2)
@@ -449,7 +460,7 @@ pander::pander(attr(body_fat_Decorrelated,"VarRatio"))
 
 Here we review the transformed data using a heatmap of the data
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 smap <- FRESAScale(body_fat_Decorrelated,method="OrderLogit")$scaledData
   hm <- gplots::heatmap.2(scale(as.matrix(smap)),
                     trace = "none",
@@ -502,7 +513,7 @@ with very high correlation among them.
 Here I'll plot the original correlation and the correlation of the
 returned data set.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 # The original
   par(cex=0.6,cex.main=0.85,cex.axis=0.7)
@@ -543,7 +554,7 @@ The `attr(body_fat_Decorrelated,"UPLTM")` returns the transformation
 matrix. The `UPLTM` is sparse, here I show a heat map of the
 transformation matrix that shows which elements are different from zero.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
   UPLTM <- attr(body_fat_Decorrelated,"UPLTM")
   
@@ -572,7 +583,7 @@ for each one of the latent formulas. The `getLatentCoefficients()` and
 its attribute: `attr(LatentFormulas,"LatentCharFormulas")` can be used
 to display the formula of the latent variables.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 # Get a list with the latent formulas' coefficients
 LatentFormulas <- getLatentCoefficients(body_fat_Decorrelated)
 
@@ -614,20 +625,26 @@ between the mean of the raw observations and the mean of the model.
 The `graph_from_adjacency_matrix()` function from `igraph` can be used
 to visualize the association between variables.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0, fig.align="center"}
 par(op)
 
 transform <- attr(body_fat_Decorrelated,"UPLTM") != 0
 colnames(transform) <- str_remove_all(colnames(transform),"La_")
-transform <- abs(transform*cor(body_fat[,rownames(transform)])) # The weights are proportional to the observed correlation
+# The weights are proportional to the observed correlation
+transform <- abs(transform*cor(body_fat[,rownames(transform)])) 
 
 
-VertexSize <- attr(body_fat_Decorrelated,"fscore") # The size depends on the variable independence relevance (fscore)
+# The size depends on the variable independence  relevance (fscore)
+
+VertexSize <- attr(body_fat_Decorrelated,"fscore") 
+
 names(VertexSize) <- str_remove_all(names(VertexSize),"La_")
-VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
+# Normalization
+VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) 
 
 
-gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
+gr <- graph_from_adjacency_matrix(transform,mode = "directed",
+                                  diag = FALSE,weighted=TRUE)
 gr$layout <- layout_with_fr
 
 # The user can use any cluster method. Here we use the optimal clustering.
@@ -656,7 +673,7 @@ multicollinearity issues.
 To handle the data sensitivity to the input data, ILAA allows for
 bootstrapping estimation of the transformation matrix.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0, fig.align="center"}
 
 ## Here we petrubate only 5% of the data
 body_fat_Decorrelated <-  ILAA(body_fat,thr=0.2,bootstrap=100)
@@ -673,9 +690,12 @@ pander::pander(as.matrix(charFormulas))
 ## The transformation
 par(op)
 
-transform <- attr(body_fat_Decorrelated,"UPLTM") != 0 # The non-zero coefficients
-colnames(transform) <- str_remove_all(colnames(transform),"La_")  # For network analysis
-transform <- abs(transform*cor(body_fat[,rownames(transform)])) # The weights are proportional to the observed correlation
+# The non-zero coefficients
+transform <- attr(body_fat_Decorrelated,"UPLTM") != 0 
+# For network analysis
+colnames(transform) <- str_remove_all(colnames(transform),"La_")
+# The weights are proportional to the observed correlation
+transform <- abs(transform*cor(body_fat[,rownames(transform)])) 
 
 
 gplots::heatmap.2(transform,
@@ -700,12 +720,15 @@ gplots::heatmap.2(transform,
 ## Network analysis
 # The vertex size will be proportional to the fscore of the IDeA procedure.
   
-VertexSize <- attr(body_fat_Decorrelated,"fscore") # The size depends on the variable independence relevance (fscore)
-VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) # Normalization
+# The size depends on the variable independence relevance (fscore)
+VertexSize <- attr(body_fat_Decorrelated,"fscore") 
+# Normalization
+VertexSize <- 10*(VertexSize-min(VertexSize))/(max(VertexSize)-min(VertexSize)) 
 
 
 
-gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
+gr <- graph_from_adjacency_matrix(transform,mode = "directed",
+                                  diag = FALSE,weighted=TRUE)
 gr$layout <- layout_with_fr
 
 fc <- cluster_optimal(gr)
@@ -752,24 +775,28 @@ rotate the input matrix, multiply by -1, and the the output is the
 estimated observation from the independent variables. The bias term is
 estimated by computing the observed mean minus the transformed mean.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.5, fig.width= 7}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.0, fig.width= 6.0, fig.align="center"}
 transform <- attr(body_fat_Decorrelated,"UPLTM")
 varratio <- attr(body_fat_Decorrelated,"VarRatio")
 # Set the diagonal to zero
 diag(transform) <- 0
 
 #Estimating the observation
-obsestim <- -1*as.data.frame(as.matrix(body_fat[,rownames(transform)]) %*% transform)
+obsestim <- -1*as.data.frame(
+  as.matrix(body_fat[,rownames(transform)]) %*% transform)
 
 #Bias estimation
-bias <- apply(body_fat[,rownames(transform)],2,mean) - apply(obsestim[,colnames(transform)],2,mean)
+bias <- apply(body_fat[,rownames(transform)],2,mean) - 
+  apply(obsestim[,colnames(transform)],2,mean)
 
 #Plotting
 par(mfrow=c(1,2),cex=0.45)
 for (vn in names(varratio))
 {
   oname <- str_remove_all(vn,"La_")
-  plot(obsestim[,vn] + bias[oname],body_fat[,oname],xlab=paste("Estimated:",oname),ylab=oname,main=oname)
+  plot(obsestim[,vn] + bias[oname],
+       body_fat[,oname],xlab=paste("Estimated:",oname),
+       ylab=oname,main=oname)
   indx <- obsestim[,vn]+bias[oname]
   lmtvals <- lm(body_fat[,oname] ~ indx )
   xvals <- c(min(obsestim[,vn]+ bias[oname]),max(obsestim[,vn]+ bias[oname])) 
@@ -778,7 +805,8 @@ for (vn in names(varratio))
   ylim <- c(min(body_fat[,oname]),max(body_fat[,oname]))
 
   text(xvals[1]+(xvals[2]-xvals[1])/2,0.95*(ylim[2]-ylim[1])+ylim[1],
-       sprintf("Slope= %.2f, R2=%3.2f",lmtvals$coefficients[2],1.0-varratio[vn])
+       sprintf("Slope= %.2f, R2=%3.2f",
+               lmtvals$coefficients[2],1.0-varratio[vn])
       )
 }
 par(op)
@@ -824,7 +852,7 @@ The next code snippet shows the process of transforming the training set
 and then using the returned object to transform the testing set using
 both outcome-blind and outcome-driven transformations.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 ## Outcome-blind
 body_fat_Decorrelated_train <- ILAA(trainingset,
@@ -843,8 +871,9 @@ body_fat_Decorrelated_trainD <- ILAA(trainingset,
 
 pander::pander(attr(body_fat_Decorrelated_trainD,"drivingFeatures"))
 
-body_fat_Decorrelated_testD <- predictDecorrelate(body_fat_Decorrelated_trainD
-                                                  ,testingset)
+body_fat_Decorrelated_testD <- predictDecorrelate(
+                                  body_fat_Decorrelated_trainD
+                                  ,testingset)
 
 ```
 
@@ -855,7 +884,7 @@ train a linear model of the body fat content. For this example we will
 use the `LASSO_MIN()` function of the FRESA.CAD package to model the
 $BodyFat$ using all the variables in the transformed training set.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 ## Outcome-Blind
 modelBodyFatRaw <- LASSO_MIN(BodyFat~.,trainingset)
@@ -880,7 +909,7 @@ are different between the Outcome-driven and outcome-blind ILAA methods.
 Here we check the Variance inflation factor (VIF) on the train and
 testing sets
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 frm <- paste("BodyFat~",str_flatten(modelBodyFatRaw$selectedfeatures," + "))
 
 X <- model.matrix(formula(frm),trainingset);
@@ -949,7 +978,7 @@ pander::pander(as.matrix(observedCoefD$coefficients),caption="Driven Coefficient
 Here we check the Variance inflation factor (VIF) on the train and
 testing sets using the observed variables
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 X <- model.matrix(formula(observedCoef$formula),trainingset);
 mc <- multiCol(X)
 title("Observed Training VIF")
@@ -977,7 +1006,7 @@ The user can predict the BodyFat content using the handy `predict()`
 function. After that we can measure the testing performance using the
 `predictionStats_regression()` function.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 ## OUtcome-Blind 
 predicBodyFat <- predict(modelBodyFat,body_fat_Decorrelated_test)
@@ -1005,10 +1034,12 @@ observed testing set using the computed beta coefficients. The next
 lines of code show how to do the prediction using `model.matrix()` R
 function and the dot product `%*%` :
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 
-predicBodyFatObst <- model.matrix(formula(observedCoef$formula),testingset) %*% observedCoef$coefficients
+predicBodyFatObst <- model.matrix(
+                                formula(observedCoef$formula),
+                                testingset) %*% observedCoef$coefficients
 
 plot(predicBodyFatObst,
      predicBodyFat,
@@ -1030,7 +1061,7 @@ transformed observations.
 The next lines of code compute the linear model using LASSO from the
 original observed data. Then, it computes the predicted performance.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 #rawmodelBodyFat <- LASSO_MIN(BodyFat~.,trainingset)
 #pander::pander(rawmodelBodyFat$coef)
 
@@ -1039,7 +1070,8 @@ rawmodelBodyFat <- modelBodyFatRaw;
 
 rawpredicBodyFat <- predict(rawmodelBodyFat,testingset)
 rmetrics <- predictionStats_regression(cbind(testingset$BodyFat,
-                                             rawpredicBodyFat),"Raw: Body Fat")
+                                             rawpredicBodyFat),
+                                       "Raw: Body Fat")
 pander::pander(rmetrics)
 
 ```
@@ -1060,7 +1092,7 @@ and `summary.lm()` functions.
 The inspection of the summary results clearly shows that most of the
 beta coefficients on the transformed data set are significant.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 ## Raw Model
 par(mfrow=c(2,2),cex=0.5)
@@ -1078,7 +1110,8 @@ plot(Delm)
 ## Outcome-Driven
 par(mfrow=c(2,2),cex=0.5)
 Delm <- lm(BodyFat~.,
-           body_fat_Decorrelated_trainD[,c("BodyFat",names(modelBodyFatD$coef)[-1])])
+           body_fat_Decorrelated_trainD[,c("BodyFat",
+                                           names(modelBodyFatD$coef)[-1])])
 pander::pander(Delm,add.significance.stars=TRUE)
 plot(Delm)
 
@@ -1140,7 +1173,7 @@ by the target outcome.
 LASSO_MIN with a binomial family is used to compute the logistic model
 of overweight.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 ## Outcome-blind
 modelOverweight <- LASSO_MIN(Overweight~.,
@@ -1165,7 +1198,8 @@ compute the beta coefficients for each one of the observed variables.
 
 # Get the coefficients in the observed space
 observedCoef <- getObservedCoef(OW_Decorrelated_train,modelOverweight)
-pander::pander(as.matrix(observedCoef$coefficients),caption="Observed Coefficients")
+pander::pander(as.matrix(observedCoef$coefficients),
+               caption="Observed Coefficients")
 
 
 ```
@@ -1176,7 +1210,7 @@ The predictions of the testing set can be done using the handy
 `predict()` function. The evaluation of the testing results can be
 evaluated using the `predictionStats_binary()` function.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0, fig.align="center"}
 
 ## Outcome-blind
 predicOverweight <- predict(modelOverweight,OW_Decorrelated_test)
@@ -1197,9 +1231,13 @@ pander::pander(pr$ClassMetrics)
 The predict of the testing set can be done using the `model.matrix()`
 and the dot product `%*%.`
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
-predicOverweightObst <- model.matrix(formula(observedCoef$formula),testingsetBMI) %*% observedCoef$coefficients
+predicOverweightObst <- 
+  model.matrix(
+    formula(observedCoef$formula),testingsetBMI
+    ) %*% observedCoef$coefficients
+
 #predicOverweightObst <- 1.0/(1.0 + exp(-predicOverweightObst));
 
 plot(predicOverweightObst,predicOverweight,
@@ -1220,7 +1258,7 @@ contrast to the model generated from the transformed space.
 The next lines of code compute the logistic model and display its
 testing performance:
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 6.0, fig.align="center"}
 ##Training
 rawmodelOverweight <- LASSO_MIN(Overweight~.,
                                 trainingsetBMI,
@@ -1245,7 +1283,7 @@ user can clearly see that all the betas of the latent-based model are
 statically significant. An effect that is not seen in the logistic
 observed model.
 
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0, fig.align="center"}
 
 par(mfrow=c(2,2),cex=0.5)
 

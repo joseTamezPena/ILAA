@@ -86,7 +86,8 @@ dataframe <- PimaIndiansDiabetes_mat
 outcome <- "diabetes"
 
 
-nLoops <- 100
+nLoops <- 50
+tfrac <- 0.80
 
 needScaling <- TRUE
 IDSample <- FALSE

@@ -259,7 +259,9 @@ dataframe <- TADPOLECrossMRI
 outcome <- "status"
 
 
-nLoops <- 100
+nLoops <- 50
+tfrac <- 0.80
+
 needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.8

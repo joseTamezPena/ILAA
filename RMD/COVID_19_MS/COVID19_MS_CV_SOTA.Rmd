@@ -89,7 +89,8 @@ studyName <- "COVID19_MS"
 dataframe <- avgCOVID19
 outcome <- "class"
 
-nLoops <- 100
+tfrac <- 0.80
+nLoops <- 50
 
 needScaling <- TRUE
 IDSample <- FALSE

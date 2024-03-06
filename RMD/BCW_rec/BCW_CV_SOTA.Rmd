@@ -88,7 +88,9 @@ outcome <- "status"
 
 
 
-nLoops <- 100
+tfrac <- 0.75
+nLoops <- 50
+
 needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.4

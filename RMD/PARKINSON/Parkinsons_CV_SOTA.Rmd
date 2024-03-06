@@ -99,7 +99,9 @@ avgParkison[,whof] <- signedlog(avgParkison[,whof])
 studyName <- "Parkinsons"
 dataframe <- avgParkison
 outcome <- "class"
-nLoops <- 100
+tfrac <- 0.80
+nLoops <- 50
+
 needScaling <- TRUE
 IDSample <- FALSE
 thro <- 0.8

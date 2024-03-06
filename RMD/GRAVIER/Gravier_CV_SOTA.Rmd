@@ -70,7 +70,8 @@ dataframe <- gravierset
 outcome <- "class"
 
 
-nLoops <- 100
+nLoops <- 50
+tfrac <- 0.80
 
 needScaling <- FALSE
 IDSample <- FALSE
