@@ -74,12 +74,9 @@ dataframe <- YARN
 outcome <- "density"
 thro <- 0.8
 
-cexheat <- 0.35
-loops <- 30
-
-yarn.pls <- plsr(density ~ NIR, 6, data = yarn, validation = "CV")
-
-print(summary(yarn.pls))
+cexheat <- 0.25
+loops <- 100
+tfrac <- 0.80
 
 
 
@@ -87,5 +84,5 @@ print(summary(yarn.pls))
 
 ## Generaring the report
 
-```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/child_regression.Rmd")}
+```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/child_SOTA_regression.Rmd")}
 ```

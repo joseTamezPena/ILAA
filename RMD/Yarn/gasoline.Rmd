@@ -74,7 +74,7 @@ studyName <- "gasoline"
 dataframe <- Gasoline
 outcome <- "VOctane"
 
-thro <- 0.4
+thro <- 0.8
 
 cexheat <- 0.35
 loops <- 100
@@ -87,5 +87,5 @@ tfrac <- 0.80
 
 ## Generaring the report
 
-```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/child_regression.Rmd")}
+```{r parent, child = here::here("~/GitHub/LatentBiomarkers/RMD/Child_univariate/child_SOTA_regression.Rmd")}
 ```

@@ -16,21 +16,21 @@ library("pls")
 
 plfit <- function(formula=formula,data=NULL,...)
 {
-  fitpls <- plsr(formula=formula,data=data,...)
+  fitpls <- plsr(formula=formula,data=data,scale =TRUE,...)
   class(fitpls) <- c("TopPLS",class(fitpls))
   return(fitpls)
 }
 
 pcrfit <- function(formula=formula,data=NULL,...)
 {
-  fitpls <- pcr(formula=formula,data=data,...)
+  fitpls <- pcr(formula=formula,data=data,scale =TRUE,...)
   class(fitpls) <- c("TopPLS",class(fitpls))
   return(fitpls)
 }
 
 cpplsfit <- function(formula=formula,data=NULL,...)
 {
-  fitpls <- cppls(formula=formula,data=data,...)
+  fitpls <- cppls(formula=formula,data=data,scale =TRUE,...)
   class(fitpls) <- c("TopPLS",class(fitpls))
   return(fitpls)
 }
@@ -47,12 +47,84 @@ predict.TopPLS <- function(object,...)
 
 ```
 
+## PLSR vs ILAA
+
+```{r}
+
+toPCA <- sapply(apply(dataframe,2,unique),length) >= 5 & colnames(dataframe) != outcome
+
+pc <- prcomp(dataframe[,toPCA],center = TRUE,scale. = TRUE,tol=0.01)   #principal components
+
+
+rotstd <- log10(abs(100*pc$rotation)+1.0)
+  gplots::heatmap.2(rotstd,
+                    trace = "none",
+                    dendrogram="none",
+                    breaks=c(0,0.5,1,2,3),
+#                    scale="row",
+                    mar = c(5,5),
+                    col=rainbow(4),
+                    main = "PCA Rotation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                    Rowv=FALSE,
+                    Colv=FALSE,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="log(|100Rot|+1)",
+                    xlab="Output Feature", ylab="Input Feature")
+
+plm <- plsr(formula=formula(paste(outcome,"~.")),data=dataframe,scale =TRUE)
+
+loadadings <- log10(abs(100*plm$loadings) + 1.0)
+  gplots::heatmap.2(loadadings,
+                    breaks=c(0,0.5,1,2,3),
+                    trace = "none",
+                    dendrogram="none",
+#                    scale="row",
+                    mar = c(5,5),
+                    col=rainbow(4),
+                    main = "PLS Loadings",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                    Rowv=FALSE,
+                    Colv=FALSE,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="log(|100Beta|+1)",
+                    xlab="Output Feature", ylab="Input Feature")
+
+
+ERTmod <- ILAA(dataframe,Outcome = outcome,thr=thro)
+
+ERT <- log10(abs(100*attr(ERTmod,"UPLTM")) + 1);
+  gplots::heatmap.2(ERT,
+                    trace = "none",
+                    breaks=c(0,0.5,1,2,3),
+                    mar = c(5,5),
+                    col=rainbow(4),
+                    main = "ERT Loadings",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                    dendrogram="none",
+                    Rowv=FALSE,
+                    Colv=FALSE,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="log(|100Beta|+1)",
+                    xlab="Output Feature", ylab="Input Feature")
+
+```
+
 
 
 ## SOTA Comparison to PLS, PC, LASSO, and ENET
 ### PLSR
 
-```{r PLSR, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+```{r PLSR, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 
 PLScv <- randomCV(dataframe,outcome,plfit,
@@ -63,9 +135,9 @@ PLSbs <- predictionStats_regression(PLScv$medianTest,"PLS: CV")
 
 ```
 
-### PC XGB
+### PC 
 
-```{r PCR, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+```{r PCR, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 
 PCcv <- randomCV(fittingFunction = pcrfit,
@@ -76,23 +148,23 @@ PCbs <- predictionStats_regression(PCcv$medianTest,"PCR: CV")
 
 ```
 
-### CPP XGB
+### CPP
 
-```{r CPP, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+```{r CPP, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 
-CPPlcv <- randomCV(fittingFunction = cpplsfit,
-                     trainSampleSets = PLScv$trainSamplesSets
-                    )
+#CPPlcv <- randomCV(fittingFunction = cpplsfit,
+#                     trainSampleSets = PLScv$trainSamplesSets
+#                    )
 
-CPPlbs <- predictionStats_regression(CPPlcv$medianTest,"cppls: CV")
+#CPPlbs <- predictionStats_regression(CPPlcv$medianTest,"cppls: CV")
 
 ```
 
 
 ### LASSO
 
-```{r LASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+```{r LASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 
 LASSOcv <- randomCV(fittingFunction = LASSO_MIN,
@@ -106,7 +178,7 @@ LASSObs <- predictionStats_regression(LASSOcv$medianTest,"LASSO: CV")
 
 ### PCA LASSO
 
-```{r PCALASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+```{r PCALASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 
 PCALASSOcv <- randomCV(fittingFunction = filteredFit,
@@ -115,13 +187,13 @@ PCALASSOcv <- randomCV(fittingFunction = filteredFit,
                       filtermethod = NULL,
                     PCA = TRUE)
 
-PCALASSObs <- predictionStats_regression(PCALASSOcv$medianTest,"ILLA-LASSO: CV")
+PCALASSObs <- predictionStats_regression(PCALASSOcv$medianTest,"PCA-LASSO: CV")
 ```
 
 
 ### ILAA LASSO
 
-```{r ILAALASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+```{r ILAALASSO, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 
 ILAALASSOcv <- randomCV(fittingFunction = filteredFit,
@@ -136,16 +208,17 @@ ILAALASSObs <- predictionStats_regression(ILAALASSOcv$medianTest,"ILLA-LASSO: CV
 
 ### ENET 
 
-```{r SVM, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+```{r ENET, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 ENETcv <- randomCV(fittingFunction = GLMNET_ELASTICNET_MIN,
                      trainSampleSets = PLScv$trainSamplesSets)
 ENETbs <- predictionStats_regression(ENETcv$medianTest,"ENET: CV")
+
 ```
 
 ### ILAAA ENET 
 
-```{r ILAASVM, results = "asis", warning = FALSE, dpi=300, fig.height= 6.0, fig.width= 8.0}
+```{r ILAAENET, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 
 ILAAENETcv <- randomCV(fittingFunction = filteredFit,
@@ -161,12 +234,12 @@ ILAAENETbs <- predictionStats_regression(ILAAENETcv$medianTest,"ILLA-ENET: CV")
 
 
 ## The Reports
-```{r tables, results = "asis", warning = FALSE,  dpi=300, fig.height= 4.5, fig.width= 7.0}
+```{r tables, results = "asis", warning = FALSE,  dpi=300, fig.height= 4.5, fig.width= 6.0}
 par(op)
 RMSTABLE <- rbind(
                   PLSbs$RMSEci,
                   PCbs$RMSEci,
-                  CPPlbs$RMSEci,
+#                  CPPlbs$RMSEci,
                   LASSObs$RMSEci,
                   PCALASSObs$RMSEci,
                   ILAALASSObs$RMSEci,
@@ -174,8 +247,12 @@ RMSTABLE <- rbind(
                   ILAAENETbs$RMSEci
                   )
 colnames(RMSTABLE) <- c("Median","Lower","Upper")
-rownames(RMSTABLE) <- c("PLS","PC","CPP",
-                        "LASSO","PCA-LASSO","ILAA-LASSO","ENET","ILAA-ENET")
+#rownames(RMSTABLE) <- c("PLSR","PCR","CPP",
+#                        "LASSO","PCA-LASSO","ILAA-LASSO","ENET","ILAA-ENET")
+
+rownames(RMSTABLE) <- c("PLSR","PCR",
+                        "LASSO","PCA-LASSO","ILAA-LASSO",
+                        "ENET","ILAA-ENET")
 
 pander::pander(RMSTABLE)
 
@@ -197,7 +274,7 @@ par(op)
 MADTABLE <- rbind(
                   PLSbs$MAEci,
                   PCbs$MAEci,
-                  CPPlbs$MAEci,
+#                  CPPlbs$MAEci,
                   LASSObs$MAEci,
                   PCALASSObs$MAEci,
                   ILAALASSObs$MAEci,
@@ -226,7 +303,7 @@ pber <- barPlotCiError(MADTABLE,
 PearsonTABLE <- rbind(
                   PLSbs$corci,
                   PCbs$corci,
-                  CPPlbs$corci,
+#                  CPPlbs$corci,
                   LASSObs$corci,
                   PCALASSObs$corci,
                   ILAALASSObs$corci,
