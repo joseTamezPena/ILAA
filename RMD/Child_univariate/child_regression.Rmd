@@ -12,6 +12,7 @@ library("vioplot")
 library("rpart")
 library(multiColl)
 library(car)
+library("pls")
 
 source("C:/Users/jtame/Documents/GitHub/LatentBiomarkers/RMD/RepeatedLinearCV.R")
 
@@ -29,7 +30,6 @@ varlist <- varlist[varlist != outcome]
 largeSet <- length(varlist) > 1500 
 ```
 
-
 ### Training and testing sets
 
 ```{r results = "asis", warning = FALSE}
@@ -44,6 +44,7 @@ pander::pander(t(summary(trainingset)))
 varlist <- colnames(trainingset)
 varlist <- varlist[varlist != outcome]
 ```
+
 
 
 ### Correlation Matrix of the Data
@@ -123,8 +124,8 @@ par(op)
   gr <- graph_from_adjacency_matrix(transform,mode = "directed",diag = FALSE,weighted=TRUE)
   gr$layout <- layout_with_fr
   
-#  fc <- cluster_optimal(gr)
-          fc <- cluster_walktrap (gr,steps=50)
+  fc <- cluster_optimal(gr)
+#          fc <- cluster_walktrap (gr,steps=50)
 
   plot(fc, gr,
        edge.width = 2*E(gr)$weight,
@@ -439,4 +440,245 @@ text(xvals[1]+(xvals[2]-xvals[1])/2,xvals[2]-1,sprintf("Slope= %.2f",lmtvals$coe
 pander::pander(summary(lmtvals))
 
 ```
+
+
+
+## PCA, EFA, PLS, ERT
+
+```{r, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
+
+toPCA <- sapply(apply(dataframe,2,unique),length) >= 5 & colnames(dataframe) != outcome
+
+pc <- prcomp(dataframe[,toPCA],center = TRUE,scale. = TRUE,tol=0.01)   #principal components
+
+if (ncol(dataframe)<20)
+{
+pander::pander(as.data.frame(pc$rotation),caption="PCA")
+}
+
+rotstd <- log10(abs(100*pc$rotation)+1.0)
+  gplots::heatmap.2(rotstd,
+                    trace = "none",
+                    dendrogram="none",
+                    breaks=c(0,0.5,1,2,3),
+#                    scale="row",
+                    mar = c(5,5),
+                    col=rainbow(4),
+                    main = "PCA Rotation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                    Rowv=FALSE,
+                    Colv=FALSE,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="log(|100Rot|+1)",
+                    xlab="Output Feature", ylab="Input Feature")
+
+
+efa <- try(fa(dataframe[,toPCA],ncol(pc$rotation),rotate="varimax",warnings=FALSE))  # EFA analysis
+
+#if (!inherits(efa,"try-error"))
+#{
+  if (ncol(dataframe)<20)
+  {
+   pander::pander(as.data.frame(efa$weights),caption="EFA")
+#    lds <- efa$weights
+#    lds2 <- matrix(as.numeric(lds),nrow=nrow(lds),ncol=ncol(lds))
+#    colnames(lds2) <- colnames(lds)
+#    rownames(lds2) <- rownames(lds)
+#    pander::pander(lds2,caption="EFA")
+  }
+  rotstd <- log10(abs(100*efa$weights)+1.0)
+    gplots::heatmap.2(rotstd,
+                      trace = "none",
+                      dendrogram="none",
+                      breaks=c(0,0.5,1,2,3),
+  #                    scale="row",
+                      mar = c(5,5),
+                      col=rainbow(4),
+                      main = "EFA weights",
+                      cexRow = cexheat,
+                      cexCol = cexheat,
+                      Rowv=FALSE,
+                      Colv=FALSE,
+                     srtCol=45,
+                     srtRow=45,
+                      key.title=NA,
+                      key.xlab="log(|100W|+1)",
+                      xlab="Output Feature", ylab="Input Feature")
+#}
+
+  
+  
+plm <- plsr(formula=formula(paste(outcome,"~.")),data=dataframe,scale =TRUE)
+if (ncol(dataframe)<20)
+{
+  lds <- plm$loadings
+  lds2 <- matrix(as.numeric(lds),nrow=nrow(lds),ncol=ncol(lds))
+  colnames(lds2) <- colnames(lds)
+  rownames(lds2) <- rownames(lds)
+  pander::pander(lds2,caption="PLS")
+}
+
+loadadings <- log10(abs(100*plm$loadings) + 1.0)
+  gplots::heatmap.2(loadadings,
+                    breaks=c(0,0.5,1,2,3),
+                    trace = "none",
+                    dendrogram="none",
+#                    scale="row",
+                    mar = c(5,5),
+                    col=rainbow(4),
+                    main = "PLS Loadings",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                    Rowv=FALSE,
+                    Colv=FALSE,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="log(|100Beta|+1)",
+                    xlab="Output Feature", ylab="Input Feature")
+
+
+ERTmod <- ILAA(dataframe,Outcome = outcome,thr=thro)
+
+ERT <- log10(abs(100*attr(ERTmod,"UPLTM")) + 1);
+  gplots::heatmap.2(ERT,
+                    trace = "none",
+                    breaks=c(0,0.5,1,2,3),
+                    mar = c(5,5),
+                    col=rainbow(4),
+                    main = "ERT Rotation",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                    dendrogram="none",
+                    Rowv=FALSE,
+                    Colv=FALSE,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="log(|100Beta|+1)",
+                    xlab="Output Feature", ylab="Input Feature")
+
+if (ncol(dataframe)<20)
+{
+pander::pander(attr(ERTmod,"UPLTM"),caption="ERT")
+}
+
+
+```
+
+
+
+## U-MAP Visualization of features
+
+
+### The UMAP on Raw Data
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 5.0, fig.width= 7.0}
+  thesamples <- c(1:nrow(dataframe));
+  if (nrow(dataframe)>2000) 
+  {
+    thesamples <- sample(thesamples,2000)
+  }
+
+  classes <- as.integer(scale(dataframe[thesamples,outcome]))
+  classes <- classes - min(classes) + 1
+  raincolors <- heat.colors(length(unique(classes)))
+  dtatoplot <- as.matrix(FRESAScale(dataframe[thesamples,],method="OrderLogit")$scaledData)
+  datasetframe.umap = umap(dtatoplot,n_components=2)
+  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: RAW",col=raincolors[classes],pch=15)
+  
+    gplots::heatmap.2(dtatoplot,
+                    trace = "none",
+                    mar = c(5,5),
+                    col=heat.colors(5),
+                    main = "Raw",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="Z",
+                    xlab="Feature", ylab="Subject")
+
+
+
+  dtatoplot <- as.matrix(FRESAScale(predict(pc,dataframe[thesamples,]),method="OrderLogit")$scaledData)
+  datasetframe.umap = umap(dtatoplot,n_components=2)
+  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: PCA",col=raincolors[classes],pch=15)
+
+    gplots::heatmap.2(dtatoplot,
+                    trace = "none",
+                    mar = c(5,5),
+                    col=heat.colors(5),
+                    main = "PCA",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="Z",
+                    xlab="Feature", ylab="Subject")
+
+  
+if (!inherits(efa,"try-error"))
+{
+  dtatoplot <- as.matrix(FRESAScale(predict(efa,dataframe[thesamples,toPCA]),method="OrderLogit")$scaledData)
+  datasetframe.umap = umap(dtatoplot,n_components=2)
+  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: EFA",col=raincolors[classes],pch=15)
+    gplots::heatmap.2(dtatoplot,
+                    trace = "none",
+                    mar = c(5,5),
+                    col=heat.colors(5),
+                    main = "EFA",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="Z",
+                    xlab="Feature", ylab="Subject")
+}
+  rotframe <- as.matrix(scale(dataframe[thesamples,rownames(plm$loadings)])) %*% plm$loadings
+  
+  dtatoplot <- as.matrix(FRESAScale(rotframe,method="OrderLogit")$scaledData)
+  datasetframe.umap = umap(dtatoplot,n_components=2)
+  
+  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: PLS",col=raincolors[classes],pch=15)
+      gplots::heatmap.2(dtatoplot,
+                    trace = "none",
+                    mar = c(5,5),
+                    col=heat.colors(5),
+                    main = "PLS",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="Z",
+                    xlab="Feature", ylab="Subject")
+
+
+  dtatoplot <- as.matrix(FRESAScale(ERTmod[thesamples,colnames(ERTmod) != outcome],method="OrderLogit")$scaledData)
+  datasetframe.umap = umap(dtatoplot,n_components=2)
+  plot(datasetframe.umap$layout,xlab="U1",ylab="U2",main="UMAP: ERT",col=raincolors[classes],pch=15)
+      gplots::heatmap.2(dtatoplot,
+                    trace = "none",
+                    mar = c(5,5),
+                    col=heat.colors(5),
+                    main = "ERT",
+                    cexRow = cexheat,
+                    cexCol = cexheat,
+                   srtCol=45,
+                   srtRow=45,
+                    key.title=NA,
+                    key.xlab="Z",
+                    xlab="Feature", ylab="Subject")
+  
+  
+```
+
+
+
 

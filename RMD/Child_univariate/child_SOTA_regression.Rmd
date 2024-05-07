@@ -49,12 +49,16 @@ predict.TopPLS <- function(object,...)
 
 ## PLSR vs ILAA
 
-```{r}
+```{r, results = "asis", warning = FALSE, dpi=300, fig.height= 4.5, fig.width= 6.0}
 
 toPCA <- sapply(apply(dataframe,2,unique),length) >= 5 & colnames(dataframe) != outcome
 
 pc <- prcomp(dataframe[,toPCA],center = TRUE,scale. = TRUE,tol=0.01)   #principal components
 
+if (ncol(dataframe)<20)
+{
+pander::pander(as.data.frame(pc$rotation),caption="PCA")
+}
 
 rotstd <- log10(abs(100*pc$rotation)+1.0)
   gplots::heatmap.2(rotstd,
@@ -75,7 +79,46 @@ rotstd <- log10(abs(100*pc$rotation)+1.0)
                     key.xlab="log(|100Rot|+1)",
                     xlab="Output Feature", ylab="Input Feature")
 
+
+efa <- try(fa(dataframe[,toPCA],ncol(pc$rotation),rotate="varimax",warnings=FALSE))  # EFA analysis
+
+if (!inherits(efa,"try-error"))
+{
+  if (ncol(dataframe)<20)
+  {
+   pander::pander(as.data.frame(efa$weights),caption="EFA")
+  rotstd <- log10(abs(100*efa$weights)+1.0)
+    gplots::heatmap.2(rotstd,
+                      trace = "none",
+                      dendrogram="none",
+                      breaks=c(0,0.5,1,2,3),
+  #                    scale="row",
+                      mar = c(5,5),
+                      col=rainbow(4),
+                      main = "EFA weights",
+                      cexRow = cexheat,
+                      cexCol = cexheat,
+                      Rowv=FALSE,
+                      Colv=FALSE,
+                     srtCol=45,
+                     srtRow=45,
+                      key.title=NA,
+                      key.xlab="log(|100W|+1)",
+                      xlab="Output Feature", ylab="Input Feature")
+  }
+}
+
+  
+  
 plm <- plsr(formula=formula(paste(outcome,"~.")),data=dataframe,scale =TRUE)
+if (ncol(dataframe)<20)
+{
+  lds <- plm$loadings
+  lds2 <- matrix(as.numeric(lds),nrow=nrow(lds),ncol=ncol(lds))
+  colnames(lds2) <- colnames(lds)
+  rownames(lds2) <- rownames(lds)
+  pander::pander(lds2,caption="PLS")
+}
 
 loadadings <- log10(abs(100*plm$loadings) + 1.0)
   gplots::heatmap.2(loadadings,
@@ -116,6 +159,12 @@ ERT <- log10(abs(100*attr(ERTmod,"UPLTM")) + 1);
                     key.title=NA,
                     key.xlab="log(|100Beta|+1)",
                     xlab="Output Feature", ylab="Input Feature")
+
+if (ncol(dataframe)<20)
+{
+pander::pander(attr(ERTmod,"UPLTM"),caption="ERT")
+}
+
 
 ```
 

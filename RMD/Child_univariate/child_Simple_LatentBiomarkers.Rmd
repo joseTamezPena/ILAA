@@ -414,7 +414,6 @@ univarDe <- uniRankVar(varlistc,
 	           rankingTest="AUC",
 	           )
 
-
 ```
 
 
