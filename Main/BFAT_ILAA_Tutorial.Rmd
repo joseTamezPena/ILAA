@@ -35,13 +35,18 @@ op <- par(no.readonly = TRUE)
 
 # Introduction
 
-![Figure 1: The UPLTM](images/Fig_Trans_1-01.jpg)
+![Figure 1: The UPLTM: any linear transformation matrix that does not
+reduce data dimensionality and has a one-to-one association between
+units of measurement, i.e., it is preserving the space metric. The ERT
+is special form of UPLTM that is preserving the metric, and aims to
+create latent variables with controlled association between
+them.](images/Fig_Trans_1-01.jpg)
 
 Iterative Linear Association Analysis (ILAA) is a computational method
-that estimates the Exploratory Residualization Transform (ERT), an
-special case of the UPLTM as seen in Figure 1. ERT is estimated from a
-sample of multidimensional data. and mitigates muticollinearity issues
-via variable residualization.
+that estimates the Exploratory Residualization Transform (ERT) as seen
+in Figure 1, and Appendix A describes in detail the ILAA algorithm. ERT
+is estimated from a sample of multidimensional data. and mitigates
+muticollinearity issues via variable residualization.
 
 The dataframe with reduced multicollinarity issues, $Q$, is estimated
 by:
@@ -61,7 +66,7 @@ The returned transformation matrix can be used to:
 2.  Do exploratory discovery of latent variables associated with a
     specific outcome-target
 
-3.  Addressing multicollinearity issues in linear regression models
+3.  Addressing multicollinearity issues in regression models
 
     1.  Better estimation and interpretation of model variables
 
@@ -225,7 +230,7 @@ where:
 -   `verbose` : Display the evolution of the algorithm.
 
 -   `bootstrap` : The number of bootstrap estimations. (True bootstrap
-    when n\>500, 5% bootstrap at n\<=500)
+    when n\>500, 5% constrained resampling at n\<=500)
 
 At return of the ILLA function is a decorrelated dataframe that shares
 the same dimensions as the input dataframe. The dataframe has the
@@ -904,7 +909,7 @@ pander::pander(as.matrix(modelBodyFatD$coef),caption="Outcome-Driven Coefficient
 The printed beta coefficients of the models show that the LASSO models
 are different between the Outcome-driven and outcome-blind ILAA methods.
 
-#### Muticollinear Analysis
+#### Multicollinear Analysis
 
 Here we check the Variance inflation factor (VIF) on the train and
 testing sets
@@ -1318,3 +1323,129 @@ practical application of ILAA, providing comprehensive insights into its
 functions for estimating, predicting, and scrutinizing transformations.
 Such capabilities hold significant promise in supervised learning
 scenarios, encompassing regression and logistic models.
+
+# Appendix A
+
+## The ILAA Algorithm
+
+There are many transformation matrices $W$ that moves a the observed
+feature space $X$ affected by collinearity into new space $Q$, with
+controled collinearity i.e.,: $$
+Q=W  X,
+$$
+
+and they can be found in many different ways. The ILAA algorithm aims to
+find a single realization based on variable residualization, and unit
+preserving transformations. i.e., it aims to find the Exploratory
+Residualization Transform (ERT).
+
+The algorithm iterates by estimating the residuals of the linear fitting
+between observed feature pairs:
+
+$$ x_j=\beta_{i,j} x_i + b_{i,j} + \epsilon_{i,j}.$$
+
+Hence the residual variable:
+
+$$q_j=x_j-\beta_{i,j} x_i,  \quad \forall  (i,j) \in  \mathbb{B},$$
+
+is a latent variable with zero correlation between the "independent"
+feature $i$ and the "dependent" feature $j$.
+
+The residualization is done on all the features pairs with significant
+association. Then, to address multiple collinearity the algorithm must
+iterate between estimation of the derived latent variables. The main
+issue with iterated realization is the heuristic decision of which
+feature is "independent" and who is the "dependent" feature. The ILAA
+function decides the hierarchy based on the degree of correlation and/or
+association to variables.
+
+If we define $\mathbb{B}$ as the basis vector of the observed matrix
+$X$, and we aim to return a $Q$ matrix whose maximum correlation is
+lower than $T$, then the following steps estimate a single realization
+of $W$:
+
+1.  Set $Q^1=X$, and $W^1=I$ as the initial solutions.
+
+2.  Compute the absolute of the correlation matrix of $Q^1$:
+    $R^1=|corr(Q)|$ then set $R^1_{j,j \in \mathbb{B}}=0$.
+
+3.  Extract the vector of the maximum correlation of each feature:
+    $$\boldsymbol{\rho} = \max(R^1_{k,:} ):\: \forall k \in \mathbb{B} $$
+
+4.  Extract the set of unaltered bases: $\mathbb{U}$:
+
+Set $\mathbb{K}=\mathbb{B}$, then sort $\mathbb{K}$ from the most
+relevant feature to the least relevant then iterate trough all sorted
+features:
+
+$$\mathbb{U}^{m+1} = \mathbb{U}^{m} \cup \{\mathbb{K}_{m} \: | \: R^1_{\mathbb{K}_{m} \times \mathbb{U}^{m}} < T_0 \},$$
+
+where $T_0$ is the critical value of significant association between
+variables, and $\mathbb{U}^{1}=\emptyset.$
+
+5.  At iteration $n$, define the $\mathbb{I}$ (independent) and the
+    $\mathbb{J}$ (dependent) paired set:
+    ${\mathbb{I} \times \mathbb{J}}$.\
+    First, get all the correlation pairs above the correlation goal:
+    $$\mathbb{H}^n=\{ (i,j) \quad | \quad R^n_{i,j}  \ge T: \forall (i,j) \in \mathbb{B}\}.$$
+    Second, sort the relevance of the pairs.
+
+Third, interactively join all the pairs:
+
+$$\mathbb{I}^{m} \times \mathbb{J}^{m}=  \mathbb{I}^{m-1} \times \mathbb{J}^{m-1} \cup \{(i,j)\quad |\quad \rho_i  \ge \rho_j: \, \forall \, (i,j) \in \mathbb{H}^n  \wedge  i \notin \mathbb{J}^{m-1} \wedge j \in \mathbb{T}\};$$
+
+where
+$$\mathbb{T}=\{k \in \mathbb{B} \setminus (\mathbb{U} \cup \mathbb{I}^{m-1})\},$$
+and $$\mathbb{I}^1=\mathbb{J}^1=\emptyset.$$
+
+6.  Compute the $\boldsymbol{\beta}^n$ matrix loading based on the
+    $\mathbb{I} \times \mathbb{J}$ pairs. Estimate the slope
+    coefficients $\beta_{i,j}$ via linear fitting
+    $$ x_j=\beta_{i,j} x_i + a_j, \quad \forall (i,j) \in \mathbb{I} \times \mathbb{J}$$
+    Then, set all non-statistically significant $\beta_{i,j}$ values to
+    zero. Statically significant values are defined by
+    $p(\beta_{i,j})  <  p_{th}$; where $p_{th}$ is the maximum
+    probability of acceptance, and $p(\beta_{i,j})$ is the probability
+    that the slope coefficient is zero.
+
+7.  Update $$W^n=W^{n-1} (I - \boldsymbol{\beta}^n), $$ then compute
+    $Q^n=W^n  X$.
+
+8.  Update the correlation matrix: $R^n=|corr(Q^n)|$, then set
+    $R^n_{j,j}=0: \: \forall j \in \mathbb{B}$, and the maximum
+    correlation vector: $\boldsymbol{\rho} = \max(R^n_{k,:})$.
+
+9.  Repeat steps 5 to 8 until the maximum value of $R^n$ is less than
+    $T$, i.e., $\max(R^n) < T$.
+
+### Implementation Notes:
+
+1.  The correlation metric could be Person, or Spearman.
+
+2.  The critical value $T_0$ at step 4 is the critical Pearson's
+    correlation found using the t-distribution approximation. It is
+    found by setting a significant q-value adjusted for multiple
+    comparisons. $q=0.15/|\mathbb{B}|$;
+
+3.  The FRESA.CAD::ILAA() linear fitting of step 6 is standard linear
+    fitting for Pearson's Correlation, or Robust fitting for Spearman's
+    rank correlation.
+
+4.  The $p_{th}$ for statistical significance uses a q-value of 0.15 and
+    it is adjusted for multiple comparisons using the Bonferroni
+    correction: $p_{th}=0.15/|B|$.
+
+5.  The ILAA implementation in FRESA.CAD uses relaxed iterations. i.e.,
+    the threshold values changes from an initial value of 0.95 until it
+    reaches the user supplied threshold: $T$
+
+6.  In FRESA.CAD::ILAA the sorting of step 4 can be set to association
+    to a user defined target (Driven) or the user can provide their own
+    ranked variables.
+
+7.  In FRESA.CAD::ILAA the sorting of step 5 can be selected from
+    maximum correlation or weighted correlation.
+
+8.  The correlation matrix $R$ depends on the data. FRESA.CAD::ILAA()
+    can be set to aggregate estimations of $W$ with bootstrapped
+    perturbations of the data.

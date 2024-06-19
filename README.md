@@ -11,7 +11,7 @@ This repository showcases the use of the **FRESA.CAD::ILAA(), FRESA.CAD::IDeA()*
 -   [License](#license)
 -   [Contact](#contact)
 
-## About
+## About {#about}
 
 Examples of usage and applications of the **FRESA.CAD::ILAA()** and the associated exploratory residualization matrix (**ERT**).
 
@@ -20,13 +20,13 @@ This repository also holds the Source code of the Shiny App: [ERT Calculator](ht
 The repository folder structure is:
 
 | Folder Name | Contents                                                                                |
-|-----------------|-------------------------------------------------------|
+|-------------|-----------------------------------------------------------------------------------------|
 | Data        | Data sets used in the examples of this repository: [Data](Data/DataSpecsAndSources.csv) |
 | ILAA        | [Shiny App code](https://josetamezpena.shinyapps.io/ILAA/)                              |
 | Main        | [The ILAA Tutorial Code](https://rpubs.com/J_Tamez/ILAA_Tutorial)                       |
 | RMD         | The RMD scripts used for the validation and showcasing the ILAA method                  |
 
-## Installation
+## Installation {#installation}
 
 ILAA is part of the FRESA.CAD package. To use ILAA first install FRESA.CAD You can install the official release of the package from CRAN using:
 
@@ -44,7 +44,7 @@ install.packages("devtools")
 devtools::install_github("https://github.com/joseTamezPena/FRESA.CAD")
 ```
 
-## Usage
+## Usage {#usage}
 
 After installation you can test ILAA on the iris data set.
 
@@ -77,7 +77,7 @@ The app will compute the ERT transformation using the user-provided data set.
 
 Also you can look at the output of the ILAA tutorial at: <https://rpubs.com/J_Tamez/ILAA_Tutorial>
 
-## Contributing
+## Contributing {#contributing}
 
 Contributions are welcome! If you'd like to contribute to this project, please follow these guidelines:
 
@@ -87,11 +87,11 @@ Contributions are welcome! If you'd like to contribute to this project, please f
 -   Push to the branch: `git push origin feature/new-feature`.
 -   Submit a pull request.
 
-## License
+## License {#license}
 
 This project is licensed under the LGPL Licence 3.0 see the [LICENSE](LICENSE) file for details.
 
-## Contact
+## Contact {#contact}
 
 Email: jose.tamezpena\@tec.mx
 
