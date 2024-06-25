@@ -33,14 +33,14 @@ op <- par(no.readonly = TRUE)
 
 ```
 
-# Introduction
-
 ![Figure 1: The UPLTM: any linear transformation matrix that does not
 reduce data dimensionality and has a one-to-one association between
 units of measurement, i.e., it is preserving the space metric. The ERT
 is special form of UPLTM that is preserving the metric, and aims to
 create latent variables with controlled association between
 them.](images/Fig_Trans_1-01.jpg)
+
+# Introduction
 
 Iterative Linear Association Analysis (ILAA) is a computational method
 that estimates the Exploratory Residualization Transform (ERT) as seen
@@ -594,7 +594,11 @@ LatentFormulas <- getLatentCoefficients(body_fat_Decorrelated)
 
 # A string character with the formulas can be obtained by:
 charFormulas <- attr(LatentFormulas,"LatentCharFormulas")
-pander::pander(as.matrix(charFormulas))
+varRatio <- attr(body_fat_Decorrelated,"VarRatio")
+measUnits <- c("lb","Years",rep("in",length(charFormulas)-3),"Kg/m^2")
+names(measUnits) <- names(charFormulas)
+fullFrame <- as.data.frame(cbind(Formula=charFormulas,Unit=measUnits,R2=round(1.0-varRatio[names(charFormulas)],3)))
+pander::pander(fullFrame)
 
 ```
 
@@ -666,7 +670,55 @@ par(op)
 
 
 ```
+### Association Plots
 
+#### Direct Transform Estimation
+
+The transformation matrix can be used to get estimation of each variable
+from the latent models.
+
+To to this just set the diagonal of the transformation to zero, then
+rotate the input matrix, multiply by -1, and the the output is the
+estimated observation from the independent variables. The bias term is
+estimated by computing the observed mean minus the transformed mean.
+
+```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.0, fig.width= 6.0, fig.align="center"}
+transform <- attr(body_fat_Decorrelated,"UPLTM")
+varratio <- attr(body_fat_Decorrelated,"VarRatio")
+# Set the diagonal to zero
+diag(transform) <- 0
+
+#Estimating the observation
+obsestim <- -1*as.data.frame(
+  as.matrix(body_fat[,rownames(transform)]) %*% transform)
+
+#Bias estimation
+bias <- apply(body_fat[,rownames(transform)],2,mean) - 
+  apply(obsestim[,colnames(transform)],2,mean)
+
+#Plotting
+par(mfrow=c(1,2),cex=0.65)
+for (vn in names(varratio))
+{
+  oname <- str_remove_all(vn,"La_")
+  plot(obsestim[,vn] + bias[oname],
+       body_fat[,oname],xlab=paste("Estimated:",oname),
+       ylab=oname,main=oname)
+  indx <- obsestim[,vn]+bias[oname]
+  lmtvals <- lm(body_fat[,oname] ~ indx )
+  xvals <- c(min(obsestim[,vn]+ bias[oname]),max(obsestim[,vn]+ bias[oname])) 
+  pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
+  lines(x=xvals,y=pred,col="red")
+  ylim <- c(min(body_fat[,oname]),max(body_fat[,oname]))
+
+  text(xvals[1]+(xvals[2]-xvals[1])/2,0.95*(ylim[2]-ylim[1])+ylim[1],
+       sprintf("Slope= %.2f, R2=%3.2f",
+               lmtvals$coefficients[2],1.0-varratio[vn]),col="blue"
+      )
+}
+par(op)
+
+```
 ### ILAA Solution and Perturbations
 
 ILLA solutions depends on the observed data. The provided function can
@@ -768,55 +820,7 @@ pander::pander(max(abs(cormat)))
 
 ```
 
-### Association Plots
 
-#### Direct Transform Estimation
-
-The transformation matrix can be used to get estimation of each variable
-from the latent models.
-
-To to this just set the diagonal of the transformation to zero, then
-rotate the input matrix, multiply by -1, and the the output is the
-estimated observation from the independent variables. The bias term is
-estimated by computing the observed mean minus the transformed mean.
-
-```{r results = "asis", warning = FALSE, dpi=300, fig.height= 3.0, fig.width= 6.0, fig.align="center"}
-transform <- attr(body_fat_Decorrelated,"UPLTM")
-varratio <- attr(body_fat_Decorrelated,"VarRatio")
-# Set the diagonal to zero
-diag(transform) <- 0
-
-#Estimating the observation
-obsestim <- -1*as.data.frame(
-  as.matrix(body_fat[,rownames(transform)]) %*% transform)
-
-#Bias estimation
-bias <- apply(body_fat[,rownames(transform)],2,mean) - 
-  apply(obsestim[,colnames(transform)],2,mean)
-
-#Plotting
-par(mfrow=c(1,2),cex=0.45)
-for (vn in names(varratio))
-{
-  oname <- str_remove_all(vn,"La_")
-  plot(obsestim[,vn] + bias[oname],
-       body_fat[,oname],xlab=paste("Estimated:",oname),
-       ylab=oname,main=oname)
-  indx <- obsestim[,vn]+bias[oname]
-  lmtvals <- lm(body_fat[,oname] ~ indx )
-  xvals <- c(min(obsestim[,vn]+ bias[oname]),max(obsestim[,vn]+ bias[oname])) 
-  pred <- lmtvals$coefficients[1] + lmtvals$coefficients[2] * xvals
-  lines(x=xvals,y=pred,col="red")
-  ylim <- c(min(body_fat[,oname]),max(body_fat[,oname]))
-
-  text(xvals[1]+(xvals[2]-xvals[1])/2,0.95*(ylim[2]-ylim[1])+ylim[1],
-       sprintf("Slope= %.2f, R2=%3.2f",
-               lmtvals$coefficients[2],1.0-varratio[vn])
-      )
-}
-par(op)
-
-```
 
 The visual inspection of the above-displayed figures shows that some
 latent variables are not associated with the original parent variable,
@@ -1324,6 +1328,8 @@ functions for estimating, predicting, and scrutinizing transformations.
 Such capabilities hold significant promise in supervised learning
 scenarios, encompassing regression and logistic models.
 
+\
+
 # Appendix A
 
 ## The ILAA Algorithm
@@ -1340,7 +1346,7 @@ preserving transformations. i.e., it aims to find the Exploratory
 Residualization Transform (ERT).
 
 The algorithm iterates by estimating the residuals of the linear fitting
-between observed feature pairs:
+between observed feature pairs $(x_i,x_j)$:
 
 $$ x_j=\beta_{i,j} x_i + b_{i,j} + \epsilon_{i,j}.$$
 
@@ -1353,17 +1359,26 @@ feature $i$ and the "dependent" feature $j$.
 
 The residualization is done on all the features pairs with significant
 association. Then, to address multiple collinearity the algorithm must
-iterate between estimation of the derived latent variables. The main
-issue with iterated realization is the heuristic decision of which
-feature is "independent" and who is the "dependent" feature. The ILAA
-function decides the hierarchy based on the degree of correlation and/or
-association to variables.
+be iterated.
+
+The iteration:$$W^n=W^{n-1}(I-\boldsymbol{\beta}^n),$$
+
+where $\boldsymbol{\beta}^n$ is the matrix of the beta coefficients of
+all independent variables to the dependent variables, will estimate the
+final shape of the ERT transformation until the desired maximum absolute
+correlation on $Q$ is achieved.
+
+The main issue with iterated realization is the heuristic decision of
+which feature is "independent" and who is the "dependent" feature. The
+ILAA function decides the hierarchy based on the degree of correlation
+and/or association to variables.
 
 If we define $\mathbb{B}$ as the basis vector of the observed matrix
 $X$, and we aim to return a $Q$ matrix whose maximum correlation is
 lower than $T$, then the following steps estimate a single realization
 of $W$:
 
+::: {#algorithm}
 1.  Set $Q^1=X$, and $W^1=I$ as the initial solutions.
 
 2.  Compute the absolute of the correlation matrix of $Q^1$:
@@ -1417,6 +1432,7 @@ and $$\mathbb{I}^1=\mathbb{J}^1=\emptyset.$$
 
 9.  Repeat steps 5 to 8 until the maximum value of $R^n$ is less than
     $T$, i.e., $\max(R^n) < T$.
+:::
 
 ### Implementation Notes:
 
@@ -1426,6 +1442,13 @@ and $$\mathbb{I}^1=\mathbb{J}^1=\emptyset.$$
     correlation found using the t-distribution approximation. It is
     found by setting a significant q-value adjusted for multiple
     comparisons. $q=0.15/|\mathbb{B}|$;
+
+    ``` R
+      q= 0.15/ncol(data)
+      ndf <- nrow(data)-2
+      tvalue <- qt(1.0 - q,ndf)
+      T_0 <- tvalue/sqrt(ndf + tvalue^2)
+    ```
 
 3.  The FRESA.CAD::ILAA() linear fitting of step 6 is standard linear
     fitting for Pearson's Correlation, or Robust fitting for Spearman's
